@@ -22,5 +22,5 @@ public class PlaceCourse extends BaseTimeEntity {
     @JoinColumn(name = "place_id")
     private Place place;
 
-    private Integer order;
+    private Integer placeOrder;
 }

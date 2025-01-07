@@ -3,7 +3,7 @@ package umc.catchy.domain.vote.domain;
 import jakarta.persistence.*;
 import lombok.Getter;
 import umc.catchy.domain.common.BaseTimeEntity;
-import umc.catchy.domain.group.domain.Group;
+import umc.catchy.domain.group.domain.Groups;
 
 import java.time.LocalDateTime;
 
@@ -22,5 +22,5 @@ public class Vote extends BaseTimeEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")
-    private Group group;
+    private Groups group;
 }
