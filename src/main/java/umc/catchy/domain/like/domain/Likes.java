@@ -8,7 +8,7 @@ import umc.catchy.domain.place.domain.Place;
 
 @Entity
 @Getter
-public class Like extends BaseTimeEntity {
+public class Likes extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

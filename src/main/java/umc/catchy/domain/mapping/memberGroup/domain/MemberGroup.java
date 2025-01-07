@@ -3,7 +3,7 @@ package umc.catchy.domain.mapping.memberGroup.domain;
 import jakarta.persistence.*;
 import lombok.Getter;
 import umc.catchy.domain.common.BaseTimeEntity;
-import umc.catchy.domain.group.domain.Group;
+import umc.catchy.domain.group.domain.Groups;
 import umc.catchy.domain.member.domain.Member;
 
 import java.time.LocalDateTime;
@@ -22,7 +22,7 @@ public class MemberGroup extends BaseTimeEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")
-    private Group group;
+    private Groups group;
 
     private LocalDateTime promiseTime;
 }

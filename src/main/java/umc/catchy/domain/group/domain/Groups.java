@@ -5,11 +5,10 @@ import lombok.Getter;
 import umc.catchy.domain.common.BaseTimeEntity;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Getter
-public class Group extends BaseTimeEntity {
+public class Groups extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "group_id")
