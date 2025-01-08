@@ -11,6 +11,8 @@ import umc.catchy.domain.common.BaseTimeEntity;
 @Entity
 @Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Member extends BaseTimeEntity {
 
     @Id
@@ -34,10 +36,10 @@ public class Member extends BaseTimeEntity {
     private MemberState state;
 
     @Setter
-    private String access_token;
+    private String accessToken;
 
     @Setter
-    private String refresh_token;
+    private String refreshToken;
 
     private Integer gpt_count;
 

@@ -9,18 +9,18 @@ public record LoginResponse(
         String email,
         String nickname,
         LocalDateTime createdDate,
-        String access_token,
-        String refresh_token
+        String accessToken,
+        String refreshToken
 ) {
-    public static LoginResponse of(Member member, String access_token, String refresh_token) {
+    public static LoginResponse of(Member member, String accessToken, String refreshToken) {
         return new LoginResponse(
                 member.getId(),
                 member.getProviderId(),
                 member.getEmail(),
                 member.getNickname(),
                 member.getCreatedDate(),
-                access_token,
-                refresh_token
+                accessToken,
+                refreshToken
         );
     }
 }
