@@ -17,5 +17,5 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
 jwt:
   secret: ${JWT_KEY}
-  accessTokenValidity: 7200000 # 2 hour
+  accessTokenValidity: 86400000 # 1 day
   refreshTokenValidity: 604800000 # 1 week
