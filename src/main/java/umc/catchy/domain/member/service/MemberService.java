@@ -9,8 +9,10 @@ import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
+import umc.catchy.domain.member.dto.request.ReIssueTokenRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.response.LoginResponse;
+import umc.catchy.domain.member.dto.response.ReIssueTokenResponse;
 import umc.catchy.domain.member.dto.response.SignUpResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
@@ -69,10 +71,27 @@ public class MemberService {
         String accessToken = jwtUtil.createAccessToken(email);
         String refreshToken = jwtUtil.createRefreshToken(email);
 
-        member.setRefresh_token(accessToken);
-        member.setRefresh_token(refreshToken);
+        member.setAccessToken(accessToken);
+        member.setRefreshToken(refreshToken);
 
         return LoginResponse.of(member, accessToken, refreshToken);
+    }
+
+    public ReIssueTokenResponse reIssue(ReIssueTokenRequest request) {
+        String refreshToken = request.refreshToken();
+
+        Member member = memberRepository.findByRefreshToken(refreshToken).orElseThrow(() ->
+                new IllegalArgumentException("유효하지 않은 refreshToken입니다."));
+
+        if (!refreshToken.equals(member.getRefreshToken())) {
+            throw new IllegalArgumentException("유효하지 않은 refreshToken입니다.");
+        }
+
+        // 재발급
+        String newAccessToken = jwtUtil.createAccessToken(member.getEmail());
+        String newRefreshToken = jwtUtil.createRefreshToken(member.getEmail());
+
+        return ReIssueTokenResponse.of(newAccessToken, newRefreshToken);
     }
 
     private Member createMemberEntity(SignUpRequest request, String profileImageUrl, SocialType socialType) {
