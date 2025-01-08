@@ -25,7 +25,6 @@ import umc.catchy.domain.member.service.MemberService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.common.response.status.SuccessStatus;
-import umc.catchy.global.error.exception.GeneralException;
 
 @Tag(name = "Member", description = "사용자 관련 API")
 @RestController
@@ -57,23 +56,10 @@ public class MemberController {
         return BaseResponse.onSuccess(SuccessStatus._CREATED, memberService.signUp(request, profileImage, socialType));
     }
 
-    @PostMapping("/login/{platform}")
+    @PostMapping("/login")
     @Operation(summary = "소셜 로그인 API",
             description = "카카오/애플 계정의 존재 여부 확인")
-    public BaseResponse<LoginResponse> login(@Parameter(
-            name = "platform",
-            description = "소셜 로그인 플랫폼 (KAKAO 또는 APPLE)",
-            required = true,
-            in = ParameterIn.PATH
-    )@PathVariable("platform") String platform, @RequestBody @Valid LoginRequest request) {
-
-        SocialType socialType;
-
-        try {
-            socialType = SocialType.valueOf(platform.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return BaseResponse.onFailure(ErrorStatus.PLATFORM_BAD_REQUEST);
-        }
+    public BaseResponse<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
 
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.login(request));
     }
