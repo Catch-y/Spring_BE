@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import umc.catchy.domain.common.BaseTimeEntity;
 
 @Entity
@@ -32,8 +33,10 @@ public class Member extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private MemberState state;
 
+    @Setter
     private String access_token;
 
+    @Setter
     private String refresh_token;
 
     private Integer gpt_count;
