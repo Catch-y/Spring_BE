@@ -21,7 +21,7 @@ public class Member extends BaseTimeEntity {
     private Long id;
 
     @Column(name = "provider_id", nullable = false, length = 50)
-    private Long providerId;
+    private String providerId;
 
     private String email;
 
@@ -44,7 +44,7 @@ public class Member extends BaseTimeEntity {
     private Integer gpt_count;
 
     public static Member createMember(
-            Long providerId,
+            String providerId,
             String email,
             String nickname,
             String profileImage,

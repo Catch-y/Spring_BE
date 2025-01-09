@@ -5,7 +5,7 @@ import umc.catchy.domain.member.domain.Member;
 
 public record LoginResponse(
         Long id,
-        Long providerId,
+        String providerId,
         String email,
         String nickname,
         LocalDateTime createdDate,
