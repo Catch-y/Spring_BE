@@ -16,5 +16,10 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
+jwt:
+  secret: ${JWT_KEY}
+  accessTokenValidity: 86400000 # 1 day
+  refreshTokenValidity: 604800000 # 1 week
+
 server:
   port: 8081
