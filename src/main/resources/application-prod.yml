@@ -7,10 +7,9 @@ spring:
 
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
-    open-in-view: false
-    show-sql: true
     hibernate:
-      ddl-auto: update # 첫 배포 이후 validate 으로 수정
+      ddl-auto: update # 배포 환경에서는 update
+    show-sql: false
 
   servlet:
     multipart:
