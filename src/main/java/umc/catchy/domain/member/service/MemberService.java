@@ -107,15 +107,18 @@ public class MemberService {
         String refreshToken = request.refreshToken();
 
         Member member = memberRepository.findByRefreshToken(refreshToken).orElseThrow(() ->
-                new IllegalArgumentException("유효하지 않은 refreshToken입니다."));
+                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         if (!refreshToken.equals(member.getRefreshToken())) {
-            throw new IllegalArgumentException("유효하지 않은 refreshToken입니다.");
+            throw new GeneralException(ErrorStatus.MEMBER_NOT_FOUND);
         }
 
         // 재발급
         String newAccessToken = jwtUtil.createAccessToken(member.getEmail());
         String newRefreshToken = jwtUtil.createRefreshToken(member.getEmail());
+
+        member.setAccessToken(newAccessToken);
+        member.setRefreshToken(refreshToken);
 
         return ReIssueTokenResponse.of(newAccessToken, newRefreshToken);
     }
