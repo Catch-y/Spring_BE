@@ -7,8 +7,8 @@ import umc.catchy.domain.member.domain.Member;
 public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Optional<Member> findByEmail(String email);
-    Optional<Member> findByProviderId(Long providerId);
+    Optional<Member> findByProviderId(String providerId);
     Optional<Member> findByNickname(String nickname);
-    Optional<Member> findByEmailAndProviderId(String email, Long providerId);
+    Optional<Member> findByEmailAndProviderId(String email, String providerId);
     Optional<Member> findByRefreshToken(String refreshToken);
 }

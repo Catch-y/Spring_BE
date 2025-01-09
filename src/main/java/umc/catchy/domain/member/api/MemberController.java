@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -56,12 +57,26 @@ public class MemberController {
         return BaseResponse.onSuccess(SuccessStatus._CREATED, memberService.signUp(request, profileImage, socialType));
     }
 
-    @PostMapping("/login")
+    @PostMapping("/login/{platform}")
     @Operation(summary = "소셜 로그인 API",
             description = "카카오/애플 계정의 존재 여부 확인")
-    public BaseResponse<LoginResponse> login(@RequestBody @Valid LoginRequest request) {
+    public BaseResponse<LoginResponse> login(@Parameter(
+            name = "platform",
+            description = "소셜 로그인 플랫폼 (KAKAO 또는 APPLE)",
+            required = true,
+            in = ParameterIn.PATH
+    )@PathVariable("platform") String platform, @RequestBody @Valid LoginRequest request) {
 
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.login(request));
+        SocialType socialType;
+
+        try {
+            socialType = SocialType.valueOf(platform.toUpperCase());
+
+        } catch (IllegalArgumentException e) {
+            return BaseResponse.onFailure(ErrorStatus.PLATFORM_BAD_REQUEST);
+        }
+
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.login(request, socialType));
     }
 
     @PostMapping("/reissue")
@@ -70,6 +85,12 @@ public class MemberController {
             @RequestBody @Valid ReIssueTokenRequest request) {
 
         return BaseResponse.onSuccess(SuccessStatus._CREATED, memberService.reIssue(request));
+    }
+
+    @GetMapping("/token/kakao")
+    @Operation(summary = "인가코드를 통해 카카오 액세스 토큰 받아오기", description = "테스트용 입니다")
+    public BaseResponse<String> getAccessToken(String code) {
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.getKakaoAccessToken(code));
     }
 
 }
