@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import umc.catchy.domain.member.api.MemberController;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.code.ErrorReasonDTO;
 import umc.catchy.global.common.response.status.ErrorStatus;
@@ -23,7 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Slf4j
-@RestControllerAdvice(annotations = {RestController.class})
+@RestControllerAdvice(annotations = {RestController.class}, basePackageClasses = {MemberController.class})
 @RequiredArgsConstructor
 public class ExceptionAdvice extends ResponseEntityExceptionHandler {
 
