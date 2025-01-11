@@ -79,12 +79,10 @@ public class MemberController {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.login(request, socialType));
     }
 
-    @PostMapping("/reissue")
+    @GetMapping("/reissue")
     @Operation(summary = "토큰 재발급 API", description = "refresh token을 통한 access token, refresh token 재발급")
-    public BaseResponse<ReIssueTokenResponse> reIssue(
-            @RequestBody @Valid ReIssueTokenRequest request) {
-
-        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberService.reIssue(request));
+    public BaseResponse<ReIssueTokenResponse> reIssue() {
+        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberService.reIssue());
     }
 
     @GetMapping("/token/kakao")

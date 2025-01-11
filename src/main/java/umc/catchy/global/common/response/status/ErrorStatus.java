@@ -26,6 +26,11 @@ public enum ErrorStatus implements BaseErrorCode {
     EMAIL_DUPLICATE(HttpStatus.CONFLICT, "MEMBER409", "이미 사용 중인 이메일입니다."),
     NICKNAME_DUPLICATE(HttpStatus.CONFLICT, "MEMBER409", "이미 사용 중인 닉네임입니다."),
 
+    // 토큰 관련 에러
+    INVALID_TOKEN(HttpStatus.BAD_REQUEST, "TOKEN400", "유효하지 않은 토큰입니다."),
+    TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "TOKEN401", "만료된 토큰입니다."),
+    UNSUPPORTED_TOKEN(HttpStatus.BAD_REQUEST, "TOKEN402", "지원하지 않는 형식의 토큰입니다."),
+    NOT_FOUND_TOKEN(HttpStatus.NOT_FOUND, "TOKEN404", "토큰의 클레임이 비어있습니다.")
     ;
 
     private final HttpStatus httpStatus;
