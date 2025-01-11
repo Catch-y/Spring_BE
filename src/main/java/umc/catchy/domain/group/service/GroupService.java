@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.group.dao.GroupRepository;
 import umc.catchy.domain.group.domain.Groups;
 import umc.catchy.domain.group.dto.request.InviteCodeRequest;
+import umc.catchy.domain.group.dto.response.GroupInfoResponse;
 import umc.catchy.domain.group.dto.response.GroupJoinResponse;
 import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
 import umc.catchy.domain.mapping.memberGroup.domain.MemberGroup;
@@ -36,5 +37,18 @@ public class GroupService {
         memberGroupRepository.save(memberGroup);
 
         return new GroupJoinResponse(true, "Successfully joined the group.");
+    }
+
+    @Transactional(readOnly = true)
+    public GroupInfoResponse getGroupInfoByInviteCode(String inviteCode) {
+        Groups group = groupRepository.findByInviteCode(inviteCode)
+                .orElseThrow(() -> new IllegalArgumentException(ErrorStatus.GROUP_INVITE_CODE_INVALID.getMessage()));
+
+        return GroupInfoResponse.builder()
+                .groupName(group.getGroupName())
+                .groupLocation(group.getGroupLocation())
+                .promiseTime(group.getPromiseTime())
+                .groupImage(group.getGroupImage())
+                .build();
     }
 }
