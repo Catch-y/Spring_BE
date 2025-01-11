@@ -10,6 +10,7 @@ import umc.catchy.domain.group.dto.response.GroupJoinResponse;
 import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
 import umc.catchy.domain.mapping.memberGroup.domain.MemberGroup;
 import umc.catchy.domain.member.domain.Member;
+import umc.catchy.global.common.response.status.ErrorStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -21,16 +22,16 @@ public class GroupService {
     @Transactional
     public GroupJoinResponse joinGroupByInviteCode(InviteCodeRequest request) {
         Groups group = groupRepository.findByInviteCode(request.getInviteCode())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid invite code."));
+                .orElseThrow(() -> new IllegalArgumentException(ErrorStatus.GROUP_INVITE_CODE_INVALID.getMessage()));
 
         if (memberGroupRepository.existsByGroupIdAndMemberId(group.getId(), request.getMemberId())) {
-            return new GroupJoinResponse(false, "You are already a member of this group.");
+            throw new IllegalArgumentException(ErrorStatus.GROUP_MEMBER_ALREADY_EXISTS.getMessage());
         }
 
         MemberGroup memberGroup = MemberGroup.builder()
                 .promiseTime(group.getPromiseTime())
                 .group(group)
-                .member(new Member(request.getMemberId())) // MemberID 클라이언트에서 입력 -> 추후 수정
+                .member(new Member(request.getMemberId()))
                 .build();
         memberGroupRepository.save(memberGroup);
 
