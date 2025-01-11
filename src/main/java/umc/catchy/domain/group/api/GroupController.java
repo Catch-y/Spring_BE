@@ -1,5 +1,6 @@
 package umc.catchy.domain.group.api;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +19,7 @@ public class GroupController {
     private final GroupService groupService;
 
     @PostMapping("/join")
-    public ResponseEntity<GroupJoinResponse> joinGroupByInviteCode(@RequestBody InviteCodeRequest request) {
+    public ResponseEntity<GroupJoinResponse> joinGroupByInviteCode(@Valid @RequestBody InviteCodeRequest request) {
         GroupJoinResponse response = groupService.joinGroupByInviteCode(request);
         return ResponseEntity.ok(response);
     }
