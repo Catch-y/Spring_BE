@@ -31,6 +31,11 @@ public enum ErrorStatus implements BaseErrorCode {
     GROUP_MEMBER_ALREADY_EXISTS(HttpStatus.CONFLICT, "GROUP409", "이미 그룹에 가입된 회원입니다."),
     GROUP_NOT_FOUND(HttpStatus.NOT_FOUND, "GROUP404", "그룹을 찾을 수 없습니다."),
 
+    // 토큰 관련 에러
+    INVALID_TOKEN(HttpStatus.BAD_REQUEST, "TOKEN400", "유효하지 않은 토큰입니다."),
+    TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "TOKEN401", "만료된 토큰입니다."),
+    UNSUPPORTED_TOKEN(HttpStatus.BAD_REQUEST, "TOKEN402", "지원하지 않는 형식의 토큰입니다."),
+    NOT_FOUND_TOKEN(HttpStatus.NOT_FOUND, "TOKEN404", "토큰의 클레임이 비어있습니다."),
     ;
 
     private final HttpStatus httpStatus;

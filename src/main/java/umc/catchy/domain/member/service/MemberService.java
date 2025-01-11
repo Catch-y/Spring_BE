@@ -27,14 +27,14 @@ import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
-import umc.catchy.domain.member.dto.request.ReIssueTokenRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.response.LoginResponse;
 import umc.catchy.domain.member.dto.response.ReIssueTokenResponse;
 import umc.catchy.domain.member.dto.response.SignUpResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
-import umc.catchy.global.util.JWTUtil;
+import umc.catchy.global.util.JwtUtil;
+import umc.catchy.global.util.SecurityUtil;
 
 @Service
 @RequiredArgsConstructor
@@ -42,7 +42,7 @@ import umc.catchy.global.util.JWTUtil;
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    private final JWTUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
     public SignUpResponse signUp(SignUpRequest request, MultipartFile profileImage, SocialType socialType) {
         String accessToken = request.accessToken();
@@ -103,22 +103,18 @@ public class MemberService {
         return LoginResponse.of(member, accessToken, refreshToken);
     }
 
-    public ReIssueTokenResponse reIssue(ReIssueTokenRequest request) {
-        String refreshToken = request.refreshToken();
+    public ReIssueTokenResponse reIssue() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
 
-        Member member = memberRepository.findByRefreshToken(refreshToken).orElseThrow(() ->
+        Member member = memberRepository.findById(memberId).orElseThrow(() ->
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-
-        if (!refreshToken.equals(member.getRefreshToken())) {
-            throw new GeneralException(ErrorStatus.MEMBER_NOT_FOUND);
-        }
 
         // 재발급
         String newAccessToken = jwtUtil.createAccessToken(member.getEmail());
         String newRefreshToken = jwtUtil.createRefreshToken(member.getEmail());
 
         member.setAccessToken(newAccessToken);
-        member.setRefreshToken(refreshToken);
+        member.setRefreshToken(newRefreshToken);
 
         return ReIssueTokenResponse.of(newAccessToken, newRefreshToken);
     }
@@ -213,7 +209,7 @@ public class MemberService {
             StringBuilder sb = new StringBuilder();
             sb.append("grant_type=authorization_code");
             sb.append("&client_id="); // TODO REST_API_KEY 입력
-            sb.append("&client_secret=");
+            sb.append("&client_secret="); // TODO SECRET_KEY 입력
             sb.append("&redirect_uri=http://localhost:8080/login/oauth2/code/kakao"); // TODO 인가코드 받은 redirect_uri 입력
             sb.append("&code=" + code);
             bw.write(sb.toString());

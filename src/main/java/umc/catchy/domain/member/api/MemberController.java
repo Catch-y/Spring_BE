@@ -14,10 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
-import umc.catchy.domain.member.dto.request.ReIssueTokenRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.response.LoginResponse;
 import umc.catchy.domain.member.dto.response.ReIssueTokenResponse;
@@ -79,12 +77,10 @@ public class MemberController {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.login(request, socialType));
     }
 
-    @PostMapping("/reissue")
+    @GetMapping("/reissue")
     @Operation(summary = "토큰 재발급 API", description = "refresh token을 통한 access token, refresh token 재발급")
-    public BaseResponse<ReIssueTokenResponse> reIssue(
-            @RequestBody @Valid ReIssueTokenRequest request) {
-
-        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberService.reIssue(request));
+    public BaseResponse<ReIssueTokenResponse> reIssue() {
+        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberService.reIssue());
     }
 
     @GetMapping("/token/kakao")
