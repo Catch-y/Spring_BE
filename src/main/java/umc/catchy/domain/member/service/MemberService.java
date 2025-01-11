@@ -27,7 +27,6 @@ import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
-import umc.catchy.domain.member.dto.request.ReIssueTokenRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.response.LoginResponse;
 import umc.catchy.domain.member.dto.response.ReIssueTokenResponse;
