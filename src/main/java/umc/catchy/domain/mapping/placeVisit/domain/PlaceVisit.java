@@ -1,27 +1,30 @@
-package umc.catchy.domain.bookmark.domain;
+package umc.catchy.domain.mapping.placeVisit.domain;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import umc.catchy.domain.common.BaseTimeEntity;
-import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.member.domain.Member;
+import umc.catchy.domain.place.domain.Place;
 
 @Entity
 @Getter
-public class BookMark extends BaseTimeEntity {
+public class PlaceVisit extends BaseTimeEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "bookmark_id")
+    @Column(name = "placeVisit_id")
     private Long id;
+
+    private boolean isVisited;
+
+    private boolean isLiked;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id")
-    private Course course;
+    @JoinColumn(name = "place_id")
+    private Place place;
 
-    @Enumerated(EnumType.STRING)
-    private BookMarkStatus status;
 }

@@ -1,4 +1,4 @@
-package umc.catchy.domain.like.domain;
+package umc.catchy.domain.placeReview.domain;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -8,10 +8,15 @@ import umc.catchy.domain.place.domain.Place;
 
 @Entity
 @Getter
-public class Likes extends BaseTimeEntity {
+public class PlaceReview extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "placeReview_id")
     private Long id;
+
+    private Integer rating;
+
+    private String comment;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
@@ -21,6 +26,4 @@ public class Likes extends BaseTimeEntity {
     @JoinColumn(name = "place_id")
     private Place place;
 
-    @Enumerated(EnumType.STRING)
-    private LikeStatus status;
 }

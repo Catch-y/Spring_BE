@@ -13,5 +13,6 @@ public class Location extends BaseTimeEntity {
     private Long id;
 
     private String upperLocation;
+
     private String lowerLocation;
 }

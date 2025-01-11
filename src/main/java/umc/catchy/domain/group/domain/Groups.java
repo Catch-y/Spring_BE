@@ -14,9 +14,15 @@ public class Groups extends BaseTimeEntity {
     @Column(name = "group_id")
     private Long id;
 
+    @Column(length = 20)
     private String groupName;
+
     private String groupImage;
+
     private String groupLocation;
+
+    @Column(length = 36)
     private String inviteCode;
+
     private LocalDateTime promiseTime;
 }
