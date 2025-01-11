@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.group.dao.GroupRepository;
 import umc.catchy.domain.group.domain.Groups;
-import umc.catchy.domain.group.dto.request.InviteCodeRequest;
 import umc.catchy.domain.group.dto.response.GroupInfoResponse;
 import umc.catchy.domain.group.dto.response.GroupJoinResponse;
 import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
