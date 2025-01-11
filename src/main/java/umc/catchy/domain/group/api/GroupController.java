@@ -18,6 +18,7 @@ import umc.catchy.domain.group.dto.response.GroupJoinResponse;
 import umc.catchy.domain.group.service.GroupService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
+import umc.catchy.global.util.SecurityUtil;
 
 @Tag(name = "Group", description = "그룹 관련 API")
 @RestController
@@ -30,7 +31,7 @@ public class GroupController {
     @Operation(summary = "그룹 초대 코드로 가입", description = "초대 코드를 입력하여 사용자가 그룹에 가입합니다.")
     @PostMapping("/join")
     public ResponseEntity<BaseResponse<GroupJoinResponse>> joinGroupByInviteCode(@Valid @RequestBody InviteCodeRequest request) {
-        GroupJoinResponse response = groupService.joinGroupByInviteCode(request);
+        GroupJoinResponse response = groupService.joinGroupByInviteCode(request.getInviteCode());
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 

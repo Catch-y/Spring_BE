@@ -43,11 +43,6 @@ public class Member extends BaseTimeEntity {
 
     private Integer gpt_count;
 
-    //사용자 인증 도입 후에는 필요없음
-    public Member(Long id) {
-        this.id = id;
-    }
-
     public static Member createMember(
             String providerId,
             String email,
