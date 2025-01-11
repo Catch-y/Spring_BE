@@ -38,7 +38,7 @@ public class GroupController {
     @Operation(summary = "초대 코드로 그룹 정보 조회", description = "초대 코드를 이용하여 그룹 이름, 장소, 약속 날짜 및 그룹 이미지를 조회합니다.")
     @GetMapping("/invite/{inviteCode}")
     public ResponseEntity<BaseResponse<GroupInfoResponse>> getGroupInfoByInviteCode(
-            @Parameter(description = "그룹 초대 코드", required = true, example = "INV123")
+            @Parameter(description = "그룹 초대 코드", required = true)
             @PathVariable String inviteCode
     ) {
         GroupInfoResponse response = groupService.getGroupInfoByInviteCode(inviteCode);
