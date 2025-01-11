@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "jwt")
 @Getter
 @Setter
-public class JWTProperties {
+public class JwtProperties {
     private String secret;
     private Long accessTokenValidity;
     private Long refreshTokenValidity;

@@ -2,39 +2,40 @@ package umc.catchy.global.util;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import umc.catchy.domain.jwt.domain.TokenProvider;
+import umc.catchy.domain.jwt.domain.JwtTokenProvider;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
-import umc.catchy.infra.config.jwt.JWTProperties;
+import umc.catchy.global.common.response.status.ErrorStatus;
+import umc.catchy.global.error.exception.GeneralException;
+import umc.catchy.infra.config.jwt.JwtProperties;
 
 @Component
 @RequiredArgsConstructor
-public class JWTUtil {
+public class JwtUtil {
 
-    private final TokenProvider tokenProvider;
-    private final JWTProperties jwtProperties;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtProperties jwtProperties;
     private final MemberRepository memberRepository;
 
     public String createAccessToken(String email) {
-        return tokenProvider.createToken(email, jwtProperties.getAccessTokenValidity());
+        return jwtTokenProvider.createToken(email, jwtProperties.getAccessTokenValidity());
     }
 
     public String createRefreshToken(String email) {
-        return tokenProvider.createToken(email, jwtProperties.getRefreshTokenValidity());
+        return jwtTokenProvider.createToken(email, jwtProperties.getRefreshTokenValidity());
     }
 
     public boolean validateToken(String token) {
-        return tokenProvider.validateToken(token);
+        return jwtTokenProvider.validateToken(token);
     }
 
     public String getEmailFromToken(String token) {
-        return tokenProvider.getEmailFromToken(token);
+        return jwtTokenProvider.getEmailFromToken(token);
     }
 
     public Long getMemberIdFromToken(String token) {
-        String email = getEmailFromToken(token);
-        Member member = memberRepository.findByEmail(email).orElseThrow(() ->
-                new IllegalArgumentException("존재하지 않는 계정입니다.")
+        Member member = memberRepository.findByAccessToken(token).orElseThrow(() ->
+                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND)
         );
         return member.getId();
     }
