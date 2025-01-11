@@ -17,6 +17,8 @@ public class ActiveTime extends BaseTimeEntity {
     private Long id;
 
     private DayOfWeek dayOfWeek;
+
     private LocalDateTime startTime;
+
     private LocalDateTime endTime;
 }

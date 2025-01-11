@@ -15,11 +15,21 @@ public class Place extends BaseTimeEntity {
 
     private String placeName;
 
-    private String description;
+    private String placeDescription;
+
+    private String roadAddress; //도로명 주소
+
+    private String numberAddress; // 지번 주소
 
     private Double latitude; // 위도
 
     private Double longitude; // 경도
+
+    private String activeTime; // 영업시간
+
+    private String placeSite; // 장소 사이트
+
+    private String imageUrl; // 장소 이미지
 
     @OneToOne
     @JoinColumn(name = "category_id")

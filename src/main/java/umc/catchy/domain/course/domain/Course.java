@@ -19,12 +19,20 @@ public class Course extends BaseTimeEntity {
 
     private String courseName;
 
-    private LocalDateTime recommendTime;
+    private LocalDateTime recommendTimeStart;
+
+    private LocalDateTime recommendTimeEnd;
+
+    private String courseDescription;
 
     private Long participantsNumber;
 
     @Enumerated(EnumType.STRING)
     private CourseType courseType;
+
+    private boolean hasReview;
+
+    private Integer rating;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
