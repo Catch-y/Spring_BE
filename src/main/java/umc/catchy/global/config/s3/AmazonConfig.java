@@ -8,12 +8,14 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @Getter
+@Slf4j
 public class AmazonConfig {
 
     @Value("${cloud.aws.credentials.accessKey}")
@@ -31,7 +33,14 @@ public class AmazonConfig {
     private AWSCredentials awsCredentials;
 
     @PostConstruct
-    public void init() { this.awsCredentials = new BasicAWSCredentials(accessKey, secretKey); }
+    public void init() { this.awsCredentials = new BasicAWSCredentials(accessKey, secretKey);
+
+        // 로그 출력
+        log.info("AWS Access Key: {}", accessKey);
+        log.info("AWS Secret Key: {}", secretKey);
+        log.info("AWS Region: {}", region);
+        log.info("AWS S3 Bucket: {}", bucket);
+    }
 
     @Bean
     public AmazonS3 amazonS3() {
