@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
-import umc.catchy.domain.Uuid.repository.UuidRepository;
 import umc.catchy.global.config.s3.AmazonConfig;
 
 import java.io.IOException;
