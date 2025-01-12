@@ -24,6 +24,7 @@ public class CreateGroupResponse {
                 .groupName(group.getGroupName())
                 .groupLocation(group.getGroupLocation())
                 .groupImage(group.getGroupImage())
+                .inviteCode(group.getInviteCode())
                 .promiseTime(group.getPromiseTime())
                 .creatorNickname(creatorNickname)
                 .build();
