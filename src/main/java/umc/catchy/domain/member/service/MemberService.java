@@ -16,13 +16,22 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import net.minidev.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import umc.catchy.domain.category.dao.CategoryRepository;
+import umc.catchy.domain.category.domain.Category;
+import umc.catchy.domain.category.dto.request.CategorySurveyRequest;
+import umc.catchy.domain.mapping.memberCategory.dao.MemberCategoryRepository;
+import umc.catchy.domain.mapping.memberCategory.domain.MemberCategory;
+import umc.catchy.domain.mapping.memberCategory.dto.response.MemberCategoryCreatedResponse;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
@@ -42,6 +51,8 @@ import umc.catchy.global.util.SecurityUtil;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final CategoryRepository categoryRepository;
+    private final MemberCategoryRepository memberCategoryRepository;
     private final JwtUtil jwtUtil;
 
     public SignUpResponse signUp(SignUpRequest request, MultipartFile profileImage, SocialType socialType) {
@@ -266,5 +277,16 @@ public class MemberService {
                 nickname,
                 profileImageUrl,
                 socialType);
+    }
+
+    public MemberCategoryCreatedResponse createMemberCategory(CategorySurveyRequest request) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        List<Category> categories = categoryRepository.findAllByNameIn(request.getCategories());
+        List<MemberCategory> collect = categories.stream().map(category -> MemberCategory.builder().member(currentMember).category(category).build()).collect(Collectors.toList());
+
+        memberCategoryRepository.saveAll(collect);
+        return new MemberCategoryCreatedResponse(true,"member`s categories are created");
     }
 }
