@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,8 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
+import umc.catchy.domain.member.dto.request.ProfileRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.response.LoginResponse;
+import umc.catchy.domain.member.dto.response.ProfileResponse;
 import umc.catchy.domain.member.dto.response.ReIssueTokenResponse;
 import umc.catchy.domain.member.dto.response.SignUpResponse;
 import umc.catchy.domain.member.service.MemberService;
@@ -84,9 +87,20 @@ public class MemberController {
     }
 
     @GetMapping("/token/kakao")
-    @Operation(summary = "인가코드를 통해 카카오 액세스 토큰 받아오기", description = "테스트용 입니다")
+    @Operation(summary = "인가코드를 통해 카카오 액세스 토큰 받아오기", description = "실제로는 프론트에서 액세스 토큰을 지급함")
     public BaseResponse<String> getAccessToken(String code) {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.getKakaoAccessToken(code));
     }
 
+    @GetMapping("/mypage")
+    @Operation(summary = "프로필 조회 API", description = "현재 로그인된 사용자의 정보를 조회")
+    public BaseResponse<ProfileResponse> getProfile() {
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.getCurrentMember());
+    }
+
+    @PatchMapping("/mypage")
+    @Operation(summary = "프로필 변경 API", description = "현재 로그인된 사용자의 프로필 변경")
+    public BaseResponse<ProfileResponse> updateProfile(@RequestBody @Valid ProfileRequest request) {
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateMember(request));
+    }
 }
