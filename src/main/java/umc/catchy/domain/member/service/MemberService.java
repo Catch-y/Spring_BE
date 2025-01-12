@@ -36,8 +36,10 @@ import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
+import umc.catchy.domain.member.dto.request.ProfileRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.response.LoginResponse;
+import umc.catchy.domain.member.dto.response.ProfileResponse;
 import umc.catchy.domain.member.dto.response.ReIssueTokenResponse;
 import umc.catchy.domain.member.dto.response.SignUpResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
@@ -130,6 +132,100 @@ public class MemberService {
         return ReIssueTokenResponse.of(newAccessToken, newRefreshToken);
     }
 
+    public String getKakaoAccessToken (String code) {
+        String access_Token = "";
+        String refresh_Token = "";
+        String reqURL = "https://kauth.kakao.com/oauth/token";
+
+        try {
+            URL url = new URL(reqURL);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+            //POST 요청을 위해 기본값이 false인 setDoOutput을 true로
+            conn.setRequestMethod("POST");
+            conn.setDoOutput(true);
+
+            //POST 요청에 필요로 요구하는 파라미터 스트림을 통해 전송
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
+            StringBuilder sb = new StringBuilder();
+            sb.append("grant_type=authorization_code");
+            sb.append("&client_id="); // TODO REST_API_KEY 입력
+            sb.append("&client_secret="); // TODO SECRET_KEY 입력
+            sb.append("&redirect_uri=http://localhost:8080/login/oauth2/code/kakao"); // TODO 인가코드 받은 redirect_uri 입력
+            sb.append("&code=" + code);
+            bw.write(sb.toString());
+            bw.flush();
+
+            //결과 코드가 200이라면 성공
+            int responseCode = conn.getResponseCode();
+            System.out.println("responseCode : " + responseCode);
+
+            if (responseCode != 200) {
+                BufferedReader errorReader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+                String errorLine = "";
+                StringBuilder errorResult = new StringBuilder();
+                while ((errorLine = errorReader.readLine()) != null) {
+                    errorResult.append(errorLine);
+                }
+                System.out.println("Error response body: " + errorResult.toString());
+                errorReader.close();
+            }
+
+            //요청을 통해 얻은 JSON타입의 Response 메세지 읽어오기
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String line = "";
+            String result = "";
+
+            while ((line = br.readLine()) != null) {
+                result += line;
+            }
+            System.out.println("response body : " + result);
+
+            //Gson 라이브러리에 포함된 클래스로 JSON파싱 객체 생성
+            JsonParser parser = new JsonParser();
+            JsonElement element = parser.parse(result);
+
+            access_Token = element.getAsJsonObject().get("access_token").getAsString();
+            refresh_Token = element.getAsJsonObject().get("refresh_token").getAsString();
+
+            System.out.println("access_token : " + access_Token);
+            System.out.println("refresh_token : " + refresh_Token);
+
+            br.close();
+            bw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return access_Token;
+    }
+
+    public ProfileResponse getCurrentMember() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId).orElseThrow(() ->
+                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        return ProfileResponse.of(member);
+    }
+
+    public ProfileResponse updateMember(ProfileRequest request) {
+        // 닉네임 중복 검사
+        memberRepository.findByNickname(request.nickname())
+                .ifPresent(member -> {
+                    throw new GeneralException(ErrorStatus.NICKNAME_DUPLICATE);
+                });
+
+        Long memberId = SecurityUtil.getCurrentMemberId();
+
+        Member member = memberRepository.findById(memberId).orElseThrow(() ->
+                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+
+        member.setNickname(request.nickname());
+
+        return ProfileResponse.of(member);
+    }
+
     private Optional<Member> getMemberByTokenAndSocialType(String token, SocialType socialType) {
         Map<String, String> info = new HashMap<>();
 
@@ -200,74 +296,6 @@ public class MemberService {
         }
 
         return info;
-    }
-
-    public String getKakaoAccessToken (String code) {
-        String access_Token = "";
-        String refresh_Token = "";
-        String reqURL = "https://kauth.kakao.com/oauth/token";
-
-        try {
-            URL url = new URL(reqURL);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-            //POST 요청을 위해 기본값이 false인 setDoOutput을 true로
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-
-            //POST 요청에 필요로 요구하는 파라미터 스트림을 통해 전송
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
-            StringBuilder sb = new StringBuilder();
-            sb.append("grant_type=authorization_code");
-            sb.append("&client_id="); // TODO REST_API_KEY 입력
-            sb.append("&client_secret="); // TODO SECRET_KEY 입력
-            sb.append("&redirect_uri=http://localhost:8080/login/oauth2/code/kakao"); // TODO 인가코드 받은 redirect_uri 입력
-            sb.append("&code=" + code);
-            bw.write(sb.toString());
-            bw.flush();
-
-            //결과 코드가 200이라면 성공
-            int responseCode = conn.getResponseCode();
-            System.out.println("responseCode : " + responseCode);
-
-            if (responseCode != 200) {
-                BufferedReader errorReader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
-                String errorLine = "";
-                StringBuilder errorResult = new StringBuilder();
-                while ((errorLine = errorReader.readLine()) != null) {
-                    errorResult.append(errorLine);
-                }
-                System.out.println("Error response body: " + errorResult.toString());
-                errorReader.close();
-            }
-
-            //요청을 통해 얻은 JSON타입의 Response 메세지 읽어오기
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            String line = "";
-            String result = "";
-
-            while ((line = br.readLine()) != null) {
-                result += line;
-            }
-            System.out.println("response body : " + result);
-
-            //Gson 라이브러리에 포함된 클래스로 JSON파싱 객체 생성
-            JsonParser parser = new JsonParser();
-            JsonElement element = parser.parse(result);
-
-            access_Token = element.getAsJsonObject().get("access_token").getAsString();
-            refresh_Token = element.getAsJsonObject().get("refresh_token").getAsString();
-
-            System.out.println("access_token : " + access_Token);
-            System.out.println("refresh_token : " + refresh_Token);
-
-            br.close();
-            bw.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return access_Token;
     }
 
     private Member createMemberEntity(String providerId, String email, String nickname, String profileImageUrl, SocialType socialType) {

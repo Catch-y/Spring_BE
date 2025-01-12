@@ -25,6 +25,7 @@ public class Member extends BaseTimeEntity {
 
     private String email;
 
+    @Setter
     private String nickname;
 
     private String profileImage;
