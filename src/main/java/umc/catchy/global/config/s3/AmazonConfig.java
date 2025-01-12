@@ -36,10 +36,10 @@ public class AmazonConfig {
     public void init() { this.awsCredentials = new BasicAWSCredentials(accessKey, secretKey);
 
         // 로그 출력
+        log.info("AWS S3 Bucket: {}", bucket);
+        log.info("AWS Region: {}", region);
         log.info("AWS Access Key: {}", accessKey);
         log.info("AWS Secret Key: {}", secretKey);
-        log.info("AWS Region: {}", region);
-        log.info("AWS S3 Bucket: {}", bucket);
     }
 
     @Bean
