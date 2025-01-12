@@ -18,17 +18,17 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 public class AmazonConfig {
 
+    @Value("${cloud.aws.s3.bucket}")
+    private String bucket;
+
+    @Value("${cloud.aws.region.static}")
+    private String region;
+
     @Value("${cloud.aws.credentials.accessKey}")
     private String accessKey;
 
     @Value("${cloud.aws.credentials.secretKey}")
     private String secretKey;
-
-    @Value("${cloud.aws.region.static}")
-    private String region;
-
-    @Value("${cloud.aws.s3.bucket}")
-    private String bucket;
 
     private AWSCredentials awsCredentials;
 
