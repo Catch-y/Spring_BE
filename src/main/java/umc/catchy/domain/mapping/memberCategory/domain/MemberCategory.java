@@ -1,6 +1,7 @@
 package umc.catchy.domain.mapping.memberCategory.domain;
 
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.common.BaseTimeEntity;
@@ -21,4 +22,12 @@ public class MemberCategory extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @Builder
+    public static MemberCategory createMemberCategory(Member member, Category category) {
+        return MemberCategory.builder()
+                .member(member)
+                .category(category)
+                .build();
+    }
 }
