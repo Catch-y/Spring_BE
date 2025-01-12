@@ -282,10 +282,8 @@ public class MemberService {
     public MemberCategoryCreatedResponse createMemberCategory(CategorySurveyRequest request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-
         List<Category> categories = categoryRepository.findAllByNameIn(request.getCategories());
-        List<MemberCategory> collect = categories.stream().map(category -> MemberCategory.builder().member(currentMember).category(category).build()).collect(Collectors.toList());
-
+        List<MemberCategory> collect = categories.stream().map(category -> MemberCategory.createMemberCategory(currentMember, category)).collect(Collectors.toList());
         memberCategoryRepository.saveAll(collect);
         return new MemberCategoryCreatedResponse(true,"member`s categories are created");
     }
