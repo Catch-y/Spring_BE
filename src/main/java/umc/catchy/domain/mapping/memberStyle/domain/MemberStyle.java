@@ -1,13 +1,14 @@
 package umc.catchy.domain.mapping.memberStyle.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
+import lombok.*;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.style.domain.Style;
 
 @Entity
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MemberStyle extends BaseTimeEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,4 +22,16 @@ public class MemberStyle extends BaseTimeEntity{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "style_id")
     private Style style;
+
+    @Builder
+    public MemberStyle(Member member, Style style) {
+        this.member = member;
+        this.style = style;
+    }
+    public static MemberStyle createMemberStyle(Member member, Style style) {
+        return MemberStyle.builder()
+                .member(member)
+                .style(style)
+                .build();
+    }
 }
