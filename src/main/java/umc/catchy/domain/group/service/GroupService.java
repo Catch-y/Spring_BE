@@ -66,7 +66,7 @@ public class GroupService {
     @Transactional
     public CreateGroupResponse createGroup(CreateGroupRequest request, Long memberId) {
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         Groups group = Groups.builder()
                 .groupName(request.getGroupName())
@@ -85,6 +85,6 @@ public class GroupService {
                 .build();
         memberGroupRepository.save(memberGroup);
 
-        return CreateGroupResponse.fromEntity(savedGroup);
+        return CreateGroupResponse.fromEntity(savedGroup, member.getNickname());
     }
 }

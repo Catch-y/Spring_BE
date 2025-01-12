@@ -1,13 +1,13 @@
 package umc.catchy.domain.group.dto.response;
 
+import lombok.Builder;
 import lombok.Getter;
-import lombok.Setter;
 import umc.catchy.domain.group.domain.Groups;
 
 import java.time.LocalDateTime;
 
 @Getter
-@Setter
+@Builder
 public class CreateGroupResponse {
 
     private Long groupId;
@@ -16,15 +16,16 @@ public class CreateGroupResponse {
     private String groupImage;
     private String inviteCode;
     private LocalDateTime promiseTime;
+    private String creatorNickname;
 
-    public static CreateGroupResponse fromEntity(Groups group) {
-        CreateGroupResponse response = new CreateGroupResponse();
-        response.setGroupId(group.getId());
-        response.setGroupName(group.getGroupName());
-        response.setGroupLocation(group.getGroupLocation());
-        response.setGroupImage(group.getGroupImage());
-        response.setInviteCode(group.getInviteCode());
-        response.setPromiseTime(group.getPromiseTime());
-        return response;
+    public static CreateGroupResponse fromEntity(Groups group, String creatorNickname) {
+        return CreateGroupResponse.builder()
+                .groupId(group.getId())
+                .groupName(group.getGroupName())
+                .groupLocation(group.getGroupLocation())
+                .groupImage(group.getGroupImage())
+                .promiseTime(group.getPromiseTime())
+                .creatorNickname(creatorNickname)
+                .build();
     }
 }

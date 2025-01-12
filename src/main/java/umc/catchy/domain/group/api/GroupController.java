@@ -34,12 +34,13 @@ public class GroupController {
 
     @Operation(summary = "그룹 생성", description = "그룹을 생성합니다.")
     @PostMapping(consumes = "multipart/form-data")
-    public ResponseEntity<CreateGroupResponse> createGroup(@Validated @ModelAttribute CreateGroupRequest request) {
+    public ResponseEntity<BaseResponse<CreateGroupResponse>> createGroup(@Validated @ModelAttribute CreateGroupRequest request) {
 
         Long memberId = SecurityUtil.getCurrentMemberId();
         CreateGroupResponse response = groupService.createGroup(request, memberId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._CREATED, response));
     }
+
     @Operation(summary = "그룹 초대 코드로 가입", description = "초대 코드를 입력하여 사용자가 그룹에 가입합니다.")
     @PostMapping("/join")
     public ResponseEntity<BaseResponse<GroupJoinResponse>> joinGroupByInviteCode(@Valid @RequestBody InviteCodeRequest request) {
