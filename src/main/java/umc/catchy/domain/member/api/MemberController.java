@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import umc.catchy.domain.category.dto.request.CategorySurveyRequest;
+import umc.catchy.domain.mapping.memberCategory.dto.response.MemberCategoryCreatedResponse;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.ProfileRequest;
@@ -91,7 +93,7 @@ public class MemberController {
     public BaseResponse<String> getAccessToken(String code) {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.getKakaoAccessToken(code));
     }
-
+  
     @GetMapping("/mypage")
     @Operation(summary = "프로필 조회 API", description = "현재 로그인된 사용자의 정보를 조회")
     public BaseResponse<ProfileResponse> getProfile() {
@@ -102,5 +104,12 @@ public class MemberController {
     @Operation(summary = "프로필 변경 API", description = "현재 로그인된 사용자의 프로필 변경")
     public BaseResponse<ProfileResponse> updateProfile(@RequestBody @Valid ProfileRequest request) {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateMember(request));
+    }
+  
+    @PostMapping("/survey/category")
+    @Operation(summary = "사용자 취향설문 카테고리 저장 API ", description = "사용자 취향설문 1,2단계를 저장")
+    public BaseResponse<MemberCategoryCreatedResponse> createMemberCategory(@RequestBody CategorySurveyRequest request) {
+        MemberCategoryCreatedResponse response = memberService.createMemberCategory(request);
+        return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
     }
 }
