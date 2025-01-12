@@ -11,6 +11,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import umc.catchy.global.error.exception.CustomAccessDeniedHandler;
+import umc.catchy.global.error.exception.CustomAuthenticationEntryPoint;
 import umc.catchy.infra.config.security.JwtAuthenticationFilter;
 import umc.catchy.infra.config.security.JwtExceptionFilter;
 
@@ -20,7 +22,8 @@ import umc.catchy.infra.config.security.JwtExceptionFilter;
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtExceptionFilter jwtExceptionFilter;
-
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -37,8 +40,13 @@ public class SecurityConfig {
                                 , "/swagger-ui.html/**", "/v3/api-docs/**"
                                 , "/login/**", "/member/token/kakao"
                                 , "/h2-console/**", "/member/login/**"
-                                , "/member/signup/**").permitAll()
-                        .anyRequest().authenticated());
+                                , "/member/signup/**","/group/invite/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(customAuthenticationEntryPoint) // 401 처리
+                        .accessDeniedHandler(customAccessDeniedHandler) // 403 처리
+                );
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtExceptionFilter, JwtAuthenticationFilter.class);
