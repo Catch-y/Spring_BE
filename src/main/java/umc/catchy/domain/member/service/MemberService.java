@@ -15,24 +15,30 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.time.DayOfWeek;
+import java.util.*;
+
 import lombok.RequiredArgsConstructor;
 import net.minidev.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import umc.catchy.domain.activetime.dao.ActiveTimeRepository;
+import umc.catchy.domain.activetime.domain.ActiveTime;
+import umc.catchy.domain.mapping.memberActivetime.dao.MemberActiveTimeRepository;
+import umc.catchy.domain.mapping.memberActivetime.domain.MemberActiveTime;
+import umc.catchy.domain.mapping.memberStyle.dao.MemberStyleRepository;
+import umc.catchy.domain.mapping.memberStyle.domain.MemberStyle;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.ProfileRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
-import umc.catchy.domain.member.dto.response.LoginResponse;
-import umc.catchy.domain.member.dto.response.ProfileResponse;
-import umc.catchy.domain.member.dto.response.ReIssueTokenResponse;
-import umc.catchy.domain.member.dto.response.SignUpResponse;
+import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
+import umc.catchy.domain.member.dto.response.*;
+import umc.catchy.domain.style.dao.StyleRepository;
+import umc.catchy.domain.style.domain.Style;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.JwtUtil;
@@ -44,6 +50,10 @@ import umc.catchy.global.util.SecurityUtil;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final StyleRepository styleRepository;
+    private final ActiveTimeRepository activeTimeRepository;
+    private final MemberActiveTimeRepository memberActiveTimeRepository;
+    private final MemberStyleRepository memberStyleRepository;
     private final JwtUtil jwtUtil;
 
     public SignUpResponse signUp(SignUpRequest request, MultipartFile profileImage, SocialType socialType) {
@@ -294,5 +304,29 @@ public class MemberService {
                 nickname,
                 profileImageUrl,
                 socialType);
+    }
+
+    public StyleAndActiveTimeSurveyCreatedResponse createStyleAndActiveTimeSurvey(StyleAndActiveTimeSurveyRequest request) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        List<Style> styleList = styleRepository.findAllByNameIn(request.getStyleNames());
+        List<ActiveTime> activeTimeList = activeTimeRepository.findAllByDayOfWeekInAndStartTimeAndEndTime(request.getDaysOfWeeks()
+                ,request.getStartTime(),request.getEndTime()).orElseGet(() -> {
+                    List<ActiveTime> newActiveTimeList = new ArrayList<>();
+                    for (DayOfWeek dayOfWeek : request.getDaysOfWeeks()) {
+                        newActiveTimeList.add(
+                        ActiveTime.builder()
+                                .dayOfWeek(dayOfWeek)
+                                .startTime(request.getStartTime())
+                                .endTime(request.getEndTime())
+                                .build()); }
+                    activeTimeRepository.saveAll(newActiveTimeList);
+                    return newActiveTimeList;
+                }
+        );
+        styleList.stream().map(style -> memberStyleRepository.save(MemberStyle.createMemberStyle(currentMember, style)));
+        activeTimeList.stream().map(activeTime -> memberActiveTimeRepository.save(MemberActiveTime.createMemberActiveTime(currentMember, activeTime)));
+        return new StyleAndActiveTimeSurveyCreatedResponse(true,"Styles and ActiveTimes are completely created ");
     }
 }
