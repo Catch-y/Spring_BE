@@ -3,8 +3,11 @@ package umc.catchy.domain.group.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.group.dao.GroupRepository;
 import umc.catchy.domain.group.domain.Groups;
+import umc.catchy.domain.group.dto.request.CreateGroupRequest;
+import umc.catchy.domain.group.dto.response.CreateGroupResponse;
 import umc.catchy.domain.group.dto.response.GroupInfoResponse;
 import umc.catchy.domain.group.dto.response.GroupJoinResponse;
 import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
@@ -58,5 +61,30 @@ public class GroupService {
                 .promiseTime(group.getPromiseTime())
                 .groupImage(group.getGroupImage())
                 .build();
+    }
+
+    @Transactional
+    public CreateGroupResponse createGroup(CreateGroupRequest request, Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        Groups group = Groups.builder()
+                .groupName(request.getGroupName())
+                .groupImage(request.getGroupImage() != null ? request.getGroupImage().getOriginalFilename() : null)
+                .groupLocation(request.getGroupLocation())
+                .inviteCode(request.getInviteCode())
+                .promiseTime(request.getPromiseTime())
+                .build();
+
+        Groups savedGroup = groupRepository.save(group);
+
+        MemberGroup memberGroup = MemberGroup.builder()
+                .promiseTime(savedGroup.getPromiseTime())
+                .member(member)
+                .group(savedGroup)
+                .build();
+        memberGroupRepository.save(memberGroup);
+
+        return CreateGroupResponse.fromEntity(savedGroup, member.getNickname());
     }
 }
