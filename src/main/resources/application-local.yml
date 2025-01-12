@@ -15,3 +15,15 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.H2Dialect
+
+cloud:
+  aws:
+    s3:
+      bucket: catchy-bucket
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
+    credentials:
+      accessKey: ${AWS_ACCESS_KEY}
+      secretKey: ${AWS_SECRET_KEY}
