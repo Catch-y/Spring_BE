@@ -17,6 +17,6 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
 
 jwt:
-  secret:
+  secret: REbyG7M0ukUxvuFaPmo/akm5TLVNv0Rdbz8C+UptDampEQseABDOfuVlYB1iFaatyYMLrAlipSpJQT/bpA96ZA==
   accessTokenValidity: 86400000 # 1 day
   refreshTokenValidity: 604800000 # 1 week
