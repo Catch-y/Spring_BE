@@ -1,14 +1,17 @@
 package umc.catchy.domain.activetime.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
+import lombok.*;
 import umc.catchy.domain.common.BaseTimeEntity;
 
 import java.time.DayOfWeek;
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Getter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class ActiveTime extends BaseTimeEntity {
 
     @Id
@@ -16,9 +19,10 @@ public class ActiveTime extends BaseTimeEntity {
     @Column(name = "activeTime_id")
     private Long id;
 
+    @Enumerated(EnumType.STRING)
     private DayOfWeek dayOfWeek;
 
-    private LocalDateTime startTime;
+    private LocalTime startTime;
 
-    private LocalDateTime endTime;
+    private LocalTime endTime;
 }
