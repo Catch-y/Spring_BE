@@ -15,6 +15,7 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
+import java.time.DayOfWeek;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,22 +28,28 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import umc.catchy.domain.activetime.dao.ActiveTimeRepository;
+import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.category.dto.request.CategorySurveyRequest;
+import umc.catchy.domain.mapping.memberActivetime.dao.MemberActiveTimeRepository;
+import umc.catchy.domain.mapping.memberActivetime.domain.MemberActiveTime;
 import umc.catchy.domain.mapping.memberCategory.dao.MemberCategoryRepository;
 import umc.catchy.domain.mapping.memberCategory.domain.MemberCategory;
 import umc.catchy.domain.mapping.memberCategory.dto.response.MemberCategoryCreatedResponse;
+import umc.catchy.domain.mapping.memberStyle.dao.MemberStyleRepository;
+import umc.catchy.domain.mapping.memberStyle.domain.MemberStyle;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.ProfileRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
-import umc.catchy.domain.member.dto.response.LoginResponse;
-import umc.catchy.domain.member.dto.response.ProfileResponse;
-import umc.catchy.domain.member.dto.response.ReIssueTokenResponse;
-import umc.catchy.domain.member.dto.response.SignUpResponse;
+import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
+import umc.catchy.domain.member.dto.response.*;
+import umc.catchy.domain.style.dao.StyleRepository;
+import umc.catchy.domain.style.domain.Style;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.JwtUtil;
@@ -56,6 +63,10 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final CategoryRepository categoryRepository;
     private final MemberCategoryRepository memberCategoryRepository;
+    private final StyleRepository styleRepository;
+    private final ActiveTimeRepository activeTimeRepository;
+    private final MemberActiveTimeRepository memberActiveTimeRepository;
+    private final MemberStyleRepository memberStyleRepository;
     private final JwtUtil jwtUtil;
 
     @Value("${security.kakao.client-id}")
@@ -322,4 +333,48 @@ public class MemberService {
         memberCategoryRepository.saveAll(collect);
         return new MemberCategoryCreatedResponse(true,"member`s categories are created");
     }
+
+    public StyleAndActiveTimeSurveyCreatedResponse createStyleAndActiveTimeSurvey(StyleAndActiveTimeSurveyRequest request) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        List<Style> styleList = styleRepository.findAllByNameIn(request.getStyleNames());
+
+        List<ActiveTime> activeTimeList = activeTimeRepository.findAllByDayOfWeekInAndStartTimeAndEndTime(request.getDaysOfWeeks()
+                ,request.getStartTime(),request.getEndTime());
+
+        if(activeTimeList.isEmpty()){
+            for (DayOfWeek dayOfWeek : request.getDaysOfWeeks()) {
+                activeTimeList.add(ActiveTime.builder()
+                        .dayOfWeek(dayOfWeek)
+                        .startTime(request.getStartTime())
+                        .endTime(request.getEndTime())
+                        .build());
+            }
+            activeTimeRepository.saveAll(activeTimeList);
+        }
+
+        List<MemberStyle> memberStyleList = styleList.stream().map(style -> MemberStyle.createMemberStyle(currentMember, style)).collect(Collectors.toList());
+        List<Long> memberStyleIds = saveMemberStyleAndReturnIds(memberStyleList);
+        List<MemberActiveTime> memberActiveTimeList = activeTimeList.stream().map(activeTime -> MemberActiveTime.createMemberActiveTime(currentMember, activeTime)).collect(Collectors.toList());
+        List<Long> memberActiveTimeIds = saveMemberActiveTimeAndReturnIds(memberActiveTimeList);
+
+        return new StyleAndActiveTimeSurveyCreatedResponse(memberStyleIds, memberActiveTimeIds);
+    }
+
+    private List<Long> saveMemberStyleAndReturnIds(List<MemberStyle> memberStyleList) {
+        List<MemberStyle> savedEntities = memberStyleRepository.saveAll(memberStyleList);
+
+        return savedEntities.stream()
+                .map(MemberStyle::getId) // 저장된 엔티티의 ID 값 추출
+                .collect(Collectors.toList());
+    }
+
+    private List<Long> saveMemberActiveTimeAndReturnIds(List<MemberActiveTime> memberActiveTimeList) {
+        List<MemberActiveTime> savedEntities = memberActiveTimeRepository.saveAll(memberActiveTimeList);
+
+        return savedEntities.stream()
+                .map(MemberActiveTime::getId)
+                .collect(Collectors.toList());
+    }
 }
+
