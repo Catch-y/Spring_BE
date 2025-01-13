@@ -14,6 +14,8 @@ public class StyleAndActiveTimeSurveyRequest {
     List<StyleName> styleNames;
     @NotNull(message = "한 개 이상 골라야합니다.")
     List<DayOfWeek> daysOfWeeks;
+    @NotNull
     LocalTime startTime;
+    @NotNull
     LocalTime endTime;
 }
