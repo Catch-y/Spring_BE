@@ -6,10 +6,10 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum StyleName {
-    ALONE("ALONE"),
-    FRIENDS("FRIENDS"),
-    FAMILY("FAMILY"),
-    COUPLE("COUPLE");
+    ALONE("혼자"),
+    FRIENDS("친구"),
+    FAMILY("가족"),
+    COUPLE("연인");
 
     private final String value;
 }
