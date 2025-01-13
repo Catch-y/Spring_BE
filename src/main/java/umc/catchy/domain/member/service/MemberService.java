@@ -327,24 +327,27 @@ public class MemberService {
     public StyleAndActiveTimeSurveyCreatedResponse createStyleAndActiveTimeSurvey(StyleAndActiveTimeSurveyRequest request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-
         List<Style> styleList = styleRepository.findAllByNameIn(request.getStyleNames());
+
         List<ActiveTime> activeTimeList = activeTimeRepository.findAllByDayOfWeekInAndStartTimeAndEndTime(request.getDaysOfWeeks()
-                ,request.getStartTime(),request.getEndTime()).orElseGet(() -> {
-                    List<ActiveTime> newActiveTimeList = new ArrayList<>();
-                    for (DayOfWeek dayOfWeek : request.getDaysOfWeeks()) {
-                        newActiveTimeList.add(
-                        ActiveTime.builder()
+                ,request.getStartTime(),request.getEndTime());
+
+        if(activeTimeList.isEmpty()){
+            for (DayOfWeek dayOfWeek : request.getDaysOfWeeks()) {
+                activeTimeList.add(ActiveTime.builder()
                                 .dayOfWeek(dayOfWeek)
                                 .startTime(request.getStartTime())
                                 .endTime(request.getEndTime())
-                                .build()); }
-                    activeTimeRepository.saveAll(newActiveTimeList);
-                    return newActiveTimeList;
-                }
-        );
-        styleList.stream().map(style -> memberStyleRepository.save(MemberStyle.createMemberStyle(currentMember, style)));
-        activeTimeList.stream().map(activeTime -> memberActiveTimeRepository.save(MemberActiveTime.createMemberActiveTime(currentMember, activeTime)));
+                                .build());
+            }
+            activeTimeRepository.saveAll(activeTimeList);
+        }
+
+        List<MemberStyle> memberStyleList = styleList.stream().map(style -> MemberStyle.createMemberStyle(currentMember, style)).collect(Collectors.toList());
+        memberStyleRepository.saveAll(memberStyleList);
+        List<MemberActiveTime> memberActiveTimeList = activeTimeList.stream().map(activeTime -> MemberActiveTime.createMemberActiveTime(currentMember, activeTime)).collect(Collectors.toList());
+        memberActiveTimeRepository.saveAll(memberActiveTimeList);
+
         return new StyleAndActiveTimeSurveyCreatedResponse(true,"Styles and ActiveTimes are completely created ");
     }
 }

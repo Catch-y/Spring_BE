@@ -21,10 +21,8 @@ import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.ProfileRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
-import umc.catchy.domain.member.dto.response.LoginResponse;
-import umc.catchy.domain.member.dto.response.ProfileResponse;
-import umc.catchy.domain.member.dto.response.ReIssueTokenResponse;
-import umc.catchy.domain.member.dto.response.SignUpResponse;
+import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
+import umc.catchy.domain.member.dto.response.*;
 import umc.catchy.domain.member.service.MemberService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
@@ -110,6 +108,13 @@ public class MemberController {
     @Operation(summary = "사용자 취향설문 카테고리 저장 API ", description = "사용자 취향설문 1,2단계를 저장")
     public BaseResponse<MemberCategoryCreatedResponse> createMemberCategory(@RequestBody CategorySurveyRequest request) {
         MemberCategoryCreatedResponse response = memberService.createMemberCategory(request);
+        return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
+    }
+
+    @PostMapping("/survey/styletime")
+    @Operation(summary = "사용자 취향설문 참여스타일 및 활동요일,시간 저장 API ", description = "사용자 취향설문 3,4단계를 저장")
+    public BaseResponse<StyleAndActiveTimeSurveyCreatedResponse> createMemberStyleTime(@RequestBody StyleAndActiveTimeSurveyRequest request) {
+        StyleAndActiveTimeSurveyCreatedResponse response = memberService.createStyleAndActiveTimeSurvey(request);
         return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
     }
 }
