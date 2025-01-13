@@ -6,6 +6,7 @@ import umc.catchy.domain.common.BaseTimeEntity;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Getter
@@ -18,7 +19,7 @@ public class ActiveTime extends BaseTimeEntity {
 
     private DayOfWeek dayOfWeek;
 
-    private LocalDateTime startTime;
+    private LocalTime startTime;
 
-    private LocalDateTime endTime;
+    private LocalTime endTime;
 }
