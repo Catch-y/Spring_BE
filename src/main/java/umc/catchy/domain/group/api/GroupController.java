@@ -18,12 +18,15 @@ import org.springframework.web.bind.annotation.RestController;
 import umc.catchy.domain.group.dto.request.CreateGroupRequest;
 import umc.catchy.domain.group.dto.request.InviteCodeRequest;
 import umc.catchy.domain.group.dto.response.CreateGroupResponse;
+import umc.catchy.domain.group.dto.response.GroupCalendarResponse;
 import umc.catchy.domain.group.dto.response.GroupInfoResponse;
 import umc.catchy.domain.group.dto.response.GroupJoinResponse;
 import umc.catchy.domain.group.service.GroupService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
 import umc.catchy.global.util.SecurityUtil;
+
+import java.util.List;
 
 @Tag(name = "Group", description = "그룹 관련 API")
 @RestController
@@ -67,5 +70,12 @@ public class GroupController {
     ) {
         groupService.leaveGroup(groupId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
+    }
+
+    @Operation(summary = "사용자가 속한 그룹 조회", description = "로그인한 사용자가 속한 그룹들의 정보를 조회합니다.")
+    @GetMapping("/my-groups")
+    public ResponseEntity<BaseResponse<List<GroupCalendarResponse>>> getUserGroups() {
+        List<GroupCalendarResponse> response = groupService.getUserGroups();
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

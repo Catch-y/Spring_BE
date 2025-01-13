@@ -8,6 +8,7 @@ import umc.catchy.domain.group.dao.GroupRepository;
 import umc.catchy.domain.group.domain.Groups;
 import umc.catchy.domain.group.dto.request.CreateGroupRequest;
 import umc.catchy.domain.group.dto.response.CreateGroupResponse;
+import umc.catchy.domain.group.dto.response.GroupCalendarResponse;
 import umc.catchy.domain.group.dto.response.GroupInfoResponse;
 import umc.catchy.domain.group.dto.response.GroupJoinResponse;
 import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
@@ -18,6 +19,9 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -111,5 +115,26 @@ public class GroupService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND));
 
         memberGroupRepository.delete(memberGroup);
+    }
+
+    @Transactional(readOnly = true)
+    public List<GroupCalendarResponse> getUserGroups() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        List<MemberGroup> memberGroups = memberGroupRepository.findAllByMemberId(memberId);
+
+        return memberGroups.stream()
+                .map(memberGroup -> {
+                    Groups group = memberGroup.getGroup();
+                    return GroupCalendarResponse.builder()
+                            .groupId(group.getId())
+                            .groupName(group.getGroupName())
+                            .promiseTime(group.getPromiseTime())
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 }
