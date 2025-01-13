@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import umc.catchy.domain.Uuid.service.s3service;
+import umc.catchy.domain.Uuid.service.S3Service;
 
 @Tag(name = "S3", description = "이미지 업로드/삭제 테스트용 API")
 @RestController
@@ -12,7 +12,7 @@ import umc.catchy.domain.Uuid.service.s3service;
 @RequiredArgsConstructor
 public class ImageController {
 
-    private final s3service s3;
+    private final S3Service s3;
 
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     public String imageUpload(@RequestPart("reviewPicture")MultipartFile reviewPicture, @RequestParam(name = "title") String title){

@@ -11,7 +11,7 @@ import java.util.UUID;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class s3service {
+public class S3Service {
     //private final UuidRepository uuidRepository;
 
     private final AmazonS3Manager s3Manager;
