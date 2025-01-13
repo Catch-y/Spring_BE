@@ -17,6 +17,7 @@ public class ActiveTime extends BaseTimeEntity {
     @Column(name = "activeTime_id")
     private Long id;
 
+    @Enumerated(EnumType.STRING)
     private DayOfWeek dayOfWeek;
 
     private LocalTime startTime;
