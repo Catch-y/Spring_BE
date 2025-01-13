@@ -17,6 +17,7 @@ import umc.catchy.domain.member.domain.Member;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
+import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +26,7 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final MemberGroupRepository memberGroupRepository;
     private final MemberRepository memberRepository;
+    private final AmazonS3Manager amazonS3Manager;
 
     @Transactional
     public GroupJoinResponse joinGroupByInviteCode(String inviteCode) {
@@ -68,9 +70,16 @@ public class GroupService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
+        String groupImageUrl = null;
+        MultipartFile groupImageFile = request.getGroupImage();
+        if (groupImageFile != null && !groupImageFile.isEmpty()) {
+            String keyName = "group-images/" + groupImageFile.getOriginalFilename();
+            groupImageUrl = amazonS3Manager.uploadFile(keyName, groupImageFile);
+        }
+
         Groups group = Groups.builder()
                 .groupName(request.getGroupName())
-                .groupImage(request.getGroupImage() != null ? request.getGroupImage().getOriginalFilename() : null)
+                .groupImage(groupImageUrl)
                 .groupLocation(request.getGroupLocation())
                 .inviteCode(request.getInviteCode())
                 .promiseTime(request.getPromiseTime())
