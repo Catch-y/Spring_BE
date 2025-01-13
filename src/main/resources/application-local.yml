@@ -17,6 +17,23 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
 
 jwt:
-  secret:
+  secret: ${JWT_KEY}
   accessTokenValidity: 86400000 # 1 day
   refreshTokenValidity: 604800000 # 1 week
+
+cloud:
+  aws:
+    s3:
+      bucket: catchy-bucket
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
+    credentials:
+      accessKey: ${AWS_ACCESS_KEY}
+      secretKey: ${AWS_SECRET_KEY}
+
+security:
+  kakao:
+    client-id: ${REST_API_KEY}
+    client-secret: ${SECRET_KEY}

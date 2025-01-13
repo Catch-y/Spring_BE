@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
 import net.minidev.json.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -56,6 +57,12 @@ public class MemberService {
     private final CategoryRepository categoryRepository;
     private final MemberCategoryRepository memberCategoryRepository;
     private final JwtUtil jwtUtil;
+
+    @Value("${security.kakao.client-id}")
+    private String clientKey;
+
+    @Value("${security.kakao.client-secret}")
+    private String clientSecretKey;
 
     public SignUpResponse signUp(SignUpRequest request, MultipartFile profileImage, SocialType socialType) {
         String accessToken = request.accessToken();
@@ -149,8 +156,8 @@ public class MemberService {
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
             StringBuilder sb = new StringBuilder();
             sb.append("grant_type=authorization_code");
-            sb.append("&client_id="); // TODO REST_API_KEY 입력
-            sb.append("&client_secret="); // TODO SECRET_KEY 입력
+            sb.append("&client_id="+clientKey); // TODO REST_API_KEY 입력
+            sb.append("&client_secret="+clientSecretKey); // TODO SECRET_KEY 입력
             sb.append("&redirect_uri=http://localhost:8080/login/oauth2/code/kakao"); // TODO 인가코드 받은 redirect_uri 입력
             sb.append("&code=" + code);
             bw.write(sb.toString());
