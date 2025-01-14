@@ -6,7 +6,9 @@ import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.domain.Place;
 
+import java.util.Optional;
+
 @Repository
 public interface PlaceVisitRepository extends JpaRepository<PlaceVisit, Long> {
-    PlaceVisit findByPlaceAndMember(Place place, Member member);
+    Optional<PlaceVisit> findByPlaceAndMember(Place place, Member member);
 }

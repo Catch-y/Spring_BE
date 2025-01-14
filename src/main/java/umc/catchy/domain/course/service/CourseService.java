@@ -8,7 +8,6 @@ import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
-import umc.catchy.domain.mapping.placeCourse.domain.PlaceCourse;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -18,8 +17,8 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -38,17 +37,15 @@ public class CourseService {
 
     //코스의 각 장소 별 간단한 정보 받아오기
     public List<CourseInfoResponse.getPlaceInfoOfCourseDTO> getPlaceListOfCourse(Course course, Member member){
-        List<PlaceCourse> placeCourseList = placeCourseRepository.findAllByCourse(course);
-
-        List<CourseInfoResponse.getPlaceInfoOfCourseDTO> DTOs = new ArrayList<>();
-        for(PlaceCourse placeCourse : placeCourseList){
-            //멤버의 장소 방문 여부 확인
-            PlaceVisit placeVisit = placeVisitRepository.findByPlaceAndMember(placeCourse.getPlace(), member);  //TODO placeVisit Valid 체크 필요
-            Boolean isVisited = placeVisit.isVisited();
-            DTOs.add(PlaceConverter.toPlaceInfoOfCourseDTO(placeCourse.getPlace(), isVisited));
-        }
-
-        return DTOs;
+        return placeCourseRepository.findAllByCourse(course).stream()
+                .map(placeCourse -> {
+                    // 멤버의 장소 방문 여부 확인
+                    Boolean isVisited = placeVisitRepository.findByPlaceAndMember(placeCourse.getPlace(), member)
+                            .map(PlaceVisit::isVisited)
+                            .orElse(false); // null -> 기본값 false
+                    return PlaceConverter.toPlaceInfoOfCourseDTO(placeCourse.getPlace(), isVisited);
+                })
+                .collect(Collectors.toList());
     }
 
     //평점 계산 로직
