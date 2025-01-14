@@ -16,10 +16,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
 import java.time.DayOfWeek;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -385,13 +382,22 @@ public class MemberService {
                 .collect(Collectors.toList());
     }
 
-    public MemberLocationCreatedResponse createMemberLocation(LocationSurveyRequest request) {
+    public MemberLocationCreatedResponse createMemberLocation(List<LocationSurveyRequest> request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
+
         Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        Location location = locationRepository.findByUpperLocationAndLowerLocation(request.getUpperLocation(),request.getLowerLocation())
-                .orElseGet(() -> locationRepository.save(Location.createLocation(request.getUpperLocation(),request.getLowerLocation())));
-        Long memberLocationId = memberLocationRepository.save(MemberLocation.createMemberLocation(currentMember,location)).getId();
-        return new MemberLocationCreatedResponse(memberLocationId);
+        List<Location> locationList = request.stream().map(r -> locationRepository.findByUpperLocationAndLowerLocation(r.getUpperLocation(), r.getLowerLocation())
+                    .orElseGet(() -> locationRepository.save(Location.createLocation(r.getUpperLocation(), r.getLowerLocation())))
+        ).toList();
+
+        List<MemberLocation> memberLocationList = locationList.stream().map(location -> MemberLocation.createMemberLocation(currentMember, location)).collect(Collectors.toList());
+        memberLocationRepository.saveAll(memberLocationList);
+
+        List<Long> memberLocationIds = memberLocationList.stream()
+                .map(MemberLocation::getId)
+                .collect(Collectors.toList());
+
+        return new MemberLocationCreatedResponse(memberLocationIds);
     }
 }
 
