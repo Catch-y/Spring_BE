@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,16 +15,20 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import umc.catchy.domain.group.dto.request.CreateGroupRequest;
 import umc.catchy.domain.group.dto.request.InviteCodeRequest;
 import umc.catchy.domain.group.dto.response.CreateGroupResponse;
+import umc.catchy.domain.group.dto.response.GroupCalendarResponse;
 import umc.catchy.domain.group.dto.response.GroupInfoResponse;
 import umc.catchy.domain.group.dto.response.GroupJoinResponse;
 import umc.catchy.domain.group.service.GroupService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
 import umc.catchy.global.util.SecurityUtil;
+
+import java.util.List;
 
 @Tag(name = "Group", description = "그룹 관련 API")
 @RestController
@@ -67,5 +72,14 @@ public class GroupController {
     ) {
         groupService.leaveGroup(groupId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
+    }
+
+    @Operation(summary = "사용자가 속한 그룹 조회", description = "로그인한 사용자가 속한 그룹들의 정보를 조회합니다.")
+    @GetMapping("/my-groups")
+    public ResponseEntity<BaseResponse<Slice<GroupCalendarResponse>>> getUserGroups(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Slice<GroupCalendarResponse> response = groupService.getUserGroups(page, size);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }
