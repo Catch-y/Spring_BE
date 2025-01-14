@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -56,5 +57,15 @@ public class GroupController {
     ) {
         GroupInfoResponse response = groupService.getGroupInfoByInviteCode(inviteCode);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "그룹 탈퇴", description = "로그인한 사용자가 특정 그룹에서 탈퇴합니다.")
+    @DeleteMapping("/{groupId}/leave")
+    public ResponseEntity<BaseResponse<Void>> leaveGroup(
+            @Parameter(description = "그룹 ID", required = true)
+            @PathVariable Long groupId
+    ) {
+        groupService.leaveGroup(groupId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 }

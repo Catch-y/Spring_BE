@@ -96,4 +96,20 @@ public class GroupService {
 
         return CreateGroupResponse.fromEntity(savedGroup, member.getNickname());
     }
+
+    @Transactional
+    public void leaveGroup(Long groupId) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        Groups group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
+
+        MemberGroup memberGroup = memberGroupRepository.findByGroupIdAndMemberId(group.getId(), memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND));
+
+        memberGroupRepository.delete(memberGroup);
+    }
 }
