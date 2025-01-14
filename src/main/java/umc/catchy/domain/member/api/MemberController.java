@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,8 +37,8 @@ public class MemberController {
 
     private final MemberService memberService;
 
-    @PostMapping(value = "/signup/kakao", consumes = "multipart/form-data")
-    @Operation(summary = "카카오 회원가입 API", description = "소셜 로그인 후 진행하는 회원가입")
+    @PostMapping(value = "/signup/{platform}", consumes = "multipart/form-data")
+    @Operation(summary = "소셜 회원가입 API", description = "소셜 로그인 후 계정이 없다면 진행")
     public BaseResponse<SignUpResponse> signUp(
             @Parameter(name = "platform", description = "소셜 로그인 플랫폼 (KAKAO 또는 APPLE)", required = true, in = ParameterIn.PATH)
             @PathVariable("platform") String platform,
@@ -73,6 +74,15 @@ public class MemberController {
         }
 
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.login(request, socialType));
+    }
+
+    @DeleteMapping("/member/withdraw/{platform}")
+    @Operation(summary = "회원 탈퇴 API ", description = "현재 로그인된 사용자 탈퇴")
+    public BaseResponse<Void> withdrawMember() {
+
+        memberService.withdraw();
+
+        return BaseResponse.onSuccess(SuccessStatus._OK, null);
     }
 
     @GetMapping("/reissue")
