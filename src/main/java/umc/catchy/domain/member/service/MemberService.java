@@ -109,6 +109,12 @@ public class MemberService {
 
         Member newMember = createMemberEntity(providerId, email, request.nickname(), profileImageUrl, socialType);
 
+        String authorizationCode = request.authorizationCode();
+
+        // 애플 회원가입이면 인가 코드를 저장
+        if (authorizationCode != null && socialType == SocialType.APPLE)
+            newMember.setAuthorizationCode(authorizationCode);
+
         memberRepository.save(newMember);
 
         return SignUpResponse.of(newMember);
