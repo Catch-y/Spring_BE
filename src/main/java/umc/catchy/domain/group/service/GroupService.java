@@ -1,6 +1,8 @@
 package umc.catchy.domain.group.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -118,23 +120,22 @@ public class GroupService {
     }
 
     @Transactional(readOnly = true)
-    public List<GroupCalendarResponse> getUserGroups() {
+    public Slice<GroupCalendarResponse> getUserGroups(int page, int size) {
         Long memberId = SecurityUtil.getCurrentMemberId();
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        List<MemberGroup> memberGroups = memberGroupRepository.findAllByMemberId(memberId);
+        PageRequest pageRequest = PageRequest.of(page, size);
+        Slice<MemberGroup> memberGroups = memberGroupRepository.findAllByMemberId(memberId, pageRequest);
 
-        return memberGroups.stream()
-                .map(memberGroup -> {
-                    Groups group = memberGroup.getGroup();
-                    return GroupCalendarResponse.builder()
-                            .groupId(group.getId())
-                            .groupName(group.getGroupName())
-                            .promiseTime(group.getPromiseTime())
-                            .build();
-                })
-                .collect(Collectors.toList());
+        return memberGroups.map(memberGroup -> {
+            Groups group = memberGroup.getGroup();
+            return GroupCalendarResponse.builder()
+                    .groupId(group.getId())
+                    .groupName(group.getGroupName())
+                    .promiseTime(group.getPromiseTime())
+                    .build();
+        });
     }
 }
