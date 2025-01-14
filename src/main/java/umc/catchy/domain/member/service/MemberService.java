@@ -88,7 +88,6 @@ public class MemberService {
     private final ActiveTimeRepository activeTimeRepository;
     private final MemberActiveTimeRepository memberActiveTimeRepository;
     private final MemberStyleRepository memberStyleRepository;
-    private final UuidRepository uuidRepository;
     private final AmazonS3Manager s3Manager;
     private final JwtUtil jwtUtil;
     private final JwtProperties jwtProperties;
@@ -165,20 +164,34 @@ public class MemberService {
         return LoginResponse.of(member, accessToken, refreshToken);
     }
 
-    public ReIssueTokenResponse reIssue() {
-        Long memberId = SecurityUtil.getCurrentMemberId();
+    public ReIssueTokenResponse validateRefreshToken() {
+        String refreshToken = SecurityUtil.extractRefreshToken();
 
-        Member member = memberRepository.findById(memberId).orElseThrow(() ->
-                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        if (refreshToken == null) throw new GeneralException(ErrorStatus.NOT_FOUND_TOKEN);
 
-        // 재발급
-        String newAccessToken = jwtUtil.createAccessToken(member.getEmail());
-        String newRefreshToken = jwtUtil.createRefreshToken(member.getEmail());
+        System.out.println(refreshToken);
 
-        member.setAccessToken(newAccessToken);
-        member.setRefreshToken(newRefreshToken);
+        // 리프레시 토큰 만료 검사
+        boolean isValid = jwtUtil.validateToken(refreshToken);
 
-        return ReIssueTokenResponse.of(newAccessToken, newRefreshToken);
+        // 등록된 유저가 아니면 예외 처리
+        Member member = memberRepository.findByRefreshToken(refreshToken).orElseThrow(() ->
+            new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+
+        // 리프레시 토큰이 유효할 때
+        if (isValid) {
+            // 액세스 토큰 재발급
+            String newAccessToken = jwtUtil.createAccessToken(member.getEmail());
+            String newRefreshToken = jwtUtil.createRefreshToken(member.getEmail());
+
+            member.setAccessToken(newAccessToken);
+            member.setRefreshToken(newRefreshToken);
+
+            return ReIssueTokenResponse.of(newAccessToken, newRefreshToken);
+        }
+        // 리프레시 토큰이 만료되었을 때
+        else throw new GeneralException(ErrorStatus.TOKEN_EXPIRED);
     }
 
     public String getKakaoAccessToken (String code) {

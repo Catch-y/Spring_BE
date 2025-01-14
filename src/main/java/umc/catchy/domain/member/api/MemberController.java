@@ -21,6 +21,7 @@ import umc.catchy.domain.mapping.memberCategory.dto.response.MemberCategoryCreat
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.ProfileRequest;
+import umc.catchy.domain.member.dto.request.ReIssueTokenRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
 import umc.catchy.domain.member.dto.response.*;
@@ -86,9 +87,9 @@ public class MemberController {
     }
 
     @GetMapping("/reissue")
-    @Operation(summary = "토큰 재발급 API", description = "refresh token을 통한 access token, refresh token 재발급")
+    @Operation(summary = "토큰 검사 및 재발급 API", description = "refresh token 검사 후 accessToken 재발급, 만료되었다면 재로그인")
     public BaseResponse<ReIssueTokenResponse> reIssue() {
-        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberService.reIssue());
+        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberService.validateRefreshToken());
     }
 
     @GetMapping("/token/kakao")
