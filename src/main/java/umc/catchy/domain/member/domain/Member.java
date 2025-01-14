@@ -42,6 +42,9 @@ public class Member extends BaseTimeEntity {
     @Setter
     private String refreshToken;
 
+    @Setter
+    private String authorizationCode;
+
     private Integer gpt_count;
 
     public static Member createMember(
