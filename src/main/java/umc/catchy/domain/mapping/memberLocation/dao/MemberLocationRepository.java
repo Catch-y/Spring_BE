@@ -6,5 +6,4 @@ import umc.catchy.domain.mapping.memberLocation.domain.MemberLocation;
 
 @Repository
 public interface MemberLocationRepository extends JpaRepository<MemberLocation, Long> {
-    Long save(MemberLocation memberLocation);
 }

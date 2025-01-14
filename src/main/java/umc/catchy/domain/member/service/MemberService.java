@@ -390,7 +390,7 @@ public class MemberService {
         Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
         Location location = locationRepository.findByUpperLocationAndLowerLocation(request.getUpperLocation(),request.getLowerLocation())
                 .orElseGet(() -> locationRepository.save(Location.createLocation(request.getUpperLocation(),request.getLowerLocation())));
-        Long memberLocationId = memberLocationRepository.save(MemberLocation.createMemberLocation(currentMember,location));
+        Long memberLocationId = memberLocationRepository.save(MemberLocation.createMemberLocation(currentMember,location)).getId();
         return new MemberLocationCreatedResponse(memberLocationId);
     }
 }
