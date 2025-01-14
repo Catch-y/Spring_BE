@@ -26,6 +26,9 @@ public enum ErrorStatus implements BaseErrorCode {
     EMAIL_DUPLICATE(HttpStatus.CONFLICT, "MEMBER409", "이미 사용 중인 이메일입니다."),
     NICKNAME_DUPLICATE(HttpStatus.CONFLICT, "MEMBER409", "이미 사용 중인 닉네임입니다."),
 
+    //코스 관련 에러
+    COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "COURSE404", "해당 코스를 찾을 수 없습니다."),
+
     // 그룹 관련 에러
     GROUP_INVITE_CODE_INVALID(HttpStatus.BAD_REQUEST, "GROUP400", "유효하지 않은 초대 코드입니다."),
     GROUP_MEMBER_ALREADY_EXISTS(HttpStatus.CONFLICT, "GROUP409", "이미 그룹에 가입된 회원입니다."),
