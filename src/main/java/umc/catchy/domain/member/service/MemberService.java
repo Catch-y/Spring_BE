@@ -44,6 +44,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import umc.catchy.domain.Uuid.dao.UuidRepository;
+import umc.catchy.domain.Uuid.domain.Uuid;
 import umc.catchy.domain.activetime.dao.ActiveTimeRepository;
 import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
@@ -70,6 +72,7 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.JwtUtil;
 import umc.catchy.global.util.SecurityUtil;
+import umc.catchy.infra.aws.s3.AmazonS3Manager;
 import umc.catchy.infra.config.jwt.JwtProperties;
 
 @Service
@@ -85,6 +88,8 @@ public class MemberService {
     private final ActiveTimeRepository activeTimeRepository;
     private final MemberActiveTimeRepository memberActiveTimeRepository;
     private final MemberStyleRepository memberStyleRepository;
+    private final UuidRepository uuidRepository;
+    private final AmazonS3Manager s3Manager;
     private final JwtUtil jwtUtil;
     private final JwtProperties jwtProperties;
 
@@ -98,7 +103,8 @@ public class MemberService {
         String accessToken = request.accessToken();
 
         // 프로필 이미지 url 생성
-        String profileImageUrl = "";
+        String keyName = "profile-images/" + profileImage.getOriginalFilename();
+        String profileImageUrl = s3Manager.uploadFile(keyName, profileImage);
 
         // 유저 정보 받아오기
         Map<String, String> info = new HashMap<>();
