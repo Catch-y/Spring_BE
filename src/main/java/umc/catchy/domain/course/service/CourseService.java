@@ -33,13 +33,13 @@ public class CourseService {
     private final PlaceVisitRepository placeVisitRepository;
     private final MemberRepository memberRepository;
 
-    public Course getCourse(Long courseId){
+    private Course getCourse(Long courseId){
         return courseRepository.findById(courseId)
                 .orElseThrow(()-> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
     }
 
     //코스의 각 장소 별 간단한 정보 받아오기
-    public List<CourseInfoResponse.getPlaceInfoOfCourseDTO> getPlaceListOfCourse(Course course, Member member){
+    private List<CourseInfoResponse.getPlaceInfoOfCourseDTO> getPlaceListOfCourse(Course course, Member member){
         return placeCourseRepository.findAllByCourse(course).stream()
                 .map(placeCourse -> {
                     // 멤버의 장소 방문 여부 확인
@@ -52,13 +52,13 @@ public class CourseService {
     }
 
     //Course : 평점 계산 로직
-    public Float calculateRatingOfCourse(Course course){
+    private Float calculateRatingOfCourse(Course course){
         //if(!course.isHasReview()){ return 0.0F; }
         return 0.0F; //TODO placeReview 관련 로직 작성하면서 함께 구현하기
     }
 
     //Course : 리뷰 개수 로직
-    public Integer calculateNumberOfReviews(Course course){
+    private Integer calculateNumberOfReviews(Course course){
         if(!course.isHasReview()){
             return 0;
         }
@@ -68,7 +68,7 @@ public class CourseService {
     }
 
     //Course : 추천 시간대 String 변환
-    public String getRecommendTimeToString(Course course){
+    private String getRecommendTimeToString(Course course){
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
         return course.getRecommendTimeStart().format(formatter)
                 +" ~ "
