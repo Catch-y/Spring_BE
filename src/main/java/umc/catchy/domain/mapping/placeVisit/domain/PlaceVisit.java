@@ -6,6 +6,9 @@ import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.domain.Place;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 public class PlaceVisit extends BaseTimeEntity {
@@ -16,6 +19,8 @@ public class PlaceVisit extends BaseTimeEntity {
     private Long id;
 
     private boolean isVisited;
+
+    private LocalDateTime visitedDate;
 
     private boolean isLiked;
 
