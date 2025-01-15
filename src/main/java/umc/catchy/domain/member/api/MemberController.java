@@ -17,7 +17,9 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.category.dto.request.CategorySurveyRequest;
+import umc.catchy.domain.location.dto.request.LocationSurveyRequest;
 import umc.catchy.domain.mapping.memberCategory.dto.response.MemberCategoryCreatedResponse;
+import umc.catchy.domain.mapping.memberLocation.dto.response.MemberLocationCreatedResponse;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.ProfileRequest;
@@ -29,6 +31,8 @@ import umc.catchy.domain.member.service.MemberService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.common.response.status.SuccessStatus;
+
+import java.util.List;
 
 @Tag(name = "Member", description = "사용자 관련 API")
 @RestController
@@ -123,6 +127,13 @@ public class MemberController {
     public BaseResponse<StyleAndActiveTimeSurveyCreatedResponse> createMemberStyleTime(
             @RequestBody StyleAndActiveTimeSurveyRequest request) {
         StyleAndActiveTimeSurveyCreatedResponse response = memberService.createStyleAndActiveTimeSurvey(request);
+        return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
+    }
+
+    @PostMapping("/survey/location")
+    @Operation(summary = "사용자 취향설문 선호지역 저장 API", description = "사용자 취향설문 5단계를 저장")
+    public BaseResponse<MemberLocationCreatedResponse> createMemberLocation(@RequestBody List<LocationSurveyRequest> request) {
+        MemberLocationCreatedResponse response = memberService.createMemberLocation(request);
         return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
     }
 }

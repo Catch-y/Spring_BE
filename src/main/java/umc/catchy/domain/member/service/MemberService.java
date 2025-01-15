@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -51,11 +52,17 @@ import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.category.dto.request.CategorySurveyRequest;
+import umc.catchy.domain.location.dao.LocationRepository;
+import umc.catchy.domain.location.domain.Location;
+import umc.catchy.domain.location.dto.request.LocationSurveyRequest;
 import umc.catchy.domain.mapping.memberActivetime.dao.MemberActiveTimeRepository;
 import umc.catchy.domain.mapping.memberActivetime.domain.MemberActiveTime;
 import umc.catchy.domain.mapping.memberCategory.dao.MemberCategoryRepository;
 import umc.catchy.domain.mapping.memberCategory.domain.MemberCategory;
 import umc.catchy.domain.mapping.memberCategory.dto.response.MemberCategoryCreatedResponse;
+import umc.catchy.domain.mapping.memberLocation.dao.MemberLocationRepository;
+import umc.catchy.domain.mapping.memberLocation.domain.MemberLocation;
+import umc.catchy.domain.mapping.memberLocation.dto.response.MemberLocationCreatedResponse;
 import umc.catchy.domain.mapping.memberStyle.dao.MemberStyleRepository;
 import umc.catchy.domain.mapping.memberStyle.domain.MemberStyle;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -88,6 +95,9 @@ public class MemberService {
     private final ActiveTimeRepository activeTimeRepository;
     private final MemberActiveTimeRepository memberActiveTimeRepository;
     private final MemberStyleRepository memberStyleRepository;
+    private final LocationRepository locationRepository;
+    private final MemberLocationRepository memberLocationRepository;
+  
     private final AmazonS3Manager s3Manager;
     private final JwtUtil jwtUtil;
     private final JwtProperties jwtProperties;
@@ -492,6 +502,24 @@ public class MemberService {
         return savedEntities.stream()
                 .map(MemberActiveTime::getId)
                 .collect(Collectors.toList());
+    }
+
+    public MemberLocationCreatedResponse createMemberLocation(List<LocationSurveyRequest> request) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+
+        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        List<Location> locationList = request.stream().map(r -> locationRepository.findByUpperLocationAndLowerLocation(r.getUpperLocation(), r.getLowerLocation())
+                    .orElseGet(() -> locationRepository.save(Location.createLocation(r.getUpperLocation(), r.getLowerLocation())))
+        ).toList();
+
+        List<MemberLocation> memberLocationList = locationList.stream().map(location -> MemberLocation.createMemberLocation(currentMember, location)).collect(Collectors.toList());
+        memberLocationRepository.saveAll(memberLocationList);
+
+        List<Long> memberLocationIds = memberLocationList.stream()
+                .map(MemberLocation::getId)
+                .collect(Collectors.toList());
+
+        return new MemberLocationCreatedResponse(memberLocationIds);
     }
 }
 
