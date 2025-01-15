@@ -7,14 +7,22 @@ import java.util.List;
 
 public class CourseConverter {
 
-    public static CourseInfoResponse.getCourseInfoDTO toCourseInfoDTO(Course course, List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeInfoOfCourseDTOS){
-        //TODO rating, reviewCount, recommendTime 설정 필요
+    public static CourseInfoResponse.getCourseInfoDTO toCourseInfoDTO(
+            Course course,
+            Float rating,
+            Integer reviewCount,
+            String recommendTime,
+            List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeInfoOfCourseDTOS
+    ){
         return CourseInfoResponse.getCourseInfoDTO.builder()
                 .courseId(course.getId())
                 .courseImage(course.getCourseImage())
                 .courseName(course.getCourseName())
                 .courseDescription(course.getCourseDescription())
                 .courseType(course.getCourseType())
+                .rating(rating)
+                .reviewCount(reviewCount)
+                .recommendTime(recommendTime)
                 .participantsNumber(course.getParticipantsNumber())
                 .placeInfos(placeInfoOfCourseDTOS)
                 .build();

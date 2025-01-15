@@ -7,6 +7,7 @@ import umc.catchy.domain.course.converter.CourseConverter;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
+import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
 import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
@@ -17,6 +18,7 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 public class CourseService {
 
     private final CourseRepository courseRepository;
+    private final CourseReviewRepository courseReviewRepository;
     private final PlaceCourseRepository placeCourseRepository;
     private final PlaceVisitRepository placeVisitRepository;
     private final MemberRepository memberRepository;
@@ -48,21 +51,28 @@ public class CourseService {
                 .collect(Collectors.toList());
     }
 
-    //평점 계산 로직
-    public Float calculateRatingOfCourse(Long courseId){
-        Course course = getCourse(courseId);
+    //Course : 평점 계산 로직
+    public Float calculateRatingOfCourse(Course course){
+        //if(!course.isHasReview()){ return 0.0F; }
+        return 0.0F; //TODO placeReview 관련 로직 작성하면서 함께 구현하기
+    }
 
+    //Course : 리뷰 개수 로직
+    public Integer calculateNumberOfReviews(Course course){
         if(!course.isHasReview()){
-            return 0.0F;
+            return 0;
         }
         else{
-            return null;
+            return courseReviewRepository.countAllByCourse(course);
         }
     }
 
-    //리뷰 개수 로직
-    public Long calculateNumberOfReviews(Long courseId){
-        return null;
+    //Course : 추천 시간대 String 변환
+    public String getRecommendTimeToString(Course course){
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        return course.getRecommendTimeStart().format(formatter)
+                +" ~ "
+                +course.getRecommendTimeEnd().format(formatter);
     }
 
     //코스의 상세 정보 받아오기
@@ -73,6 +83,6 @@ public class CourseService {
                 .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
-        return CourseConverter.toCourseInfoDTO(course, placeListOfCourse);
+        return CourseConverter.toCourseInfoDTO(course, calculateRatingOfCourse(course), calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
     }
 }

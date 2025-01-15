@@ -5,7 +5,7 @@ import lombok.Getter;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.member.domain.Member;
 
-import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Getter
@@ -19,9 +19,9 @@ public class Course extends BaseTimeEntity {
 
     private String courseName;
 
-    private LocalDateTime recommendTimeStart;
+    private LocalTime recommendTimeStart;
 
-    private LocalDateTime recommendTimeEnd;
+    private LocalTime recommendTimeEnd;
 
     private String courseDescription;
 
