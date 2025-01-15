@@ -79,15 +79,16 @@ public class VoteService {
 
     @Transactional(readOnly = true)
     public VoteResultResponse getVoteResults(Long voteId) {
-        Long groupId = categoryVoteRepository.findGroupIdByVoteId(voteId);
+        Vote vote = voteRepository.findById(voteId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_FOUND));
 
+        Long groupId = vote.getGroup().getId();
         int totalMembers = memberGroupRepository.countByGroupId(groupId);
 
         List<CategoryVote> categoryVotes = categoryVoteRepository.findByVoteId(voteId);
         List<VoteResult> results = categoryVotes.stream()
                 .map(categoryVote -> {
                     List<Member> votedMembers = memberCategoryVoteRepository.findMembersByCategoryVoteId(categoryVote.getId());
-
                     return new VoteResult(
                             categoryVote.getBigCategory().toString(),
                             votedMembers.size(),
@@ -108,7 +109,7 @@ public class VoteService {
             results.get(i).setRank(rank);
         }
 
-        return new VoteResultResponse(totalMembers, results);
+        return new VoteResultResponse(vote.getStatus().name(), totalMembers, results);
     }
 
     @Transactional(readOnly = true)

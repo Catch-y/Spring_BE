@@ -8,6 +8,7 @@ import java.util.List;
 @Getter
 @AllArgsConstructor
 public class VoteResultResponse {
+    private String status;
     private int totalMembers;
     private List<VoteResult> results;
 }
