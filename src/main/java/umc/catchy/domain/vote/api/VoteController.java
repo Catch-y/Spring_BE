@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
 import umc.catchy.domain.vote.dto.request.SubmitVoteRequest;
+import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
 import umc.catchy.domain.vote.dto.response.VoteResponse;
 import umc.catchy.domain.vote.dto.response.VoteResultResponse;
 import umc.catchy.domain.vote.service.VoteService;
@@ -48,6 +49,16 @@ public class VoteController {
     @GetMapping("/{voteId}")
     public ResponseEntity<BaseResponse<VoteResultResponse>> getVoteResults(@PathVariable Long voteId) {
         VoteResultResponse response = voteService.getVoteResults(voteId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "투표 진행 중", description = "카테고리 투표 진행 중 멤버 별 투표 현황 조회")
+    @GetMapping("/{groupId}/votes/{voteId}/members")
+    public ResponseEntity<BaseResponse<GroupVoteStatusResponse>> getGroupVoteStatus(
+            @PathVariable Long groupId,
+            @PathVariable Long voteId
+    ) {
+        GroupVoteStatusResponse response = voteService.getGroupVoteStatus(groupId, voteId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

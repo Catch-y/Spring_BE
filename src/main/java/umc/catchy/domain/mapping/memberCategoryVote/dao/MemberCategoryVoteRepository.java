@@ -16,4 +16,7 @@ public interface MemberCategoryVoteRepository extends JpaRepository<MemberCatego
 
     @Query("SELECT m FROM MemberCategoryVote mcv JOIN mcv.member m WHERE mcv.categoryVote.id = :categoryVoteId")
     List<Member> findMembersByCategoryVoteId(@Param("categoryVoteId") Long categoryVoteId);
+
+    @Query("SELECT COUNT(mcv) > 0 FROM MemberCategoryVote mcv WHERE mcv.categoryVote.vote.id = :voteId AND mcv.member.id = :memberId")
+    boolean existsByVoteIdAndMemberId(@Param("voteId") Long voteId, @Param("memberId") Long memberId);
 }
