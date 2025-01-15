@@ -16,6 +16,8 @@ import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.vote.dao.VoteRepository;
 import umc.catchy.domain.vote.domain.Vote;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
+import umc.catchy.domain.vote.dto.response.CategoryDto;
+import umc.catchy.domain.vote.dto.response.CategoryResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
 import umc.catchy.domain.vote.dto.response.MemberVoteStatus;
 import umc.catchy.domain.vote.dto.response.VoteResult;
@@ -123,5 +125,16 @@ public class VoteService {
                 .toList();
 
         return new GroupVoteStatusResponse(groupMembers.size(), memberStatuses);
+    }
+
+    @Transactional(readOnly = true)
+    public CategoryResponse getCategoriesByVoteId(Long voteId) {
+        List<CategoryVote> categories = categoryVoteRepository.findByVoteId(voteId);
+
+        List<CategoryDto> categoryDtos = categories.stream()
+                .map(category -> new CategoryDto(category.getId(), category.getBigCategory().toString()))
+                .toList();
+
+        return new CategoryResponse(voteId, categoryDtos);
     }
 }
