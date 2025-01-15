@@ -17,4 +17,5 @@ public interface MemberGroupRepository extends JpaRepository<MemberGroup, Long> 
     Optional<MemberGroup> findByGroupIdAndMemberId(Long groupId, Long memberId);
     @Query("SELECT mg FROM MemberGroup mg WHERE mg.member.id = :memberId")
     Slice<MemberGroup> findAllByMemberId(@Param("memberId") Long memberId, Pageable pageable);
+    int countByGroupId(Long groupId);
 }
