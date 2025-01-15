@@ -1,13 +1,16 @@
 package umc.catchy.domain.mapping.memberLocation.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
+import lombok.*;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.location.domain.Location;
 import umc.catchy.domain.member.domain.Member;
 
 @Entity
 @Getter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
 public class MemberLocation extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,4 +24,11 @@ public class MemberLocation extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "location_id")
     private Location location;
+
+    public static MemberLocation createMemberLocation(Member member, Location location) {
+        return MemberLocation.builder()
+                .member(member)
+                .location(location)
+                .build();
+    }
 }
