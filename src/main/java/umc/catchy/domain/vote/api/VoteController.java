@@ -5,8 +5,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
+import umc.catchy.domain.vote.dto.request.SubmitVoteRequest;
 import umc.catchy.domain.vote.dto.response.VoteResponse;
 import umc.catchy.domain.vote.service.VoteService;
 import umc.catchy.global.common.response.BaseResponse;
@@ -29,5 +31,14 @@ public class VoteController {
                 .build();
         return ResponseEntity.status(SuccessStatus._CREATED.getHttpStatus())
                 .body(BaseResponse.onSuccess(SuccessStatus._CREATED, response));
+    }
+
+    @PostMapping("/{voteId}/submit")
+    public ResponseEntity<BaseResponse<Void>> submitVote(
+            @PathVariable Long voteId,
+            @RequestBody SubmitVoteRequest request,
+            @AuthenticationPrincipal Long memberId) {
+        voteService.submitVote(memberId, voteId, request.getCategoryIds());
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 }
