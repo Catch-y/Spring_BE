@@ -33,4 +33,12 @@ public class Vote extends BaseTimeEntity {
         vote.group = group;
         return vote;
     }
+
+    public void setStatus(VoteStatus status) {
+        this.status = status;
+    }
+
+    public VoteStatus getStatus() {
+        return status;
+    }
 }

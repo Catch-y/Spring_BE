@@ -19,4 +19,6 @@ public interface MemberCategoryVoteRepository extends JpaRepository<MemberCatego
 
     @Query("SELECT COUNT(mcv) > 0 FROM MemberCategoryVote mcv WHERE mcv.categoryVote.vote.id = :voteId AND mcv.member.id = :memberId")
     boolean existsByVoteIdAndMemberId(@Param("voteId") Long voteId, @Param("memberId") Long memberId);
+    @Query("SELECT COUNT(DISTINCT mcv.member.id) FROM MemberCategoryVote mcv WHERE mcv.voteId = :voteId")
+    int countDistinctMembersByVoteId(@Param("voteId") Long voteId);
 }

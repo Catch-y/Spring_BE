@@ -15,6 +15,7 @@ import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.vote.dao.VoteRepository;
 import umc.catchy.domain.vote.domain.Vote;
+import umc.catchy.domain.vote.domain.VoteStatus;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
 import umc.catchy.domain.vote.dto.response.CategoryDto;
 import umc.catchy.domain.vote.dto.response.CategoryResponse;
@@ -72,6 +73,8 @@ public class VoteService {
             MemberCategoryVote memberCategoryVote = new MemberCategoryVote(member, categoryVote, voteId);
             memberCategoryVoteRepository.save(memberCategoryVote);
         }
+
+        checkAndUpdateVoteCompletion(voteId);
     }
 
     @Transactional(readOnly = true)
@@ -136,5 +139,21 @@ public class VoteService {
                 .toList();
 
         return new CategoryResponse(voteId, categoryDtos);
+    }
+
+    @Transactional
+    public void checkAndUpdateVoteCompletion(Long voteId) {
+        Vote vote = voteRepository.findById(voteId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_FOUND));
+
+        Long groupId = vote.getGroup().getId();
+        int totalMembers = memberGroupRepository.countByGroupId(groupId);
+
+        int membersWhoVoted = memberCategoryVoteRepository.countDistinctMembersByVoteId(voteId);
+
+        if (totalMembers == membersWhoVoted) {
+            vote.setStatus(VoteStatus.COMPLETED);
+            voteRepository.save(vote);
+        }
     }
 }
