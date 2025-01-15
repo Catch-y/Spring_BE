@@ -40,7 +40,8 @@ public class SecurityConfig {
                                 , "/swagger-ui.html/**", "/v3/api-docs/**"
                                 , "/login/**", "/member/token/kakao"
                                 , "/h2-console/**", "/member/login/**"
-                                , "/member/signup/**","/group/invite/**").permitAll()
+                                , "/member/signup/**","/group/invite/**"
+                                , "/member/reissue").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

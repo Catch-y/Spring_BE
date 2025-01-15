@@ -26,21 +26,28 @@ public class SwaggerConfig {
                 .version("1.0.0");
     }
 
+    SecurityScheme accessTokenSecurityScheme = new SecurityScheme()
+            .type(SecurityScheme.Type.HTTP)
+            .scheme("bearer")
+            .bearerFormat("JWT")
+            .in(SecurityScheme.In.HEADER)
+            .name("Authorization");
+
+    SecurityScheme refreshTokenSecurityScheme = new SecurityScheme()
+            .type(SecurityScheme.Type.APIKEY)
+            .in(SecurityScheme.In.HEADER)
+            .name("Refresh-Token");
+
     private Components authSetting() {
         return new Components()
-                .addSecuritySchemes(
-                        "accessToken",
-                        new SecurityScheme()
-                                .type(SecurityScheme.Type.HTTP)
-                                .scheme("bearer")
-                                .bearerFormat("JWT")
-                                .in(SecurityScheme.In.HEADER)
-                                .name("Authorization"));
+                .addSecuritySchemes("accessToken", accessTokenSecurityScheme)
+                .addSecuritySchemes("refreshToken", refreshTokenSecurityScheme);
     }
 
     private SecurityRequirement securityRequirement() {
         SecurityRequirement securityRequirement = new SecurityRequirement();
         securityRequirement.addList("accessToken");
+        securityRequirement.addList("refreshToken");
         return securityRequirement;
     }
 }

@@ -7,6 +7,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.nimbusds.jwt.ReadOnlyJWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -16,15 +18,35 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.ParseException;
 import java.time.DayOfWeek;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.minidev.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import umc.catchy.domain.Uuid.dao.UuidRepository;
+import umc.catchy.domain.Uuid.domain.Uuid;
 import umc.catchy.domain.activetime.dao.ActiveTimeRepository;
 import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
@@ -57,10 +79,13 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.JwtUtil;
 import umc.catchy.global.util.SecurityUtil;
+import umc.catchy.infra.aws.s3.AmazonS3Manager;
+import umc.catchy.infra.config.jwt.JwtProperties;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class MemberService {
 
     private final MemberRepository memberRepository;
@@ -72,7 +97,10 @@ public class MemberService {
     private final MemberStyleRepository memberStyleRepository;
     private final LocationRepository locationRepository;
     private final MemberLocationRepository memberLocationRepository;
+  
+    private final AmazonS3Manager s3Manager;
     private final JwtUtil jwtUtil;
+    private final JwtProperties jwtProperties;
 
     @Value("${security.kakao.client-id}")
     private String clientKey;
@@ -84,7 +112,8 @@ public class MemberService {
         String accessToken = request.accessToken();
 
         // 프로필 이미지 url 생성
-        String profileImageUrl = "";
+        String keyName = "profile-images/" + profileImage.getOriginalFilename();
+        String profileImageUrl = s3Manager.uploadFile(keyName, profileImage);
 
         // 유저 정보 받아오기
         Map<String, String> info = new HashMap<>();
@@ -114,6 +143,12 @@ public class MemberService {
 
         Member newMember = createMemberEntity(providerId, email, request.nickname(), profileImageUrl, socialType);
 
+        String authorizationCode = request.authorizationCode();
+
+        // 애플 회원가입이면 인가 코드를 저장
+        if (authorizationCode != null && socialType == SocialType.APPLE)
+            newMember.setAuthorizationCode(authorizationCode);
+
         memberRepository.save(newMember);
 
         return SignUpResponse.of(newMember);
@@ -139,20 +174,34 @@ public class MemberService {
         return LoginResponse.of(member, accessToken, refreshToken);
     }
 
-    public ReIssueTokenResponse reIssue() {
-        Long memberId = SecurityUtil.getCurrentMemberId();
+    public ReIssueTokenResponse validateRefreshToken() {
+        String refreshToken = SecurityUtil.extractRefreshToken();
 
-        Member member = memberRepository.findById(memberId).orElseThrow(() ->
-                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        if (refreshToken == null) throw new GeneralException(ErrorStatus.NOT_FOUND_TOKEN);
 
-        // 재발급
-        String newAccessToken = jwtUtil.createAccessToken(member.getEmail());
-        String newRefreshToken = jwtUtil.createRefreshToken(member.getEmail());
+        System.out.println(refreshToken);
 
-        member.setAccessToken(newAccessToken);
-        member.setRefreshToken(newRefreshToken);
+        // 리프레시 토큰 만료 검사
+        boolean isValid = jwtUtil.validateToken(refreshToken);
 
-        return ReIssueTokenResponse.of(newAccessToken, newRefreshToken);
+        // 등록된 유저가 아니면 예외 처리
+        Member member = memberRepository.findByRefreshToken(refreshToken).orElseThrow(() ->
+            new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+
+        // 리프레시 토큰이 유효할 때
+        if (isValid) {
+            // 액세스 토큰 재발급
+            String newAccessToken = jwtUtil.createAccessToken(member.getEmail());
+            String newRefreshToken = jwtUtil.createRefreshToken(member.getEmail());
+
+            member.setAccessToken(newAccessToken);
+            member.setRefreshToken(newRefreshToken);
+
+            return ReIssueTokenResponse.of(newAccessToken, newRefreshToken);
+        }
+        // 리프레시 토큰이 만료되었을 때
+        else throw new GeneralException(ErrorStatus.TOKEN_EXPIRED);
     }
 
     public String getKakaoAccessToken (String code) {
@@ -249,6 +298,24 @@ public class MemberService {
         return ProfileResponse.of(member);
     }
 
+    public void withdraw() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId).orElseThrow(() ->
+                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        if (member.getSocialType() == SocialType.APPLE) {
+            String authorizationCode = member.getAuthorizationCode();
+
+            try {
+                appleWithdraw(authorizationCode);
+            } catch (IOException e) {
+                throw new GeneralException(ErrorStatus.APPLE_WITHDRAW_FAILED);
+            }
+        }
+
+        memberRepository.delete(member);
+    }
+
     private Optional<Member> getMemberByTokenAndSocialType(String token, SocialType socialType) {
         Map<String, String> info = new HashMap<>();
 
@@ -328,6 +395,61 @@ public class MemberService {
                 nickname,
                 profileImageUrl,
                 socialType);
+    }
+
+    private void appleWithdraw(String authorizationCode) throws IOException {
+        AppleAuthTokenResponse appleAuthToken = generateAuthToken(authorizationCode);
+        if (appleAuthToken.accessToken() != null) {
+            RestTemplate restTemplate = new RestTemplateBuilder().build();
+            String revokeUrl = "https://appleid.apple.com/auth/oauth2/v2/revoke";
+            LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+            params.add("client_id", "BUNDLEID"); // TODO: BUNDLE_ID 입력
+            params.add("client_secret", createClientSecret());
+            params.add("token", appleAuthToken.accessToken());
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+            HttpEntity<MultiValueMap<String, String>> httpEntity = new HttpEntity<>(params, headers);
+            restTemplate.postForEntity(revokeUrl, httpEntity, String.class);
+        }
+    }
+
+    private AppleAuthTokenResponse generateAuthToken(String authorizationCode) throws IOException {
+        RestTemplate restTemplate = new RestTemplateBuilder().build();
+        String authUrl = "https://appleid.apple.com/auth/oauth2/v2/token";
+
+        LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("code", authorizationCode);
+        params.add("client_id", "BUNDLEID"); // TODO: BUNDLE_ID 입력
+        params.add("client_secret", createClientSecret());
+        params.add("grant_type", "authorization_code");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        HttpEntity<MultiValueMap<String, String>> httpEntity = new HttpEntity<>(params, headers);
+        try {
+            ResponseEntity<AppleAuthTokenResponse> response = restTemplate.postForEntity(authUrl, httpEntity, AppleAuthTokenResponse.class);
+            return response.getBody();
+        } catch (HttpClientErrorException e) {
+            log.error(String.valueOf(e));
+            throw new GeneralException(ErrorStatus.APPLE_WITHDRAW_FAILED);
+        }
+    }
+
+    private String createClientSecret() throws IOException {
+        Date expirationDate = Date.from(LocalDateTime.now().plusDays(30).atZone(ZoneId.systemDefault()).toInstant());
+        Map<String, Object> jwtHeader = new HashMap<>();
+        jwtHeader.put("kid", "KID"); // TODO: KEY_ID 입력
+        jwtHeader.put("alg", "ES256"); // alg
+        return Jwts.builder()
+                .setHeaderParams(jwtHeader)
+                .setIssuer("iss") // TODO: TEAM_ID 입력
+                .setIssuedAt(new Date(System.currentTimeMillis())) // 발행 시간
+                .setExpiration(expirationDate) // 만료 시간
+                .setAudience("https://appleid.apple.com") // aud
+                .setSubject("BUNDLEID") // sub
+                .signWith(SignatureAlgorithm.ES256, jwtProperties.getSecret())
+                .compact();
     }
 
     public MemberCategoryCreatedResponse createMemberCategory(CategorySurveyRequest request) {
