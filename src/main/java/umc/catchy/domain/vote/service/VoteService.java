@@ -2,6 +2,9 @@ package umc.catchy.domain.vote.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import umc.catchy.domain.category.domain.BigCategory;
+import umc.catchy.domain.categoryVote.dao.CategoryVoteRepository;
+import umc.catchy.domain.categoryVote.domain.CategoryVote;
 import umc.catchy.domain.group.dao.GroupRepository;
 import umc.catchy.domain.group.domain.Groups;
 import umc.catchy.domain.vote.dao.VoteRepository;
@@ -15,10 +18,14 @@ public class VoteService {
 
     private final VoteRepository voteRepository;
     private final GroupRepository groupRepository;
+    private final CategoryVoteRepository categoryVoteRepository;
 
-    public VoteService(VoteRepository voteRepository, GroupRepository groupRepository) {
+    public VoteService(VoteRepository voteRepository,
+                       GroupRepository groupRepository,
+                       CategoryVoteRepository categoryVoteRepository) {
         this.voteRepository = voteRepository;
         this.groupRepository = groupRepository;
+        this.categoryVoteRepository = categoryVoteRepository;
     }
 
     @Transactional
@@ -27,6 +34,13 @@ public class VoteService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
 
         Vote vote = Vote.createVote(group);
-        return voteRepository.save(vote);
+        voteRepository.save(vote);
+
+        for (BigCategory category : BigCategory.values()) {
+            CategoryVote categoryVote = new CategoryVote(vote, category);
+            categoryVoteRepository.save(categoryVote);
+        }
+
+        return vote;
     }
 }

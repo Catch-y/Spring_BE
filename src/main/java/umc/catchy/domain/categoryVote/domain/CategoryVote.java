@@ -15,10 +15,18 @@ public class CategoryVote extends BaseTimeEntity {
     @Column(name = "categoryVote_id")
     private Long id;
 
+    @Column(name = "big_category")
     @Enumerated(EnumType.STRING)
     private BigCategory bigCategory;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vote_id")
     private Vote vote;
+    public CategoryVote(Vote vote, BigCategory bigCategory) {
+        this.vote = vote;
+        this.bigCategory = bigCategory;
+    }
+
+    protected CategoryVote() {
+    }
 }
