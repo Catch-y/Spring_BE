@@ -1,6 +1,8 @@
 package umc.catchy.domain.vote.domain;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import umc.catchy.domain.common.BaseTimeEntity;
@@ -10,7 +12,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Vote extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,11 +28,14 @@ public class Vote extends BaseTimeEntity {
     @JoinColumn(name = "group_id")
     private Groups group;
 
-    public static Vote createVote(Groups group) {
-        Vote vote = new Vote();
-        vote.status = VoteStatus.IN_PROGRESS;
-        vote.endTime = LocalDateTime.now().plusDays(1);
-        vote.group = group;
-        return vote;
+    @Builder
+    public Vote(VoteStatus status, LocalDateTime endTime, Groups group) {
+        this.status = status;
+        this.endTime = endTime;
+        this.group = group;
+    }
+
+    public void changeStatus(VoteStatus status) {
+        this.status = status;
     }
 }
