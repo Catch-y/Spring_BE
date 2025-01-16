@@ -27,6 +27,7 @@ import umc.catchy.domain.vote.dto.response.VotedMemberResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 
@@ -46,7 +47,12 @@ public class VoteService {
         Groups group = groupRepository.findById(request.getGroupId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
 
-        Vote vote = Vote.createVote(group);
+        Vote vote = Vote.builder()
+                .status(VoteStatus.IN_PROGRESS)
+                .endTime(LocalDateTime.now().plusDays(1))
+                .group(group)
+                .build();
+
         voteRepository.save(vote);
 
         for (BigCategory category : BigCategory.values()) {
@@ -153,7 +159,7 @@ public class VoteService {
         int membersWhoVoted = memberCategoryVoteRepository.countDistinctMembersByVoteId(voteId);
 
         if (totalMembers == membersWhoVoted) {
-            vote.setStatus(VoteStatus.COMPLETED);
+            vote.changeStatus(VoteStatus.COMPLETED);
             voteRepository.save(vote);
         }
     }
