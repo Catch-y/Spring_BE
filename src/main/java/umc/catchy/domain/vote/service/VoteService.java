@@ -71,6 +71,11 @@ public class VoteService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
+        boolean hasAlreadyVoted = memberCategoryVoteRepository.existsByVoteIdAndMemberId(voteId, memberId);
+        if (hasAlreadyVoted) {
+            throw new GeneralException(ErrorStatus.CATEGORY_ALREADY_VOTED);
+        }
+
         for (Long categoryId : categoryIds) {
             CategoryVote categoryVote = categoryVoteRepository.findById(categoryId)
                     .orElseThrow(() -> new GeneralException(ErrorStatus.CATEGORY_NOT_FOUND));
