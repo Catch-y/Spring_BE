@@ -22,4 +22,15 @@ public class MemberCategoryVote extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
+
+    @Column(name = "vote_id")
+    private Long voteId;
+
+    public MemberCategoryVote(Member member, CategoryVote categoryVote, Long voteId) {
+        this.member = member;
+        this.categoryVote = categoryVote;
+        this.voteId = voteId;
+    }
+    protected MemberCategoryVote() {
+    }
 }
