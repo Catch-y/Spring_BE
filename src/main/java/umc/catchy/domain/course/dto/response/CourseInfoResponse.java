@@ -20,7 +20,7 @@ public class CourseInfoResponse {
         String courseName;
         String courseDescription;
         CourseType courseType;
-        Float rating;
+        Double rating;
         Integer reviewCount;
         String recommendTime;
         Long participantsNumber;

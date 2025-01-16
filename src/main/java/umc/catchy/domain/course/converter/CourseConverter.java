@@ -9,7 +9,6 @@ public class CourseConverter {
 
     public static CourseInfoResponse.getCourseInfoDTO toCourseInfoDTO(
             Course course,
-            Float rating,
             Integer reviewCount,
             String recommendTime,
             List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeInfoOfCourseDTOS
@@ -20,7 +19,7 @@ public class CourseConverter {
                 .courseName(course.getCourseName())
                 .courseDescription(course.getCourseDescription())
                 .courseType(course.getCourseType())
-                .rating(rating)
+                .rating(course.getRating())
                 .reviewCount(reviewCount)
                 .recommendTime(recommendTime)
                 .participantsNumber(course.getParticipantsNumber())
