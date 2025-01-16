@@ -27,8 +27,9 @@ public enum ErrorStatus implements BaseErrorCode {
     NICKNAME_DUPLICATE(HttpStatus.CONFLICT, "MEMBER409", "이미 사용 중인 닉네임입니다."),
     APPLE_WITHDRAW_FAILED(HttpStatus.UNAUTHORIZED, "MEMBER401", "애플 회원탈퇴에 실패하였습니다."),
 
-    //코스 관련 에러
+    // 코스 관련 에러
     COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "COURSE404", "해당 코스를 찾을 수 없습니다."),
+    INVALID_COURSE_TYPE(HttpStatus.BAD_REQUEST, "COURSE_TYPE400", "코스타입 입력이 잘못되었습니다."),
 
     // 그룹 관련 에러
     GROUP_INVITE_CODE_INVALID(HttpStatus.BAD_REQUEST, "GROUP400", "유효하지 않은 초대 코드입니다."),
