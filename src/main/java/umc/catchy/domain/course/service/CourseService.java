@@ -51,12 +51,6 @@ public class CourseService {
                 .collect(Collectors.toList());
     }
 
-    //Course : 평점 계산 로직
-    private Float calculateRatingOfCourse(Course course){
-        //if(!course.isHasReview()){ return 0.0F; }
-        return 0.0F; //TODO placeReview 관련 로직 작성하면서 함께 구현하기
-    }
-
     //Course : 리뷰 개수 로직
     private Integer calculateNumberOfReviews(Course course){
         if(!course.isHasReview()){
@@ -83,6 +77,6 @@ public class CourseService {
                 .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
-        return CourseConverter.toCourseInfoDTO(course, calculateRatingOfCourse(course), calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
+        return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
     }
 }
