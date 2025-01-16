@@ -2,6 +2,7 @@ package umc.catchy.domain.course.domain;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.member.domain.Member;
 
@@ -30,8 +31,10 @@ public class Course extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private CourseType courseType;
 
+    @Setter
     private boolean hasReview;
 
+    @Setter
     private Double rating;
 
     @ManyToOne(fetch = FetchType.LAZY)
