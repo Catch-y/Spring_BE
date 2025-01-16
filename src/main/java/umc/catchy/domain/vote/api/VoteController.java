@@ -40,9 +40,8 @@ public class VoteController {
     @PostMapping("/{voteId}/category")
     public ResponseEntity<BaseResponse<Void>> submitVote(
             @PathVariable Long voteId,
-            @RequestBody SubmitVoteRequest request,
-            @AuthenticationPrincipal Long memberId) {
-        voteService.submitVote(memberId, voteId, request.getCategoryIds());
+            @RequestBody SubmitVoteRequest request) {
+        voteService.submitVote(voteId, request.getCategoryIds());
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 

@@ -26,6 +26,7 @@ import umc.catchy.domain.vote.dto.response.VoteResultResponse;
 import umc.catchy.domain.vote.dto.response.VotedMemberResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
+import umc.catchy.global.util.SecurityUtil;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -64,7 +65,9 @@ public class VoteService {
     }
 
     @Transactional
-    public void submitVote(Long memberId, Long voteId, List<Long> categoryIds) {
+    public void submitVote(Long voteId, List<Long> categoryIds) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
