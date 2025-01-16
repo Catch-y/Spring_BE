@@ -40,6 +40,19 @@ public class PlaceReviewService {
     private final MemberRepository memberRepository;
     private final AmazonS3Manager amazonS3Manager;
 
+    //장소 rating refresh
+    private void refreshPlaceRating(Place place){
+        List<PlaceReview> reviews = placeReviewRepository.findAllByPlace(place);
+        if(!reviews.isEmpty()){
+            double averageRating = reviews.stream()
+                    .mapToDouble(PlaceReview::getRating)
+                    .average()
+                    .orElse(0.0);
+            place.setRating(averageRating);
+            placeRepository.save(place);
+        }
+    }
+
     public PostPlaceReviewResponse.newPlaceReviewResponseDTO postNewPlaceReview(PostPlaceReviewRequest request, Long placeId){
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
@@ -64,6 +77,8 @@ public class PlaceReviewService {
         //PlaceReview 엔티티 생성 및 저장
         PlaceReview newPlaceReview = PlaceReviewConverter.toPlaceReview(member, place, request);
         placeReviewRepository.save(newPlaceReview);
+        //Place::rating refresh
+        refreshPlaceRating(newPlaceReview.getPlace());
 
         List<PostPlaceReviewResponse.placeReviewImageResponseDTO> reviewImages = new ArrayList<>();
         for(MultipartFile image : request.getImages()){
