@@ -160,15 +160,15 @@ public class MemberController {
 
     @Operation(summary = "알람 여부 변경", description = "기존 토글 값을 변경합니다.")
     @PatchMapping("/alarm")
-    public ResponseEntity<Void> memberToggleAppAlarmStateUpdate() {
+    public ResponseEntity<BaseResponse<Void>> memberToggleAppAlarmStateUpdate() {
         memberService.toggleAppAlarm();
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 
     @Operation(summary = "FCM 토큰 갱신", description = "FCM 토큰을 갱신합니다.")
     @PatchMapping("/fcm-token")
-    public ResponseEntity<Void> memberFcmTokenUpdate(@RequestBody UpdateFcmTokenRequest updateFcmTokenRequest) {
+    public ResponseEntity<BaseResponse<Void>> memberFcmTokenUpdate(@RequestBody UpdateFcmTokenRequest updateFcmTokenRequest) {
         memberService.updateFcmToken(updateFcmTokenRequest);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 }
