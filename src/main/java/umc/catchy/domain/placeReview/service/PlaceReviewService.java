@@ -4,6 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import umc.catchy.domain.course.dao.CourseRepository;
+import umc.catchy.domain.course.domain.Course;
+import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -34,11 +37,21 @@ import java.util.UUID;
 public class PlaceReviewService {
 
     private final PlaceRepository placeRepository;
+    private final PlaceCourseRepository placeCourseRepository;
     private final PlaceVisitRepository placeVisitRepository;
     private final PlaceReviewRepository placeReviewRepository;
     private final PlaceReviewImageRepository placeReviewImageRepository;
+    private final CourseRepository courseRepository;
     private final MemberRepository memberRepository;
     private final AmazonS3Manager amazonS3Manager;
+
+    //코스 평점 계산
+    private void refreshCourseRating(Course course){
+        Double rating = placeCourseRepository.calculateAverageRatingByCourse(course);
+        rating = (rating != null) ? rating : 0.0;
+        course.setRating(rating);
+        courseRepository.save(course);
+    }
 
     //장소 rating refresh
     private void refreshPlaceRating(Place place){
@@ -51,6 +64,11 @@ public class PlaceReviewService {
             place.setRating(averageRating);
             placeRepository.save(place);
         }
+        //장소를 포함하는 코스에 대한 평점 refresh
+        placeCourseRepository.findAllByPlace(place)
+                .forEach(placeCourse -> {
+                    refreshCourseRating(placeCourse.getCourse());
+                });
     }
 
     public PostPlaceReviewResponse.newPlaceReviewResponseDTO postNewPlaceReview(PostPlaceReviewRequest request, Long placeId){
