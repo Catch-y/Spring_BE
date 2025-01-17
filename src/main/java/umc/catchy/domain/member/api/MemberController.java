@@ -22,8 +22,7 @@ import umc.catchy.domain.mapping.memberCategory.dto.response.MemberCategoryCreat
 import umc.catchy.domain.mapping.memberLocation.dto.response.MemberLocationCreatedResponse;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
-import umc.catchy.domain.member.dto.request.ProfileRequest;
-import umc.catchy.domain.member.dto.request.ReIssueTokenRequest;
+import umc.catchy.domain.member.dto.request.NicknameRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
 import umc.catchy.domain.member.dto.response.*;
@@ -48,7 +47,7 @@ public class MemberController {
             @Parameter(name = "platform", description = "소셜 로그인 플랫폼 (KAKAO 또는 APPLE)", required = true, in = ParameterIn.PATH)
             @PathVariable("platform") String platform,
             @RequestPart("info") @Valid SignUpRequest request,
-            @RequestPart("profileImage") MultipartFile profileImage) {
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage) {
 
         SocialType socialType;
 
@@ -81,10 +80,9 @@ public class MemberController {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.login(request, socialType));
     }
 
-    @DeleteMapping("/member/withdraw/{platform}")
+    @DeleteMapping("/member/withdraw")
     @Operation(summary = "회원 탈퇴 API ", description = "현재 로그인된 사용자 탈퇴")
     public BaseResponse<Void> withdrawMember() {
-
         memberService.withdraw();
 
         return BaseResponse.onSuccess(SuccessStatus._OK, null);
@@ -108,10 +106,31 @@ public class MemberController {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.getCurrentMember());
     }
 
-    @PatchMapping("/mypage")
-    @Operation(summary = "프로필 변경 API", description = "현재 로그인된 사용자의 프로필 변경")
-    public BaseResponse<ProfileResponse> updateProfile(@RequestBody @Valid ProfileRequest request) {
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateMember(request));
+    @PostMapping("/mypage/nickname")
+    @Operation(summary = "닉네임 중복 검사 API", description = "변경하려는 닉네임이 중복인지 검사")
+    public BaseResponse<Void> validateNickname(@RequestBody @Valid NicknameRequest request) {
+        memberService.validateNickname(request);
+
+        return BaseResponse.onSuccess(SuccessStatus.NICKNAME_AVAILABLE, null);
+    }
+
+    @PatchMapping("/mypage/nickname")
+    @Operation(summary = "닉네임 변경 API", description = "현재 로그인된 사용자의 닉네임 변경")
+    public BaseResponse<ProfileResponse> updateNickname(@RequestBody @Valid NicknameRequest request) {
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateNickname(request));
+    }
+
+    @PatchMapping(value = "/mypage/profileImage", consumes = "multipart/form-data")
+    @Operation(summary = "프로필 사진 변경 API", description = "현재 로그인된 사용자의 프로필 사진 변경")
+    public BaseResponse<ProfileResponse> updateProfileImage(@RequestPart @Valid MultipartFile profileImage) {
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateProfileImage(profileImage));
+    }
+
+    @PostMapping("/mypage/logout")
+    @Operation(summary = "로그아웃 API", description = "사용자의 토큰을 만료시킨다.")
+    public BaseResponse<Void> logout() {
+        memberService.logout();
+        return BaseResponse.onSuccess(SuccessStatus._OK, null);
     }
 
     @PostMapping("/survey/category")

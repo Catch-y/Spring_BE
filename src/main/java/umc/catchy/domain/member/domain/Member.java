@@ -28,6 +28,7 @@ public class Member extends BaseTimeEntity {
     @Setter
     private String nickname;
 
+    @Setter
     private String profileImage;
 
     @Enumerated(EnumType.STRING)
