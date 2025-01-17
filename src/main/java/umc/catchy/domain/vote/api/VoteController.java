@@ -5,9 +5,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
+import umc.catchy.domain.vote.dto.request.SubmitVoteRequest;
+import umc.catchy.domain.vote.dto.response.CategoryResponse;
+import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
 import umc.catchy.domain.vote.dto.response.VoteResponse;
+import umc.catchy.domain.vote.dto.response.VoteResultResponse;
 import umc.catchy.domain.vote.service.VoteService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
@@ -29,5 +34,39 @@ public class VoteController {
                 .build();
         return ResponseEntity.status(SuccessStatus._CREATED.getHttpStatus())
                 .body(BaseResponse.onSuccess(SuccessStatus._CREATED, response));
+    }
+
+    @Operation(summary = "카테고리 투표", description = "최소 2개 이상 카테고리를 투표합니다.")
+    @PostMapping("/{voteId}/category")
+    public ResponseEntity<BaseResponse<Void>> submitVote(
+            @PathVariable Long voteId,
+            @RequestBody SubmitVoteRequest request) {
+        voteService.submitVote(voteId, request.getCategoryIds());
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
+    }
+
+    @Operation(summary = "투표 진행 중", description = "카테고리 투표 진행 중 투표 현황 조회")
+    @GetMapping("/{voteId}")
+    public ResponseEntity<BaseResponse<VoteResultResponse>> getVoteResults(@PathVariable Long voteId) {
+        VoteResultResponse response = voteService.getVoteResults(voteId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "투표 진행 중", description = "카테고리 투표 진행 중 멤버 별 투표 현황 조회")
+    @GetMapping("/{groupId}/votes/{voteId}/members")
+    public ResponseEntity<BaseResponse<GroupVoteStatusResponse>> getGroupVoteStatus(
+            @PathVariable Long groupId,
+            @PathVariable Long voteId
+    ) {
+        GroupVoteStatusResponse response = voteService.getGroupVoteStatus(groupId, voteId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "투표 진행 중", description = "해당 카테고리 ID 목록 조회")
+    @GetMapping("/{voteId}/category")
+    public ResponseEntity<BaseResponse<CategoryResponse>> getCategories(
+            @PathVariable Long voteId) {
+        CategoryResponse response = voteService.getCategoriesByVoteId(voteId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

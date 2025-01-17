@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.*;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -45,8 +44,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import umc.catchy.domain.Uuid.dao.UuidRepository;
-import umc.catchy.domain.Uuid.domain.Uuid;
 import umc.catchy.domain.activetime.dao.ActiveTimeRepository;
 import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
@@ -69,6 +66,10 @@ import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.FcmInfo;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
+import umc.catchy.domain.member.dto.request.LoginRequest;
+import umc.catchy.domain.member.dto.request.NicknameRequest;
+import umc.catchy.domain.member.dto.request.SignUpRequest;
+import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
 import umc.catchy.domain.member.dto.request.*;
 import umc.catchy.domain.member.dto.response.*;
 import umc.catchy.domain.style.dao.StyleRepository;
@@ -278,7 +279,7 @@ public class MemberService {
         return ProfileResponse.of(member);
     }
 
-    public ProfileResponse updateMember(ProfileRequest request) {
+    public ProfileResponse updateNickname(NicknameRequest request) {
         // 닉네임 중복 검사
         memberRepository.findByNickname(request.nickname())
                 .ifPresent(member -> {
@@ -290,10 +291,42 @@ public class MemberService {
         Member member = memberRepository.findById(memberId).orElseThrow(() ->
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-
+        // 닉네임 변경
         member.setNickname(request.nickname());
 
         return ProfileResponse.of(member);
+    }
+
+    public ProfileResponse updateProfileImage(MultipartFile newProfileImage) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId).orElseThrow(() ->
+                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        String originProfileImageUrl = member.getProfileImage();
+
+        // 기존에 프로필 사진이 있었다면 제거
+        if (originProfileImageUrl.isEmpty()) {
+            s3Manager.deleteImage(originProfileImageUrl);
+        }
+
+        // 프로필 사진 url 생성
+        String keyName = "profile-images/" + newProfileImage.getOriginalFilename();
+        String newProfileImageUrl = s3Manager.uploadFile(keyName, newProfileImage);
+
+        // 이미지 변경
+        member.setProfileImage(newProfileImageUrl);
+
+        return ProfileResponse.of(member);
+    }
+
+    public void validateNickname(NicknameRequest request) {
+        String nickname = request.nickname();
+
+        // 닉네임 중복 검사
+        memberRepository.findByNickname(nickname)
+                .ifPresent(member -> {
+                    throw new GeneralException(ErrorStatus.NICKNAME_DUPLICATE);
+                });
     }
 
     public void withdraw() {
@@ -312,6 +345,15 @@ public class MemberService {
         }
 
         memberRepository.delete(member);
+    }
+
+    public void logout() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId).orElseThrow(() ->
+                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        member.setAccessToken(null);
+        member.setRefreshToken(null);
     }
 
     private Optional<Member> getMemberByTokenAndSocialType(String token, SocialType socialType) {
