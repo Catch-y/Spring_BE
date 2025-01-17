@@ -83,7 +83,7 @@ public class PlaceReviewService {
         List<PostPlaceReviewResponse.placeReviewImageResponseDTO> reviewImages = new ArrayList<>();
         for(MultipartFile image : request.getImages()){
             //S3에 이미지 업로드
-            String keyName = "place-review-images/" + UUID.randomUUID().toString();
+            String keyName = "review/place-review-images/" + UUID.randomUUID().toString();
             String url = amazonS3Manager.uploadFile(keyName, image);
 
             //PlaceReviewImage 엔티티 생성 및 저장
