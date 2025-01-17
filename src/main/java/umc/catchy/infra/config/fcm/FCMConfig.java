@@ -22,7 +22,6 @@ public class FCMConfig {
     public void init() {
         try {
             if (FirebaseApp.getApps().isEmpty()) {
-                log.info("Initializing FCM with certification: {}", fcmCertification);
                 FirebaseOptions options =
                         new FirebaseOptions.Builder()
                                 .setCredentials(
