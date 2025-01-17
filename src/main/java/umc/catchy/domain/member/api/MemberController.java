@@ -23,7 +23,6 @@ import umc.catchy.domain.mapping.memberLocation.dto.response.MemberLocationCreat
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.NicknameRequest;
-import umc.catchy.domain.member.dto.request.ProfileImageRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
 import umc.catchy.domain.member.dto.response.*;
@@ -121,10 +120,10 @@ public class MemberController {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateNickname(request));
     }
 
-    @PatchMapping("/mypage/profileImage")
+    @PatchMapping(value = "/mypage/profileImage", consumes = "multipart/form-data")
     @Operation(summary = "프로필 사진 변경 API", description = "현재 로그인된 사용자의 프로필 사진 변경")
-    public BaseResponse<ProfileResponse> updateProfileImage(@RequestBody @Valid ProfileImageRequest request) {
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateProfileImage(request));
+    public BaseResponse<ProfileResponse> updateProfileImage(@RequestPart @Valid MultipartFile profileImage) {
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateProfileImage(profileImage));
     }
 
     @PostMapping("/mypage/logout")

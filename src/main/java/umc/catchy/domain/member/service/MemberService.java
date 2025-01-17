@@ -67,7 +67,6 @@ import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.NicknameRequest;
-import umc.catchy.domain.member.dto.request.ProfileImageRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
 import umc.catchy.domain.member.dto.response.*;
@@ -296,13 +295,12 @@ public class MemberService {
         return ProfileResponse.of(member);
     }
 
-    public ProfileResponse updateProfileImage(ProfileImageRequest request) {
+    public ProfileResponse updateProfileImage(MultipartFile newProfileImage) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId).orElseThrow(() ->
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         String originProfileImageUrl = member.getProfileImage();
-        MultipartFile newProfileImage = request.profileImage();
 
         // 기존의 프로필 사진이 있었더면 제거
         if (originProfileImageUrl.isEmpty()) {
@@ -310,7 +308,7 @@ public class MemberService {
         }
 
         // 프로필 사진 url 생성
-        String keyName = "profile-images/" + newProfileImage;
+        String keyName = "profile-images/" + newProfileImage.getOriginalFilename();
         String newProfileImageUrl = s3Manager.uploadFile(keyName, newProfileImage);
 
         // 이미지 변경
