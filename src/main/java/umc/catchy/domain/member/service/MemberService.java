@@ -66,12 +66,10 @@ import umc.catchy.domain.mapping.memberLocation.dto.response.MemberLocationCreat
 import umc.catchy.domain.mapping.memberStyle.dao.MemberStyleRepository;
 import umc.catchy.domain.mapping.memberStyle.domain.MemberStyle;
 import umc.catchy.domain.member.dao.MemberRepository;
+import umc.catchy.domain.member.domain.FcmInfo;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
-import umc.catchy.domain.member.dto.request.LoginRequest;
-import umc.catchy.domain.member.dto.request.ProfileRequest;
-import umc.catchy.domain.member.dto.request.SignUpRequest;
-import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
+import umc.catchy.domain.member.dto.request.*;
 import umc.catchy.domain.member.dto.response.*;
 import umc.catchy.domain.style.dao.StyleRepository;
 import umc.catchy.domain.style.domain.Style;
@@ -394,7 +392,8 @@ public class MemberService {
                 email,
                 nickname,
                 profileImageUrl,
-                socialType);
+                socialType,
+                FcmInfo.createFcmInfo());
     }
 
     private void appleWithdraw(String authorizationCode) throws IOException {
@@ -520,6 +519,18 @@ public class MemberService {
                 .collect(Collectors.toList());
 
         return new MemberLocationCreatedResponse(memberLocationIds);
+    }
+
+    public void toggleAppAlarm() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        currentMember.toggleAppAlarmState(currentMember.getFcmInfo());
+    }
+
+    public void updateFcmToken(UpdateFcmTokenRequest request) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        currentMember.updateFcmToken(currentMember.getFcmInfo(),request.getFcmToken());
     }
 }
 

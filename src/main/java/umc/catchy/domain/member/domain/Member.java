@@ -47,12 +47,16 @@ public class Member extends BaseTimeEntity {
 
     private Integer gpt_count;
 
+    @Embedded
+    private FcmInfo fcmInfo;
+
     public static Member createMember(
             String providerId,
             String email,
             String nickname,
             String profileImage,
-            SocialType socialType
+            SocialType socialType,
+            FcmInfo fcmInfo
     ) {
         return Member.builder()
                 .providerId(providerId)
@@ -61,6 +65,15 @@ public class Member extends BaseTimeEntity {
                 .profileImage(profileImage)
                 .socialType(socialType)
                 .state(MemberState.ACTIVE)
+                .fcmInfo(fcmInfo)
                 .build();
+    }
+
+    public void toggleAppAlarmState(FcmInfo fcmState) {
+        this.fcmInfo = FcmInfo.toggleAlarm(fcmState);
+    }
+
+    public void updateFcmToken(FcmInfo fcmState, String fcmToken) {
+        this.fcmInfo = FcmInfo.updateToken(fcmState, fcmToken);
     }
 }

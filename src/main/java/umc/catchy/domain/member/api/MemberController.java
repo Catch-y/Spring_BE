@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -21,11 +22,7 @@ import umc.catchy.domain.location.dto.request.LocationSurveyRequest;
 import umc.catchy.domain.mapping.memberCategory.dto.response.MemberCategoryCreatedResponse;
 import umc.catchy.domain.mapping.memberLocation.dto.response.MemberLocationCreatedResponse;
 import umc.catchy.domain.member.domain.SocialType;
-import umc.catchy.domain.member.dto.request.LoginRequest;
-import umc.catchy.domain.member.dto.request.ProfileRequest;
-import umc.catchy.domain.member.dto.request.ReIssueTokenRequest;
-import umc.catchy.domain.member.dto.request.SignUpRequest;
-import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
+import umc.catchy.domain.member.dto.request.*;
 import umc.catchy.domain.member.dto.response.*;
 import umc.catchy.domain.member.service.MemberService;
 import umc.catchy.global.common.response.BaseResponse;
@@ -135,5 +132,19 @@ public class MemberController {
     public BaseResponse<MemberLocationCreatedResponse> createMemberLocation(@RequestBody List<LocationSurveyRequest> request) {
         MemberLocationCreatedResponse response = memberService.createMemberLocation(request);
         return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
+    }
+
+    @Operation(summary = "알람 여부 변경", description = "기존 토글 값을 변경합니다.")
+    @PatchMapping("/alarm")
+    public ResponseEntity<Void> memberToggleAppAlarmStateUpdate() {
+        memberService.toggleAppAlarm();
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "FCM 토큰 갱신", description = "FCM 토큰을 갱신합니다.")
+    @PatchMapping("/fcm-token")
+    public ResponseEntity<Void> memberFcmTokenUpdate(@RequestBody UpdateFcmTokenRequest updateFcmTokenRequest) {
+        memberService.updateFcmToken(updateFcmTokenRequest);
+        return ResponseEntity.ok().build();
     }
 }
