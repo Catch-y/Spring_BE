@@ -127,6 +127,13 @@ public class MemberController {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateProfileImage(request));
     }
 
+    @PostMapping("/mypage/logout")
+    @Operation(summary = "로그아웃 API", description = "사용자의 토큰을 만료시킨다.")
+    public BaseResponse<Void> logout() {
+        memberService.logout();
+        return BaseResponse.onSuccess(SuccessStatus._OK, null);
+    }
+
     @PostMapping("/survey/category")
     @Operation(summary = "사용자 취향설문 카테고리 저장 API ", description = "사용자 취향설문 1,2단계를 저장")
     public BaseResponse<MemberCategoryCreatedResponse> createMemberCategory(

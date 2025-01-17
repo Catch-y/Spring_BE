@@ -345,6 +345,15 @@ public class MemberService {
         memberRepository.delete(member);
     }
 
+    public void logout() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId).orElseThrow(() ->
+                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        member.setAccessToken(null);
+        member.setRefreshToken(null);
+    }
+
     private Optional<Member> getMemberByTokenAndSocialType(String token, SocialType socialType) {
         Map<String, String> info = new HashMap<>();
 
