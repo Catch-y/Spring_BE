@@ -354,7 +354,7 @@ public class MemberService {
 
         member.setAccessToken(null);
         member.setRefreshToken(null);
-        FcmInfo.deleteToken(member.getFcmInfo());
+        member.deleteFcmToken(member.getFcmInfo());
     }
 
     private Optional<Member> getMemberByTokenAndSocialType(String token, SocialType socialType) {

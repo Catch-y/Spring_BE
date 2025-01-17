@@ -77,4 +77,8 @@ public class Member extends BaseTimeEntity {
     public void updateFcmToken(FcmInfo fcmState, String fcmToken) {
         this.fcmInfo = FcmInfo.updateToken(fcmState, fcmToken);
     }
+
+    public void deleteFcmToken(FcmInfo fcmState) {
+        this.fcmInfo = FcmInfo.deleteToken(fcmState);
+    }
 }
