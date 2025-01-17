@@ -62,6 +62,16 @@ public class CourseController {
         CourseInfoResponse.getCourseInfoDTO response = courseService.updateCourse(courseId, request);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
+
+    @Operation(summary = "코스 삭제 API", description = "사용자의 코스 삭제")
+    @DeleteMapping("/course/{courseId}")
+    public ResponseEntity<BaseResponse<Void>> deleteCourse(
+            @Parameter(description = "코스 ID", required = true)
+            @PathVariable Long courseId
+    ) {
+        courseService.deleteCourse(courseId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
+    }
       
     @Operation(summary = "코스 리뷰 작성 API", description = "코스 리뷰 작성을 위한 API, 멤버가 해당 코스의 과반수 이상의 장소에 방문 체크를 성공하였을 때 리뷰 작성 권한이 주어집니다.")
     @PostMapping(value = "/{courseId}/review", consumes = "multipart/form-data")

@@ -20,7 +20,7 @@ public class PlaceCourse extends BaseTimeEntity {
     @Column(name = "place_course_id")
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "course_id")
     private Course course;
 

@@ -133,6 +133,7 @@ public class CourseService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
+        // 사용자가 가지고 있는 코스인지 검증
         memberCourseRepository.findByCourseAndMember(course, member)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER));
 
@@ -189,6 +190,27 @@ public class CourseService {
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
         return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
+    }
+
+    public void deleteCourse(Long courseId) {
+        Course course = getCourse(courseId);
+
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        // 사용자가 가지고 있는 코스인지 검증
+        MemberCourse memberCourse = memberCourseRepository.findByCourseAndMember(course, member)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER));
+
+        memberCourseRepository.delete(memberCourse);
+
+        // 코스의 장소들 삭제
+        List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
+        placeCourseRepository.deleteAll(placeCourses);
+
+        // 코스 삭제
+        courseRepository.delete(course);
     }
 
     private List<BigCategory> getCategories(Course course) {
