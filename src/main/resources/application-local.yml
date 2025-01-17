@@ -37,3 +37,6 @@ security:
   kakao:
     client-id: ${REST_API_KEY}
     client-secret: ${SECRET_KEY}
+
+fcm:
+  certification: ${FCM_CERTIFICATION:}
