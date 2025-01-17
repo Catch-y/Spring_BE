@@ -1,6 +1,7 @@
 package umc.catchy.domain.course.service;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -107,8 +108,11 @@ public class CourseService {
 
         List<Course> courses = filterByConditions(memberCourses, courseType, upperLocation, lowerLocation);
 
+        // 최신순으로 정렬
         return courses.stream()
+                .sorted(Comparator.comparing(Course::getCreatedDate).reversed())
                 .map(course -> {
+                    System.out.println(course.getCreatedDate());
                     List<BigCategory> categories = getCategories(course);
                     return MemberCourseConverter.toMemberCourseResponse(course, categories);
                 }).toList();
@@ -150,7 +154,8 @@ public class CourseService {
                 .filter(course -> {
                     List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
                     return hasUpperLocation(placeCourses, upperLocation);
-                }).distinct().toList();
+                }).distinct()
+                .toList();
     }
 
     // 하위 지역에 따라 필터링
@@ -162,7 +167,8 @@ public class CourseService {
                 .filter(course -> {
                     List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
                     return hasLowerLocation(placeCourses, lowerLocation);
-                }).distinct().toList();
+                }).distinct()
+                .toList();
     }
 
     private boolean hasUpperLocation(List<PlaceCourse> placeCourses, String upperLocation) {

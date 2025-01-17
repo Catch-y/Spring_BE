@@ -39,7 +39,7 @@ public class CourseController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
-    @Operation(summary = "내 코스 조회 API", description = "코스 탭에서 DIY/AI, 지역별로 사용자의 코스를 조회")
+    @Operation(summary = "내 코스 조회 API", description = "코스 탭에서 DIY/AI, 지역별로 사용자의 코스를 최신순으로 조회")
     @GetMapping("/course/search")
     public ResponseEntity<BaseResponse<List<MemberCourseResponse>>> getMemberCourses(
             @RequestParam(value = "type", defaultValue = "AI") String type,
