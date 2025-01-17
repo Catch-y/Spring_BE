@@ -12,7 +12,11 @@ public enum SuccessStatus implements BaseCode {
     _OK(HttpStatus.OK, "COMMON200", "성공입니다."),
     _CREATED(HttpStatus.CREATED, "COMMON201", "요청 성공 및 리소스 생성됨"),
     _NO_CONTENT(HttpStatus.NO_CONTENT, "COMMON202", "요청 성공 및 반환할 콘텐츠가 없음"),
+
+    // 사용자 관련
+    NICKNAME_AVAILABLE(HttpStatus.OK, "NICKNAME200", "사용가능한 닉네임입니다.")
     ;
+
     private final HttpStatus httpStatus;
     private final String code;
     private final String message;
