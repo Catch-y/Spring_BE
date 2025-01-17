@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
@@ -49,6 +50,17 @@ public class CourseController {
 
         List<MemberCourseResponse> responses = courseService.getMemberCourses(type, upperLocation, lowerLocation);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, responses));
+    }
+
+    @Operation(summary = "코스 수정 API", description = "사용자의 코스 수정")
+    @PatchMapping(value = "/course/{courseId}", consumes = "multipart/form-data")
+    public ResponseEntity<BaseResponse<CourseInfoResponse.getCourseInfoDTO>> updateCourse(
+            @Parameter(description = "코스 ID", required = true)
+            @PathVariable Long courseId,
+            @Valid @ModelAttribute CourseUpdateRequest request
+    ) {
+        CourseInfoResponse.getCourseInfoDTO response = courseService.updateCourse(courseId, request);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
       
     @Operation(summary = "코스 리뷰 작성 API", description = "코스 리뷰 작성을 위한 API, 멤버가 해당 코스의 과반수 이상의 장소에 방문 체크를 성공하였을 때 리뷰 작성 권한이 주어집니다.")

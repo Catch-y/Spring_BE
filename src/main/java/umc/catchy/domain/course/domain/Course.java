@@ -16,14 +16,17 @@ public class Course extends BaseTimeEntity {
     @Column(name = "course_id")
     private Long id;
 
+    @Setter
     private String courseImage;
 
+    @Setter
     private String courseName;
 
     private LocalTime recommendTimeStart;
 
     private LocalTime recommendTimeEnd;
 
+    @Setter
     private String courseDescription;
 
     private Long participantsNumber;

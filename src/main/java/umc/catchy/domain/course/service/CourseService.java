@@ -2,15 +2,18 @@ package umc.catchy.domain.course.service;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.course.domain.CourseType;
+import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
 import umc.catchy.domain.mapping.memberCourse.converter.MemberCourseConverter;
@@ -24,6 +27,7 @@ import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.converter.PlaceConverter;
+import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
@@ -32,6 +36,7 @@ import umc.catchy.global.util.SecurityUtil;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
+import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
 @Service
 @Transactional
@@ -44,6 +49,8 @@ public class CourseService {
     private final PlaceVisitRepository placeVisitRepository;
     private final MemberRepository memberRepository;
     private final MemberCourseRepository memberCourseRepository;
+    private final AmazonS3Manager amazonS3Manager;
+    private final PlaceRepository placeRepository;
 
     private Course getCourse(Long courseId){
         return courseRepository.findById(courseId)
@@ -116,6 +123,72 @@ public class CourseService {
                     List<BigCategory> categories = getCategories(course);
                     return MemberCourseConverter.toMemberCourseResponse(course, categories);
                 }).toList();
+    }
+
+    // 코스 수정
+    public CourseInfoResponse.getCourseInfoDTO updateCourse(Long courseId, CourseUpdateRequest request) {
+        Course course = getCourse(courseId);
+
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        memberCourseRepository.findByCourseAndMember(course, member)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER));
+
+        // 코스 이름 수정
+        if (!request.getCourseName().isEmpty()) {
+            course.setCourseName(request.getCourseName());
+        }
+
+        // 코스 설명 수정
+        if (!request.getCourseDescription().isEmpty()) {
+            course.setCourseDescription(request.getCourseDescription());
+        }
+
+        // 코스 이미지 수정
+        if (request.getProfileImage() != null) {
+            String originCourseImageUrl = course.getCourseImage();
+
+            if (!originCourseImageUrl.isEmpty())
+                amazonS3Manager.deleteImage(originCourseImageUrl);
+
+            MultipartFile newProfileImage = request.getProfileImage();
+
+            String keyName = "course-images/" + newProfileImage.getOriginalFilename();
+            String newProfileImageUrl = amazonS3Manager.uploadFile(keyName, newProfileImage);
+
+            course.setCourseImage(newProfileImageUrl);
+        }
+
+        // 코스 장소 수정
+        if (!request.getPlaceIds().isEmpty()) {
+            List<Long> placeIds = request.getPlaceIds();
+
+            // 기존의 장소는 제거
+            List<PlaceCourse> originPlaces = placeCourseRepository.findAllByCourse(course);
+            placeCourseRepository.deleteAll(originPlaces);
+
+            // 코스에 추가
+            IntStream.range(0, placeIds.size()).forEach(index -> {
+                Long placeId = placeIds.get(index);
+                Place place = placeRepository.findById(placeId)
+                        .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+
+                // List의 Index를 기반으로 코스 순서 결정
+                PlaceCourse newPlaceCourse = PlaceCourse.builder()
+                        .course(course)
+                        .place(place)
+                        .placeOrder(index + 1)
+                        .build();
+
+                placeCourseRepository.save(newPlaceCourse);
+                System.out.println("test4");
+            });
+        }
+
+        List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
+        return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
     }
 
     private List<BigCategory> getCategories(Course course) {
