@@ -324,7 +324,9 @@ public class MemberService {
 
         // 닉네임 중복 검사
         memberRepository.findByNickname(nickname)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.NICKNAME_DUPLICATE));
+                .ifPresent(member -> {
+                    throw new GeneralException(ErrorStatus.NICKNAME_DUPLICATE);
+                });
     }
 
     public void withdraw() {
