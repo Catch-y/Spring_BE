@@ -302,7 +302,7 @@ public class MemberService {
 
         String originProfileImageUrl = member.getProfileImage();
 
-        // 기존의 프로필 사진이 있었더면 제거
+        // 기존에 프로필 사진이 있었다면 제거
         if (originProfileImageUrl.isEmpty()) {
             s3Manager.deleteImage(originProfileImageUrl);
         }
