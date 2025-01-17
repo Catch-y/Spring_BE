@@ -2,13 +2,11 @@ package umc.catchy.infra.config.fcm;
 
 import com.google.api.core.ApiFuture;
 import com.google.firebase.messaging.*;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@Slf4j
 public class FCMService {
     /**
      * @param tokenList: 푸시 토큰 리스트
