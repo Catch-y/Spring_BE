@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
 import umc.catchy.domain.vote.dto.request.SubmitVoteRequest;
 import umc.catchy.domain.vote.dto.response.CategoryResponse;
+import umc.catchy.domain.vote.dto.response.GroupVoteResultResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
 import umc.catchy.domain.vote.dto.response.VoteResponse;
 import umc.catchy.domain.vote.dto.response.VoteResultResponse;
@@ -67,6 +68,15 @@ public class VoteController {
     public ResponseEntity<BaseResponse<CategoryResponse>> getCategories(
             @PathVariable Long voteId) {
         CategoryResponse response = voteService.getCategoriesByVoteId(voteId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "그룹 투표 결과 조회", description = "특정 투표의 지역 및 카테고리별 장소 정보를 조회합니다.")
+    @GetMapping("/{groupId}/votes/{voteId}/results")
+    public ResponseEntity<BaseResponse<GroupVoteResultResponse>> getGroupVoteResults(
+            @PathVariable Long groupId,
+            @PathVariable Long voteId) {
+        GroupVoteResultResponse response = voteService.getGroupVoteResults(groupId, voteId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }
