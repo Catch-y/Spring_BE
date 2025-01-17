@@ -13,7 +13,7 @@ public class FcmInfo {
     private Boolean appAlarm;
 
     public static FcmInfo createFcmInfo() {
-        return FcmInfo.builder().appAlarm(true).build();
+        return FcmInfo.builder().fcmToken("").appAlarm(true).build();
     }
 
     public static FcmInfo toggleAlarm(FcmInfo fcmState) {
