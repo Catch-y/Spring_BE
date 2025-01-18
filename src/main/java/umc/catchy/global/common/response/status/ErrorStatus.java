@@ -35,6 +35,7 @@ public enum ErrorStatus implements BaseErrorCode {
     COURSE_REVIEW_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "COURSE_REVIEW_MEMBER400", "해당 멤버는 코스 리뷰를 달 수 있는 권한이 없습니다."),
     COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "COURSE404", "해당 코스를 찾을 수 없습니다."),
     INVALID_COURSE_TYPE(HttpStatus.BAD_REQUEST, "COURSE_TYPE400", "코스타입 입력이 잘못되었습니다."),
+    COURSE_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND,"COURSE_MEMBER404","해당 코스가 사용자코스 그룹에 속해 있지 않습니다."),
 
     // 그룹 관련 에러
     GROUP_INVITE_CODE_INVALID(HttpStatus.BAD_REQUEST, "GROUP400", "유효하지 않은 초대 코드입니다."),
