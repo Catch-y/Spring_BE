@@ -17,6 +17,7 @@ import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
+import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
 import umc.catchy.domain.vote.dao.VoteRepository;
 import umc.catchy.domain.vote.domain.Vote;
 import umc.catchy.domain.vote.domain.VoteStatus;
@@ -52,8 +53,8 @@ public class VoteService {
     private final MemberRepository memberRepository;
     private final MemberGroupRepository memberGroupRepository;
     private final PlaceRepository placeRepository;
-    private final CategoryRepository categoryRepository; // 주입 추가
-
+    private final CategoryRepository categoryRepository;
+    private final PlaceReviewRepository placeReviewRepository;
 
     @Transactional
     public Vote createVote(CreateVoteRequest request) {
@@ -226,11 +227,14 @@ public class VoteService {
         // 해당 카테고리의 장소 조회 및 정렬
         List<Place> places = placeRepository.findByBigCategoryAndLocation(BigCategory.valueOf(category), groupLocation)
                 .stream()
-                .sorted(Comparator.comparing(Place::getPlaceName))
+                .sorted(Comparator.comparing(Place::getPlaceName)) // 가게 이름 기준으로 정렬
                 .toList();
 
         List<PlaceResponse> placeResponses = places.stream()
-                .map(place -> new PlaceResponse(place.getPlaceName(), place.getRoadAddress(), place.getRating()))
+                .map(place -> {
+                    long reviewCount = placeReviewRepository.countByPlaceId(place.getId()); // 리뷰 수 조회
+                    return new PlaceResponse(place.getId(), place.getPlaceName(), place.getRoadAddress(), place.getRating(), reviewCount);
+                })
                 .toList();
 
         return new GroupPlaceResponse(groupLocation, placeResponses);
