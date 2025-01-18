@@ -148,13 +148,13 @@ public class CourseService {
         }
 
         // 코스 이미지 수정
-        if (request.getProfileImage() != null) {
+        if (request.getCourseImage() != null) {
             String originCourseImageUrl = course.getCourseImage();
 
             if (!originCourseImageUrl.isEmpty())
                 amazonS3Manager.deleteImage(originCourseImageUrl);
 
-            MultipartFile newProfileImage = request.getProfileImage();
+            MultipartFile newProfileImage = request.getCourseImage();
 
             String keyName = "course-images/" + newProfileImage.getOriginalFilename();
             String newProfileImageUrl = amazonS3Manager.uploadFile(keyName, newProfileImage);

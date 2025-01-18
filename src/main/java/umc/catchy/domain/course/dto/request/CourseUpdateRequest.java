@@ -17,7 +17,7 @@ public class CourseUpdateRequest {
     @Size(min = 2, max = 5, message = "장소는 2개 이상 5개 이하로 선택되어야 합니다.")
     private List<Long> placeIds;
 
-    private MultipartFile profileImage;
+    private MultipartFile courseImage;
 
     private LocalTime recommendTimeStart;
 
