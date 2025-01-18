@@ -24,6 +24,7 @@ import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
 import umc.catchy.domain.vote.dto.response.CategoryDto;
 import umc.catchy.domain.vote.dto.response.CategoryResponse;
 import umc.catchy.domain.vote.dto.response.CategoryResult;
+import umc.catchy.domain.vote.dto.response.GroupPlaceResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteResultResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
 import umc.catchy.domain.vote.dto.response.MemberVoteStatus;
@@ -217,15 +218,21 @@ public class VoteService {
     }
 
     @Transactional(readOnly = true)
-    public List<PlaceResponse> getPlacesByCategory(Long groupId, String category) {
+    public GroupPlaceResponse getPlacesByCategory(Long groupId, String category) {
         Groups group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         String groupLocation = group.getGroupLocation();
 
-        // 해당 카테고리의 장소 조회
-        List<Place> places = placeRepository.findByBigCategoryAndLocation(BigCategory.valueOf(category), groupLocation);
-        return places.stream()
-                .map(place -> new PlaceResponse(place.getPlaceName(), place.getRoadAddress(), place.getLatitude(), place.getLongitude()))
+        // 해당 카테고리의 장소 조회 및 정렬
+        List<Place> places = placeRepository.findByBigCategoryAndLocation(BigCategory.valueOf(category), groupLocation)
+                .stream()
+                .sorted(Comparator.comparing(Place::getPlaceName))
                 .toList();
+
+        List<PlaceResponse> placeResponses = places.stream()
+                .map(place -> new PlaceResponse(place.getPlaceName(), place.getRoadAddress(), place.getRating()))
+                .toList();
+
+        return new GroupPlaceResponse(groupLocation, placeResponses);
     }
 }
