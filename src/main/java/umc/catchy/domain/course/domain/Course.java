@@ -22,8 +22,10 @@ public class Course extends BaseTimeEntity {
     @Setter
     private String courseName;
 
+    @Setter
     private LocalTime recommendTimeStart;
 
+    @Setter
     private LocalTime recommendTimeEnd;
 
     @Setter

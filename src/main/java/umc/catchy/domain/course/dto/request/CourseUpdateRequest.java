@@ -1,6 +1,7 @@
 package umc.catchy.domain.course.dto.request;
 
 import jakarta.validation.constraints.Size;
+import java.time.LocalTime;
 import java.util.List;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,4 +18,8 @@ public class CourseUpdateRequest {
     private List<Long> placeIds;
 
     private MultipartFile profileImage;
+
+    private LocalTime recommendTimeStart;
+
+    private LocalTime recommendTimeEnd;
 }

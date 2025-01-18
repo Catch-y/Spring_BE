@@ -187,6 +187,15 @@ public class CourseService {
             });
         }
 
+        // 추천 시간대 수정
+        if (request.getRecommendTimeStart() != null) {
+            course.setRecommendTimeStart(request.getRecommendTimeStart());
+        }
+
+        if (request.getRecommendTimeEnd() != null) {
+            course.setRecommendTimeEnd(request.getRecommendTimeEnd());
+        }
+
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
         return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
     }
