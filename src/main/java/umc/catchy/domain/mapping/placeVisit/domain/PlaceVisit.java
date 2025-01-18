@@ -22,7 +22,7 @@ public class PlaceVisit extends BaseTimeEntity {
 
     private LocalDateTime visitedDate;
 
-    private boolean isLiked;
+    private boolean isLiked = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
@@ -32,4 +32,7 @@ public class PlaceVisit extends BaseTimeEntity {
     @JoinColumn(name = "place_id")
     private Place place;
 
+    public static void toggleLiked(PlaceVisit placeVisit) {
+        placeVisit.isLiked = !placeVisit.isLiked;
+    }
 }

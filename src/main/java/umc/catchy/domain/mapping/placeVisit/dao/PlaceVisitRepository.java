@@ -11,4 +11,5 @@ import java.util.Optional;
 @Repository
 public interface PlaceVisitRepository extends JpaRepository<PlaceVisit, Long> {
     Optional<PlaceVisit> findByPlaceAndMember(Place place, Member member);
+    Optional<PlaceVisit> findByPlaceIdAndMemberId(Long placeId, Long memberId);
 }
