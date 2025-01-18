@@ -7,6 +7,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
@@ -43,13 +47,15 @@ public class CourseController {
 
     @Operation(summary = "내 코스 조회 API", description = "코스 탭에서 DIY/AI, 지역별로 사용자의 코스를 최신순으로 조회")
     @GetMapping("/search")
-    public ResponseEntity<BaseResponse<List<MemberCourseResponse>>> getMemberCourses(
-            @RequestParam(value = "type", defaultValue = "AI") String type,
+    public ResponseEntity<BaseResponse<Slice<MemberCourseResponse>>> getMemberCourses(
+            @Parameter(description = "AI/DIY 선택", required = true)
+            @RequestParam(value = "type") String type,
             @RequestParam(value = "upperLocation", defaultValue = "all") String upperLocation,
-            @RequestParam(value = "lowerLocation", defaultValue = "all") String lowerLocation
+            @RequestParam(value = "lowerLocation", defaultValue = "all") String lowerLocation,
+            @RequestParam(required = false) Long lastId
     ) {
 
-        List<MemberCourseResponse> responses = courseService.getMemberCourses(type, upperLocation, lowerLocation);
+        Slice<MemberCourseResponse> responses = courseService.getMemberCourses(type.toUpperCase(), upperLocation, lowerLocation, lastId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, responses));
     }
 

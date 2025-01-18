@@ -1,5 +1,6 @@
 package umc.catchy.domain.course.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import java.time.LocalTime;
 import java.util.List;
@@ -19,7 +20,9 @@ public class CourseUpdateRequest {
 
     private MultipartFile courseImage;
 
-    private LocalTime recommendTimeStart;
+    @Schema(description = "HH:mm 형식으로 입력해주세요.", example = "10:00")
+    private String recommendTimeStart;
 
-    private LocalTime recommendTimeEnd;
+    @Schema(description = "HH:mm 형식으로 입력해주세요.", example = "22:00")
+    private String recommendTimeEnd;
 }

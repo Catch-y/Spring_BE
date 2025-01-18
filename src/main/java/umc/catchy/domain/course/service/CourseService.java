@@ -1,10 +1,18 @@
 package umc.catchy.domain.course.service;
 
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQuery;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +22,7 @@ import umc.catchy.domain.course.converter.CourseConverter;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.course.domain.CourseType;
+import umc.catchy.domain.course.domain.QCourse;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
@@ -21,16 +30,20 @@ import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
 import umc.catchy.domain.mapping.memberCourse.converter.MemberCourseConverter;
 import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
+import umc.catchy.domain.mapping.memberCourse.domain.QMemberCourse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
 import umc.catchy.domain.mapping.placeCourse.domain.PlaceCourse;
+import umc.catchy.domain.mapping.placeCourse.domain.QPlaceCourse;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
+import umc.catchy.domain.member.domain.QMember;
 import umc.catchy.domain.place.converter.PlaceConverter;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
+import umc.catchy.domain.place.domain.QPlace;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
@@ -53,6 +66,8 @@ public class CourseService {
     private final MemberCourseRepository memberCourseRepository;
     private final AmazonS3Manager amazonS3Manager;
     private final PlaceRepository placeRepository;
+    private final JPAQueryFactory queryFactory;
+
 
     private Course getCourse(Long courseId){
         return courseRepository.findById(courseId)
@@ -102,29 +117,73 @@ public class CourseService {
     }
 
     // 현재 사용자의 코스를 불러옴
-    public List<MemberCourseResponse> getMemberCourses(String type, String upperLocation, String lowerLocation) {
+    public Slice<MemberCourseResponse> getMemberCourses(String type, String upperLocation,
+                                                           String lowerLocation, Long lastId) {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        List<MemberCourse> memberCourses = memberCourseRepository.findAllByMember(member);
-
         CourseType courseType;
+        if ("AI".equals(type)) {
+            courseType = CourseType.AI_GENERATED;
+        } else if ("DIY".equals(type)) {
+            courseType = CourseType.USER_CREATED;
+        } else {
+            throw new GeneralException(ErrorStatus.INVALID_COURSE_TYPE);
+        }
 
-        if (type.equals("AI")) courseType = CourseType.AI_GENERATED;
-        else if (type.equals("DIY")) courseType = CourseType.USER_CREATED;
-        else throw new GeneralException(ErrorStatus.INVALID_COURSE_TYPE);
+        QCourse qCourse = QCourse.course;
+        QPlace qPlace = QPlace.place;
+        QPlaceCourse qPlaceCourse = QPlaceCourse.placeCourse;
+        QMember qMember = QMember.member;
 
-        List<Course> courses = filterByConditions(memberCourses, courseType, upperLocation, lowerLocation);
+        // 주어진 조건에 해당하는 모든 코스를 불러오는 쿼리
+        JPAQuery<Course> query = queryFactory
+                .select(qCourse)
+                .from(qPlaceCourse)
+                .innerJoin(qPlaceCourse.course, qCourse)
+                .innerJoin(qPlaceCourse.place, qPlace)
+                .innerJoin(qPlaceCourse.course.member, qMember)
+                .where(
+                        qPlaceCourse.course.id.eq(qCourse.id),
+                        qPlaceCourse.place.id.eq(qPlace.id),
+                        qPlaceCourse.course.member.eq(member),
+                        qCourse.courseType.eq(courseType),
+                        upperLocationFilter(qPlace, upperLocation),
+                        lowerLocationFilter(qPlace, lowerLocation)
+                )
+                .orderBy(qCourse.id.desc())
+                .limit(pageable.getPageSize() + 1);
 
-        // 최신순으로 정렬
-        return courses.stream()
+        // lastId가 주어지면 다음 10개를 출력
+        // 주어지지 않았다면 커서를 그대로 두고 첫 10개를 출력
+        if (lastId != null) {
+            query.where(qCourse.id.lt(lastId));
+        }
+
+        List<Course> courses = query
+                .distinct()
+                .orderBy(qCourse.id.desc())
+                .limit(pageable.getPageSize() + 1)
+                .fetch();
+
+        boolean hasNext = courses.size() > pageable.getPageSize();
+
+        if (hasNext) {
+            courses.remove(courses.size() - 1);
+        }
+
+        List<MemberCourseResponse> responses = courses.stream()
                 .sorted(Comparator.comparing(Course::getCreatedDate).reversed())
                 .map(course -> {
-                    System.out.println(course.getCreatedDate());
                     List<BigCategory> categories = getCategories(course);
                     return MemberCourseConverter.toMemberCourseResponse(course, categories);
                 }).toList();
+
+        return new SliceImpl<>(responses, pageable, hasNext);
     }
 
     // 코스 수정
@@ -190,12 +249,14 @@ public class CourseService {
         }
 
         // 추천 시간대 수정
-        if (request.getRecommendTimeStart() != null) {
-            course.setRecommendTimeStart(request.getRecommendTimeStart());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+
+        if (!request.getRecommendTimeStart().isEmpty()) {
+            course.setRecommendTimeStart(LocalTime.parse(request.getRecommendTimeStart(), formatter));
         }
 
-        if (request.getRecommendTimeEnd() != null) {
-            course.setRecommendTimeEnd(request.getRecommendTimeEnd());
+        if (!request.getRecommendTimeEnd().isEmpty()) {
+            course.setRecommendTimeEnd(LocalTime.parse(request.getRecommendTimeEnd(), formatter));
         }
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
@@ -284,69 +345,17 @@ public class CourseService {
                 .toList();
     }
 
-    // 통합 필터
-    private List<Course> filterByConditions(List<MemberCourse> memberCourses, CourseType courseType, String upperLocation, String lowerLocation) {
-        List<Course> filteredByCourseType = filterByCourseType(memberCourses, courseType);
-        List<Course> filteredByUpperLocation = filterByUpperLocation(filteredByCourseType, upperLocation);
-
-        return filterByLowerLocation(filteredByUpperLocation, lowerLocation);
+    private BooleanExpression upperLocationFilter(QPlace qPlace, String upperLocation) {
+        if ("all".equals(upperLocation)) {
+            return null;
+        }
+        return qPlace.roadAddress.startsWith(upperLocation + " ");
     }
 
-    // courseType에 따라 필터링
-    private List<Course> filterByCourseType(List<MemberCourse> memberCourses, CourseType courseType) {
-        return memberCourses.stream()
-                .map(MemberCourse::getCourse)
-                .filter(course -> course.getCourseType().equals(courseType))
-                .toList();
-    }
-
-    // 상위 지역에 따라 필터링
-    private List<Course> filterByUpperLocation(List<Course> courses, String upperLocation) {
-        if (upperLocation.equals("all")) return courses;
-
-        // hasUpperLocation이 true인 course만 반환
-        return courses.stream()
-                .filter(course -> {
-                    List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
-                    return hasUpperLocation(placeCourses, upperLocation);
-                }).distinct()
-                .toList();
-    }
-
-    // 하위 지역에 따라 필터링
-    private List<Course> filterByLowerLocation(List<Course> courses, String lowerLocation) {
-        if (lowerLocation.equals("all")) return courses;
-
-        // hasLowerLocation이 true인 course만 반환
-        return courses.stream()
-                .filter(course -> {
-                    List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
-                    return hasLowerLocation(placeCourses, lowerLocation);
-                }).distinct()
-                .toList();
-    }
-
-    private boolean hasUpperLocation(List<PlaceCourse> placeCourses, String upperLocation) {
-        // 코스에 요청받은 상위 지역에 해당하는 장소가 있으면 true 반환
-        return placeCourses.stream()
-                .map(PlaceCourse::getPlace)
-                .anyMatch(place -> {
-                    List<String> roadAddress = Arrays.stream(place.getRoadAddress().split(" ")).toList();
-
-                    // 상위 지역(도) 확인
-                    return roadAddress.get(0).equals(upperLocation);
-                });
-    }
-
-    private boolean hasLowerLocation(List<PlaceCourse> placeCourses, String lowerLocation) {
-        // 코스에 요청받은 하위 지역에 해당하는 장소가 있으면 true 반환
-        return placeCourses.stream()
-                .map(PlaceCourse::getPlace)
-                .anyMatch(place -> {
-                    List<String> roadAddress = Arrays.stream(place.getRoadAddress().split(" ")).toList();
-
-                    // 하위 지역(시,군,구) 확인
-                    return roadAddress.get(1).equals(lowerLocation);
-                });
+    private BooleanExpression lowerLocationFilter(QPlace qPlace, String lowerLocation) {
+        if ("all".equals(lowerLocation)) {
+            return null;
+        }
+        return qPlace.roadAddress.contains(" " + lowerLocation);
     }
 }
