@@ -2,6 +2,7 @@ package umc.catchy.domain.course.service;
 
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.UUID;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import umc.catchy.domain.course.converter.CourseConverter;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.course.domain.CourseType;
+import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
@@ -156,7 +158,7 @@ public class CourseService {
 
             MultipartFile newCourseImage = request.getCourseImage();
 
-            String keyName = "course-images/" + newCourseImage.getOriginalFilename();
+            String keyName = "course-images/" + UUID.randomUUID();
             String newCourseImageUrl = amazonS3Manager.uploadFile(keyName, newCourseImage);
 
             course.setCourseImage(newCourseImageUrl);
@@ -219,6 +221,56 @@ public class CourseService {
 
         // 코스 삭제
         courseRepository.delete(course);
+    }
+
+    // 코스 생성(DIY)
+    public CourseInfoResponse.getCourseInfoDTO createCourseByDIY(CourseCreateRequest request) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        // 이미지 불러오기
+        String courseImageUrl = "";
+
+        if (request.getCourseImage() != null) {
+            MultipartFile courseImage = request.getCourseImage();
+
+            String keyName = "course-images/" + UUID.randomUUID();
+            courseImageUrl = amazonS3Manager.uploadFile(keyName, courseImage);
+        }
+
+        // 코스 생성
+        Course course = CourseConverter.toCourse(request, courseImageUrl, member);
+        course.setCourseType(CourseType.USER_CREATED);
+
+        // PlaceCourse 생성
+        List<Long> placeIds = request.getPlaceIds();
+
+        IntStream.range(0, placeIds.size()).forEach(index -> {
+            Long placeId = placeIds.get(index);
+            Place place = placeRepository.findById(placeId)
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+
+            // List의 Index를 기반으로 코스 순서 결정
+            PlaceCourse newPlaceCourse = PlaceCourse.builder()
+                    .course(course)
+                    .place(place)
+                    .placeOrder(index + 1)
+                    .build();
+
+            placeCourseRepository.save(newPlaceCourse);
+        });
+
+        // MemberCourse 생성
+        MemberCourse memberCourse = MemberCourse.builder()
+                .course(course)
+                .member(member)
+                .build();
+
+        memberCourseRepository.save(memberCourse);
+
+        List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
+        return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
     }
 
     private List<BigCategory> getCategories(Course course) {

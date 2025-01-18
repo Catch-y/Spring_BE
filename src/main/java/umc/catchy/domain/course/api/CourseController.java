@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.course.service.CourseService;
@@ -41,7 +42,7 @@ public class CourseController {
     }
 
     @Operation(summary = "내 코스 조회 API", description = "코스 탭에서 DIY/AI, 지역별로 사용자의 코스를 최신순으로 조회")
-    @GetMapping("/course/search")
+    @GetMapping("/search")
     public ResponseEntity<BaseResponse<List<MemberCourseResponse>>> getMemberCourses(
             @RequestParam(value = "type", defaultValue = "AI") String type,
             @RequestParam(value = "upperLocation", defaultValue = "all") String upperLocation,
@@ -52,8 +53,17 @@ public class CourseController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, responses));
     }
 
+    @Operation(summary = "코스 생성(DIY) API", description = "사용자가 직접 생성하는 코스")
+    @PostMapping(value = "/in-person", consumes = "multipart/form-data")
+    public ResponseEntity<BaseResponse<CourseInfoResponse.getCourseInfoDTO>> createCourseByDIY(
+            @Valid @ModelAttribute CourseCreateRequest request
+    ) {
+        CourseInfoResponse.getCourseInfoDTO response = courseService.createCourseByDIY(request);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
     @Operation(summary = "코스 수정 API", description = "사용자의 코스 수정")
-    @PatchMapping(value = "/course/{courseId}", consumes = "multipart/form-data")
+    @PatchMapping(value = "/{courseId}", consumes = "multipart/form-data")
     public ResponseEntity<BaseResponse<CourseInfoResponse.getCourseInfoDTO>> updateCourse(
             @Parameter(description = "코스 ID", required = true)
             @PathVariable Long courseId,
@@ -64,7 +74,7 @@ public class CourseController {
     }
 
     @Operation(summary = "코스 삭제 API", description = "사용자의 코스 삭제")
-    @DeleteMapping("/course/{courseId}")
+    @DeleteMapping("/{courseId}")
     public ResponseEntity<BaseResponse<Void>> deleteCourse(
             @Parameter(description = "코스 ID", required = true)
             @PathVariable Long courseId
