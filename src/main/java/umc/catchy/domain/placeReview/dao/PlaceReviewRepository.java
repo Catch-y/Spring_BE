@@ -10,4 +10,5 @@ import java.util.List;
 @Repository
 public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> {
     List<PlaceReview> findAllByPlace(Place place);
+    long countByPlaceId(Long placeId);
 }

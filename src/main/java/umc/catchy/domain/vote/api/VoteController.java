@@ -1,21 +1,29 @@
 package umc.catchy.domain.vote.api;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
 import umc.catchy.domain.vote.dto.request.SubmitVoteRequest;
 import umc.catchy.domain.vote.dto.response.CategoryResponse;
+import umc.catchy.domain.vote.dto.response.GroupPlaceResponse;
+import umc.catchy.domain.vote.dto.response.GroupVoteResultResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
+import umc.catchy.domain.vote.dto.response.PlaceResponse;
 import umc.catchy.domain.vote.dto.response.VoteResponse;
 import umc.catchy.domain.vote.dto.response.VoteResultResponse;
 import umc.catchy.domain.vote.service.VoteService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
+
+import java.util.List;
 
 @Tag(name = "Vote", description = "투표 관련 API")
 @RestController
@@ -67,6 +75,25 @@ public class VoteController {
     public ResponseEntity<BaseResponse<CategoryResponse>> getCategories(
             @PathVariable Long voteId) {
         CategoryResponse response = voteService.getCategoriesByVoteId(voteId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "투표 완료 - 카테고리 확인", description = "특정 투표 결과의 카테고리를 조회합니다.")
+    @GetMapping("/{groupId}/votes/{voteId}/results")
+    public ResponseEntity<BaseResponse<GroupVoteResultResponse>> getGroupVoteResults(
+            @PathVariable Long groupId,
+            @PathVariable Long voteId) {
+        GroupVoteResultResponse response = voteService.getGroupVoteResults(groupId, voteId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "투표 완료 -카테고리 별 장소 확인", description = "카테고리 별 장소를 조회합니다.")
+    @GetMapping("/{groupId}/categories/{category}/places")
+    public ResponseEntity<BaseResponse<GroupPlaceResponse>> getPlacesByCategory(
+            @PathVariable Long groupId,
+            @Parameter(description = "카테고리 값", schema = @Schema(implementation = BigCategory.class))
+            @PathVariable BigCategory category) {
+        GroupPlaceResponse response = voteService.getPlacesByCategory(groupId, category.name());
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

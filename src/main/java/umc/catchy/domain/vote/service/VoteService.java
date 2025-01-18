@@ -3,7 +3,9 @@ package umc.catchy.domain.vote.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
+import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.categoryVote.dao.CategoryVoteRepository;
 import umc.catchy.domain.categoryVote.domain.CategoryVote;
 import umc.catchy.domain.group.dao.GroupRepository;
@@ -13,14 +15,21 @@ import umc.catchy.domain.mapping.memberCategoryVote.domain.MemberCategoryVote;
 import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
+import umc.catchy.domain.place.dao.PlaceRepository;
+import umc.catchy.domain.place.domain.Place;
+import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
 import umc.catchy.domain.vote.dao.VoteRepository;
 import umc.catchy.domain.vote.domain.Vote;
 import umc.catchy.domain.vote.domain.VoteStatus;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
 import umc.catchy.domain.vote.dto.response.CategoryDto;
 import umc.catchy.domain.vote.dto.response.CategoryResponse;
+import umc.catchy.domain.vote.dto.response.CategoryResult;
+import umc.catchy.domain.vote.dto.response.GroupPlaceResponse;
+import umc.catchy.domain.vote.dto.response.GroupVoteResultResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
 import umc.catchy.domain.vote.dto.response.MemberVoteStatus;
+import umc.catchy.domain.vote.dto.response.PlaceResponse;
 import umc.catchy.domain.vote.dto.response.VoteResult;
 import umc.catchy.domain.vote.dto.response.VoteResultResponse;
 import umc.catchy.domain.vote.dto.response.VotedMemberResponse;
@@ -31,6 +40,7 @@ import umc.catchy.global.util.SecurityUtil;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +52,9 @@ public class VoteService {
     private final MemberCategoryVoteRepository memberCategoryVoteRepository;
     private final MemberRepository memberRepository;
     private final MemberGroupRepository memberGroupRepository;
+    private final PlaceRepository placeRepository;
+    private final CategoryRepository categoryRepository;
+    private final PlaceReviewRepository placeReviewRepository;
 
     @Transactional
     public Vote createVote(CreateVoteRequest request) {
@@ -56,8 +69,13 @@ public class VoteService {
 
         voteRepository.save(vote);
 
-        for (BigCategory category : BigCategory.values()) {
-            CategoryVote categoryVote = new CategoryVote(vote, category);
+        for (BigCategory bigCategory : BigCategory.values()) {
+            // Category 객체를 데이터베이스에서 조회
+            Category category = categoryRepository.findByBigCategory(bigCategory)
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.CATEGORY_NOT_FOUND));
+
+            // CategoryVote 생성 시 Category 객체 전달
+            CategoryVote categoryVote = new CategoryVote(vote, bigCategory, category);
             categoryVoteRepository.save(categoryVote);
         }
 
@@ -170,5 +188,55 @@ public class VoteService {
             vote.changeStatus(VoteStatus.COMPLETED);
             voteRepository.save(vote);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public GroupVoteResultResponse getGroupVoteResults(Long groupId, Long voteId) {
+        // 그룹 정보 조회
+        Groups group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
+        String groupLocation = group.getGroupLocation();
+
+        // 그룹 인원 수 계산
+        int totalMembers = memberGroupRepository.countByGroupId(groupId);
+        int majorityThreshold = (int) Math.ceil(totalMembers / 2.0);
+
+        // 카테고리별 장소 조회
+        List<CategoryResult> categories = categoryVoteRepository.findByVoteId(voteId).stream()
+                .map(categoryVote -> {
+                    int votesForCategory = memberCategoryVoteRepository.countByVoteIdAndCategoryVoteId(voteId, categoryVote.getId());
+
+                    if (votesForCategory >= majorityThreshold) {
+                        List<Place> places = placeRepository.findByBigCategoryAndLocation(categoryVote.getBigCategory(), groupLocation);
+                        return new CategoryResult(categoryVote.getBigCategory().toString(), places.size());
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        return new GroupVoteResultResponse(groupLocation, categories);
+    }
+
+    @Transactional(readOnly = true)
+    public GroupPlaceResponse getPlacesByCategory(Long groupId, String category) {
+        Groups group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
+        String groupLocation = group.getGroupLocation();
+
+        // 해당 카테고리의 장소 조회 및 정렬
+        List<Place> places = placeRepository.findByBigCategoryAndLocation(BigCategory.valueOf(category), groupLocation)
+                .stream()
+                .sorted(Comparator.comparing(Place::getPlaceName)) // 가게 이름 기준으로 정렬
+                .toList();
+
+        List<PlaceResponse> placeResponses = places.stream()
+                .map(place -> {
+                    long reviewCount = placeReviewRepository.countByPlaceId(place.getId()); // 리뷰 수 조회
+                    return new PlaceResponse(place.getId(), place.getPlaceName(), place.getRoadAddress(), place.getRating(), reviewCount);
+                })
+                .toList();
+
+        return new GroupPlaceResponse(groupLocation, placeResponses);
     }
 }
