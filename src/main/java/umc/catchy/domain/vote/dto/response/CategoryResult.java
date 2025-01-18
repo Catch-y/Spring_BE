@@ -1,13 +1,16 @@
 package umc.catchy.domain.vote.dto.response;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-
-import java.util.List;
+import lombok.Setter;
 
 @Getter
-@AllArgsConstructor
+@Setter
 public class CategoryResult {
     private String category;
-    private List<PlaceResponse> places;
+    private int count;
+
+    public CategoryResult(String category, int count) {
+        this.category = category;
+        this.count = count;
+    }
 }

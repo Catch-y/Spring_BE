@@ -12,11 +12,14 @@ import umc.catchy.domain.vote.dto.request.SubmitVoteRequest;
 import umc.catchy.domain.vote.dto.response.CategoryResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteResultResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
+import umc.catchy.domain.vote.dto.response.PlaceResponse;
 import umc.catchy.domain.vote.dto.response.VoteResponse;
 import umc.catchy.domain.vote.dto.response.VoteResultResponse;
 import umc.catchy.domain.vote.service.VoteService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
+
+import java.util.List;
 
 @Tag(name = "Vote", description = "투표 관련 API")
 @RestController
@@ -71,12 +74,21 @@ public class VoteController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
-    @Operation(summary = "그룹 투표 결과 조회", description = "특정 투표의 지역 및 카테고리별 장소 정보를 조회합니다.")
+    @Operation(summary = "그룹 투표 결과 조회", description = "특정 투표 결과의 카테고리를 조회합니다.")
     @GetMapping("/{groupId}/votes/{voteId}/results")
     public ResponseEntity<BaseResponse<GroupVoteResultResponse>> getGroupVoteResults(
             @PathVariable Long groupId,
             @PathVariable Long voteId) {
         GroupVoteResultResponse response = voteService.getGroupVoteResults(groupId, voteId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "그룹 투표 결과 조회", description = "카테고리 별 장소를 조회합니다.")
+    @GetMapping("/{groupId}/categories/{category}/places")
+    public ResponseEntity<BaseResponse<List<PlaceResponse>>> getPlacesByCategory(
+            @PathVariable Long groupId,
+            @PathVariable String category) {
+        List<PlaceResponse> response = voteService.getPlacesByCategory(groupId, category);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

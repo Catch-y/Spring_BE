@@ -206,11 +206,7 @@ public class VoteService {
 
                     if (votesForCategory >= majorityThreshold) {
                         List<Place> places = placeRepository.findByBigCategoryAndLocation(categoryVote.getBigCategory(), groupLocation);
-                        List<PlaceResponse> placeResponses = places.stream()
-                                .map(place -> new PlaceResponse(place.getPlaceName(), place.getRoadAddress(), place.getLatitude(), place.getLongitude()))
-                                .toList();
-
-                        return new CategoryResult(categoryVote.getBigCategory().toString(), placeResponses);
+                        return new CategoryResult(categoryVote.getBigCategory().toString(), places.size());
                     }
                     return null;
                 })
@@ -218,5 +214,18 @@ public class VoteService {
                 .toList();
 
         return new GroupVoteResultResponse(groupLocation, categories);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PlaceResponse> getPlacesByCategory(Long groupId, String category) {
+        Groups group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
+        String groupLocation = group.getGroupLocation();
+
+        // 해당 카테고리의 장소 조회
+        List<Place> places = placeRepository.findByBigCategoryAndLocation(BigCategory.valueOf(category), groupLocation);
+        return places.stream()
+                .map(place -> new PlaceResponse(place.getPlaceName(), place.getRoadAddress(), place.getLatitude(), place.getLongitude()))
+                .toList();
     }
 }
