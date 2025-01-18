@@ -154,12 +154,12 @@ public class CourseService {
             if (!originCourseImageUrl.isEmpty())
                 amazonS3Manager.deleteImage(originCourseImageUrl);
 
-            MultipartFile newProfileImage = request.getCourseImage();
+            MultipartFile newCourseImage = request.getCourseImage();
 
-            String keyName = "course-images/" + newProfileImage.getOriginalFilename();
-            String newProfileImageUrl = amazonS3Manager.uploadFile(keyName, newProfileImage);
+            String keyName = "course-images/" + newCourseImage.getOriginalFilename();
+            String newCourseImageUrl = amazonS3Manager.uploadFile(keyName, newCourseImage);
 
-            course.setCourseImage(newProfileImageUrl);
+            course.setCourseImage(newCourseImageUrl);
         }
 
         // 코스 장소 수정
