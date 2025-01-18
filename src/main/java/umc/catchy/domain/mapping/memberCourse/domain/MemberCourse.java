@@ -21,7 +21,7 @@ public class MemberCourse extends BaseTimeEntity {
 
     private LocalDateTime visitedDate;
 
-    private boolean bookmark;
+    private boolean bookmark = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
@@ -30,4 +30,8 @@ public class MemberCourse extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id")
     private Course course;
+
+    public static void toggleBookmark(MemberCourse memberCourse) {
+        memberCourse.bookmark = !memberCourse.bookmark;
+    }
 }
