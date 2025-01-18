@@ -184,7 +184,6 @@ public class CourseService {
                         .build();
 
                 placeCourseRepository.save(newPlaceCourse);
-                System.out.println("test4");
             });
         }
 
