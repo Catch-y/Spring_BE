@@ -231,48 +231,64 @@ public class VoteService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         String groupLocation = group.getGroupLocation();
 
-        // 해당 카테고리의 장소 조회 및 정렬
         List<Place> places = placeRepository.findByBigCategoryAndLocation(BigCategory.valueOf(category), groupLocation)
                 .stream()
-                .sorted(Comparator.comparing(Place::getPlaceName)) // 가게 이름 기준으로 정렬
+                .sorted(Comparator.comparing(Place::getPlaceName))
                 .toList();
 
         List<PlaceResponse> placeResponses = places.stream()
                 .map(place -> {
-                    long reviewCount = placeReviewRepository.countByPlaceId(place.getId()); // 리뷰 수 조회
-                    return new PlaceResponse(place.getId(), place.getPlaceName(), place.getRoadAddress(), place.getRating(), reviewCount);
+                    long reviewCount = placeReviewRepository.countByPlaceId(place.getId());
+
+                    // 해당 장소에 투표한 멤버 정보 조회
+                    List<Member> votingMembers = memberPlaceVoteRepository.findMembersByPlaceId(place.getId());
+
+                    List<VotedMemberResponse> votedMembers = votingMembers.stream()
+                            .map(member -> new VotedMemberResponse(
+                                    member.getId(),
+                                    member.getNickname(),
+                                    member.getProfileImage()
+                            ))
+                            .toList();
+
+
+                    // 장소 응답 생성
+                    return new PlaceResponse(
+                            place.getId(),
+                            place.getPlaceName(),
+                            place.getRoadAddress(),
+                            place.getRating(),
+                            reviewCount,
+                            place.getImageUrl(),
+                            votedMembers
+                    );
                 })
                 .toList();
 
         return new GroupPlaceResponse(groupLocation, placeResponses);
     }
 
+
     @Transactional
     public PlaceVoteResponse voteForPlace(Long voteId, Long groupId, PlaceVoteRequest request) {
         Long placeId = request.getPlaceId();
 
-        // 현재 사용자 조회
         Member member = memberRepository.findById(SecurityUtil.getCurrentMemberId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        // Place 조회
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
-        // Vote 조회
         Vote vote = voteRepository.findById(voteId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_FOUND));
 
-        // Group 조회
         Groups group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
 
-        // 중복 투표 방지
         if (memberPlaceVoteRepository.existsByMemberIdAndPlaceIdAndVoteId(member.getId(), place.getId(), vote.getId())) {
             throw new GeneralException(ErrorStatus.ALREADY_VOTED);
         }
 
-        // MemberPlaceVote 생성 및 저장
         MemberPlaceVote memberPlaceVote = MemberPlaceVote.builder()
                 .place(place)
                 .member(member)
