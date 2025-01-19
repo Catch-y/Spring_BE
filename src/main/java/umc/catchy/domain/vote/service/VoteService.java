@@ -270,7 +270,7 @@ public class VoteService {
 
 
     @Transactional
-    public PlaceVoteResponse voteForPlace(Long voteId, Long groupId, PlaceVoteRequest request) {
+    public String togglePlaceVote(Long voteId, Long groupId, PlaceVoteRequest request) {
         Long placeId = request.getPlaceId();
 
         Member member = memberRepository.findById(SecurityUtil.getCurrentMemberId())
@@ -285,19 +285,20 @@ public class VoteService {
         Groups group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
 
-        if (memberPlaceVoteRepository.existsByMemberIdAndPlaceIdAndVoteId(member.getId(), place.getId(), vote.getId())) {
-            throw new GeneralException(ErrorStatus.ALREADY_VOTED);
+        MemberPlaceVote existingVote = memberPlaceVoteRepository.findByMemberIdAndPlaceIdAndVoteId(member.getId(), place.getId(), vote.getId());
+
+        if (existingVote != null) {
+            memberPlaceVoteRepository.delete(existingVote);
+            return "Vote removed successfully.";
+        } else {
+            MemberPlaceVote memberPlaceVote = MemberPlaceVote.builder()
+                    .place(place)
+                    .member(member)
+                    .vote(vote)
+                    .group(group)
+                    .build();
+            memberPlaceVoteRepository.save(memberPlaceVote);
+            return "Vote added successfully.";
         }
-
-        MemberPlaceVote memberPlaceVote = MemberPlaceVote.builder()
-                .place(place)
-                .member(member)
-                .vote(vote)
-                .group(group)
-                .build();
-
-        memberPlaceVoteRepository.save(memberPlaceVote);
-
-        return new PlaceVoteResponse(memberPlaceVote.getId(), "Vote successfully recorded.");
     }
 }

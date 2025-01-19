@@ -100,11 +100,12 @@ public class VoteController {
     }
 
     @PatchMapping("/{groupId}/{voteId}/places/vote")
-    public ResponseEntity<PlaceVoteResponse> voteForPlace(
+    @Operation(summary = "장소 투표/취소", description = "좋아요와 같은 방식으로 장소 투표를 토글합니다.")
+    public ResponseEntity<BaseResponse<String>> togglePlaceVote(
             @PathVariable Long groupId,
             @PathVariable Long voteId,
             @Validated @RequestBody PlaceVoteRequest request) {
-        PlaceVoteResponse response = voteService.voteForPlace(voteId, groupId, request);
-        return ResponseEntity.ok(response);
+        String message = voteService.togglePlaceVote(voteId, groupId, request);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, message));
     }
 }

@@ -16,4 +16,5 @@ public interface MemberPlaceVoteRepository extends JpaRepository<MemberPlaceVote
     List<MemberPlaceVote> findByGroupId(Long groupId);
     @Query("SELECT mpv.member FROM MemberPlaceVote mpv WHERE mpv.place.id = :placeId")
     List<Member> findMembersByPlaceId(@Param("placeId") Long placeId);
+    MemberPlaceVote findByMemberIdAndPlaceIdAndVoteId(Long memberId, Long placeId, Long voteId);
 }
