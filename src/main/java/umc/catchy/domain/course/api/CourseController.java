@@ -4,11 +4,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-import java.util.List;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import umc.catchy.domain.course.dto.request.CourseCreateRequest;
+import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
@@ -42,16 +44,48 @@ public class CourseController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
-    @Operation(summary = "내 코스 조회 API", description = "코스 탭에서 DIY/AI, 지역별로 사용자의 코스를 조회")
-    @GetMapping("/course/search")
-    public ResponseEntity<BaseResponse<List<MemberCourseResponse>>> getMemberCourses(
-            @RequestParam(value = "type", defaultValue = "AI") String type,
+    @Operation(summary = "내 코스 조회 API", description = "코스 탭에서 DIY/AI, 지역별로 사용자의 코스를 최신순으로 조회")
+    @GetMapping("/search")
+    public ResponseEntity<BaseResponse<Slice<MemberCourseResponse>>> getMemberCourses(
+            @Parameter(description = "AI/DIY 선택", required = true)
+            @RequestParam(value = "type") String type,
             @RequestParam(value = "upperLocation", defaultValue = "all") String upperLocation,
-            @RequestParam(value = "lowerLocation", defaultValue = "all") String lowerLocation
+            @RequestParam(value = "lowerLocation", defaultValue = "all") String lowerLocation,
+            @RequestParam(required = false) Long lastId
     ) {
 
-        List<MemberCourseResponse> responses = courseService.getMemberCourses(type, upperLocation, lowerLocation);
+        Slice<MemberCourseResponse> responses = courseService.getMemberCourses(type.toUpperCase(), upperLocation, lowerLocation, lastId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, responses));
+    }
+
+    @Operation(summary = "코스 생성(DIY) API", description = "사용자가 직접 생성하는 코스")
+    @PostMapping(value = "/in-person", consumes = "multipart/form-data")
+    public ResponseEntity<BaseResponse<CourseInfoResponse.getCourseInfoDTO>> createCourseByDIY(
+            @Valid @ModelAttribute CourseCreateRequest request
+    ) {
+        CourseInfoResponse.getCourseInfoDTO response = courseService.createCourseByDIY(request);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "코스 수정 API", description = "사용자의 코스 수정")
+    @PatchMapping(value = "/{courseId}", consumes = "multipart/form-data")
+    public ResponseEntity<BaseResponse<CourseInfoResponse.getCourseInfoDTO>> updateCourse(
+            @Parameter(description = "코스 ID", required = true)
+            @PathVariable Long courseId,
+            @Valid @ModelAttribute CourseUpdateRequest request
+    ) {
+        CourseInfoResponse.getCourseInfoDTO response = courseService.updateCourse(courseId, request);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "코스 삭제 API", description = "사용자의 코스 삭제")
+    @DeleteMapping("/{courseId}")
+    public ResponseEntity<BaseResponse<Void>> deleteCourse(
+            @Parameter(description = "코스 ID", required = true)
+            @PathVariable Long courseId
+    ) {
+        courseService.deleteCourse(courseId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
       
     @Operation(summary = "코스 리뷰 작성 API", description = "코스 리뷰 작성을 위한 API, 멤버가 해당 코스의 과반수 이상의 장소에 방문 체크를 성공하였을 때 리뷰 작성 권한이 주어집니다.")

@@ -1,15 +1,26 @@
 package umc.catchy.domain.course.service;
 
-import java.util.Arrays;
+import java.time.LocalTime;
+import java.util.Comparator;
+import java.util.UUID;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.course.domain.CourseType;
+import umc.catchy.domain.course.domain.QCourse;
+import umc.catchy.domain.course.dto.request.CourseCreateRequest;
+import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
 import umc.catchy.domain.mapping.memberCourse.converter.MemberCourseConverter;
@@ -23,6 +34,7 @@ import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.converter.PlaceConverter;
+import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
@@ -31,6 +43,7 @@ import umc.catchy.global.util.SecurityUtil;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
+import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
 @Service
 @Transactional
@@ -43,6 +56,8 @@ public class CourseService {
     private final PlaceVisitRepository placeVisitRepository;
     private final MemberRepository memberRepository;
     private final MemberCourseRepository memberCourseRepository;
+    private final AmazonS3Manager amazonS3Manager;
+    private final PlaceRepository placeRepository;
 
     private Course getCourse(Long courseId){
         return courseRepository.findById(courseId)
@@ -92,26 +107,189 @@ public class CourseService {
     }
 
     // 현재 사용자의 코스를 불러옴
-    public List<MemberCourseResponse> getMemberCourses(String type, String upperLocation, String lowerLocation) {
+    public Slice<MemberCourseResponse> getMemberCourses(String type, String upperLocation, String lowerLocation, Long lastId) {
+        CourseType courseType;
+
+        if ("AI".equals(type)) {
+            courseType = CourseType.AI_GENERATED;
+        } else if ("DIY".equals(type)) {
+            courseType = CourseType.USER_CREATED;
+        } else {
+            throw new GeneralException(ErrorStatus.INVALID_COURSE_TYPE);
+        }
+
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        List<MemberCourse> memberCourses = memberCourseRepository.findAllByMember(member);
+        List<Course> courses = courseRepository.findCourses(courseType, upperLocation, lowerLocation, member, lastId);
 
-        CourseType courseType;
+        // 페이징 설정
+        Pageable pageable = PageRequest.of(0, 10);
 
-        if (type.equals("AI")) courseType = CourseType.AI_GENERATED;
-        else if (type.equals("DIY")) courseType = CourseType.USER_CREATED;
-        else throw new GeneralException(ErrorStatus.INVALID_COURSE_TYPE);
+        // courses가 11개면 다음 페이지가 있음
+        boolean hasNext = courses.size() > pageable.getPageSize();
 
-        List<Course> courses = filterByConditions(memberCourses, courseType, upperLocation, lowerLocation);
+        if (hasNext) {
+            courses.remove(courses.size() - 1);
+        }
 
-        return courses.stream()
+        List<MemberCourseResponse> responses = courses.stream()
+                .sorted(Comparator.comparing(Course::getCreatedDate).reversed())
                 .map(course -> {
                     List<BigCategory> categories = getCategories(course);
                     return MemberCourseConverter.toMemberCourseResponse(course, categories);
                 }).toList();
+
+        return new SliceImpl<>(responses, pageable, hasNext);
+    }
+
+    // 코스 수정
+    public CourseInfoResponse.getCourseInfoDTO updateCourse(Long courseId, CourseUpdateRequest request) {
+        Course course = getCourse(courseId);
+
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        // 사용자가 가지고 있는 코스인지 검증
+        memberCourseRepository.findByCourseAndMember(course, member)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER));
+
+        // 코스 이름 수정
+        if (!request.getCourseName().isEmpty()) {
+            course.setCourseName(request.getCourseName());
+        }
+
+        // 코스 설명 수정
+        if (!request.getCourseDescription().isEmpty()) {
+            course.setCourseDescription(request.getCourseDescription());
+        }
+
+        // 코스 이미지 수정
+        if (request.getCourseImage() != null) {
+            String originCourseImageUrl = course.getCourseImage();
+
+            if (!originCourseImageUrl.isEmpty())
+                amazonS3Manager.deleteImage(originCourseImageUrl);
+
+            MultipartFile newCourseImage = request.getCourseImage();
+
+            String keyName = "course-images/" + UUID.randomUUID();
+            String newCourseImageUrl = amazonS3Manager.uploadFile(keyName, newCourseImage);
+
+            course.setCourseImage(newCourseImageUrl);
+        }
+
+        // 코스 장소 수정
+        if (!request.getPlaceIds().isEmpty()) {
+            List<Long> placeIds = request.getPlaceIds();
+
+            // 기존의 장소는 제거
+            List<PlaceCourse> originPlaces = placeCourseRepository.findAllByCourse(course);
+            placeCourseRepository.deleteAll(originPlaces);
+
+            // 코스에 추가
+            IntStream.range(0, placeIds.size()).forEach(index -> {
+                Long placeId = placeIds.get(index);
+                Place place = placeRepository.findById(placeId)
+                        .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+
+                // List의 Index를 기반으로 코스 순서 결정
+                PlaceCourse newPlaceCourse = PlaceCourse.builder()
+                        .course(course)
+                        .place(place)
+                        .placeOrder(index + 1)
+                        .build();
+
+                placeCourseRepository.save(newPlaceCourse);
+            });
+        }
+
+        // 추천 시간대 수정
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+
+        if (!request.getRecommendTimeStart().isEmpty()) {
+            course.setRecommendTimeStart(LocalTime.parse(request.getRecommendTimeStart(), formatter));
+        }
+
+        if (!request.getRecommendTimeEnd().isEmpty()) {
+            course.setRecommendTimeEnd(LocalTime.parse(request.getRecommendTimeEnd(), formatter));
+        }
+
+        List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
+        return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
+    }
+
+    public void deleteCourse(Long courseId) {
+        Course course = getCourse(courseId);
+
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        // 사용자가 가지고 있는 코스인지 검증
+        MemberCourse memberCourse = memberCourseRepository.findByCourseAndMember(course, member)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER));
+
+        memberCourseRepository.delete(memberCourse);
+
+        // 코스의 장소들 삭제
+        List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
+        placeCourseRepository.deleteAll(placeCourses);
+
+        // 코스 삭제
+        courseRepository.delete(course);
+    }
+
+    // 코스 생성(DIY)
+    public CourseInfoResponse.getCourseInfoDTO createCourseByDIY(CourseCreateRequest request) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        // 이미지 불러오기
+        String courseImageUrl = "";
+
+        if (request.getCourseImage() != null) {
+            MultipartFile courseImage = request.getCourseImage();
+
+            String keyName = "course-images/" + UUID.randomUUID();
+            courseImageUrl = amazonS3Manager.uploadFile(keyName, courseImage);
+        }
+
+        // 코스 생성
+        Course course = CourseConverter.toCourse(request, courseImageUrl, member);
+        course.setCourseType(CourseType.USER_CREATED);
+
+        // PlaceCourse 생성
+        List<Long> placeIds = request.getPlaceIds();
+
+        IntStream.range(0, placeIds.size()).forEach(index -> {
+            Long placeId = placeIds.get(index);
+            Place place = placeRepository.findById(placeId)
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+
+            // List의 Index를 기반으로 코스 순서 결정
+            PlaceCourse newPlaceCourse = PlaceCourse.builder()
+                    .course(course)
+                    .place(place)
+                    .placeOrder(index + 1)
+                    .build();
+
+            placeCourseRepository.save(newPlaceCourse);
+        });
+
+        // MemberCourse 생성
+        MemberCourse memberCourse = MemberCourse.builder()
+                .course(course)
+                .member(member)
+                .build();
+
+        memberCourseRepository.save(memberCourse);
+
+        List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
+        return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
     }
 
     private List<BigCategory> getCategories(Course course) {
@@ -123,69 +301,5 @@ public class CourseService {
                 .map(Category::getBigCategory)
                 .distinct()
                 .toList();
-    }
-
-    // 통합 필터
-    private List<Course> filterByConditions(List<MemberCourse> memberCourses, CourseType courseType, String upperLocation, String lowerLocation) {
-        List<Course> filteredByCourseType = filterByCourseType(memberCourses, courseType);
-        List<Course> filteredByUpperLocation = filterByUpperLocation(filteredByCourseType, upperLocation);
-
-        return filterByLowerLocation(filteredByUpperLocation, lowerLocation);
-    }
-
-    // courseType에 따라 필터링
-    private List<Course> filterByCourseType(List<MemberCourse> memberCourses, CourseType courseType) {
-        return memberCourses.stream()
-                .map(MemberCourse::getCourse)
-                .filter(course -> course.getCourseType().equals(courseType))
-                .toList();
-    }
-
-    // 상위 지역에 따라 필터링
-    private List<Course> filterByUpperLocation(List<Course> courses, String upperLocation) {
-        if (upperLocation.equals("all")) return courses;
-
-        // hasUpperLocation이 true인 course만 반환
-        return courses.stream()
-                .filter(course -> {
-                    List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
-                    return hasUpperLocation(placeCourses, upperLocation);
-                }).distinct().toList();
-    }
-
-    // 하위 지역에 따라 필터링
-    private List<Course> filterByLowerLocation(List<Course> courses, String lowerLocation) {
-        if (lowerLocation.equals("all")) return courses;
-
-        // hasLowerLocation이 true인 course만 반환
-        return courses.stream()
-                .filter(course -> {
-                    List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
-                    return hasLowerLocation(placeCourses, lowerLocation);
-                }).distinct().toList();
-    }
-
-    private boolean hasUpperLocation(List<PlaceCourse> placeCourses, String upperLocation) {
-        // 코스에 요청받은 상위 지역에 해당하는 장소가 있으면 true 반환
-        return placeCourses.stream()
-                .map(PlaceCourse::getPlace)
-                .anyMatch(place -> {
-                    List<String> roadAddress = Arrays.stream(place.getRoadAddress().split(" ")).toList();
-
-                    // 상위 지역(도) 확인
-                    return roadAddress.get(0).equals(upperLocation);
-                });
-    }
-
-    private boolean hasLowerLocation(List<PlaceCourse> placeCourses, String lowerLocation) {
-        // 코스에 요청받은 하위 지역에 해당하는 장소가 있으면 true 반환
-        return placeCourses.stream()
-                .map(PlaceCourse::getPlace)
-                .anyMatch(place -> {
-                    List<String> roadAddress = Arrays.stream(place.getRoadAddress().split(" ")).toList();
-
-                    // 하위 지역(시,군,구) 확인
-                    return roadAddress.get(1).equals(lowerLocation);
-                });
     }
 }

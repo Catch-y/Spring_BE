@@ -1,7 +1,10 @@
 package umc.catchy.domain.mapping.memberCourse.domain;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.member.domain.Member;
@@ -10,6 +13,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class MemberCourse extends BaseTimeEntity {
 
     @Id
@@ -27,7 +33,7 @@ public class MemberCourse extends BaseTimeEntity {
     @JoinColumn(name = "member_id")
     private Member member;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "course_id")
     private Course course;
 
