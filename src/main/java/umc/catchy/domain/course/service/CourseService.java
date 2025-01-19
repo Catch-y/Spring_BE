@@ -31,6 +31,7 @@ import umc.catchy.domain.mapping.memberCourse.converter.MemberCourseConverter;
 import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
 import umc.catchy.domain.mapping.memberCourse.domain.QMemberCourse;
+import umc.catchy.domain.mapping.memberCourse.dto.request.MemberCourseRequest;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
 import umc.catchy.domain.mapping.placeCourse.domain.PlaceCourse;
@@ -66,8 +67,6 @@ public class CourseService {
     private final MemberCourseRepository memberCourseRepository;
     private final AmazonS3Manager amazonS3Manager;
     private final PlaceRepository placeRepository;
-    private final JPAQueryFactory queryFactory;
-
 
     private Course getCourse(Long courseId){
         return courseRepository.findById(courseId)
@@ -117,16 +116,9 @@ public class CourseService {
     }
 
     // 현재 사용자의 코스를 불러옴
-    public Slice<MemberCourseResponse> getMemberCourses(String type, String upperLocation,
-                                                           String lowerLocation, Long lastId) {
-
-        Pageable pageable = PageRequest.of(0, 10);
-
-        Long memberId = SecurityUtil.getCurrentMemberId();
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-
+    public Slice<MemberCourseResponse> getMemberCourses(String type, String upperLocation, String lowerLocation, Long lastId) {
         CourseType courseType;
+
         if ("AI".equals(type)) {
             courseType = CourseType.AI_GENERATED;
         } else if ("DIY".equals(type)) {
@@ -135,41 +127,16 @@ public class CourseService {
             throw new GeneralException(ErrorStatus.INVALID_COURSE_TYPE);
         }
 
-        QCourse qCourse = QCourse.course;
-        QPlace qPlace = QPlace.place;
-        QPlaceCourse qPlaceCourse = QPlaceCourse.placeCourse;
-        QMember qMember = QMember.member;
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        // 주어진 조건에 해당하는 모든 코스를 불러오는 쿼리
-        JPAQuery<Course> query = queryFactory
-                .select(qCourse)
-                .from(qPlaceCourse)
-                .innerJoin(qPlaceCourse.course, qCourse)
-                .innerJoin(qPlaceCourse.place, qPlace)
-                .innerJoin(qPlaceCourse.course.member, qMember)
-                .where(
-                        qPlaceCourse.course.id.eq(qCourse.id),
-                        qPlaceCourse.place.id.eq(qPlace.id),
-                        qPlaceCourse.course.member.eq(member),
-                        qCourse.courseType.eq(courseType),
-                        upperLocationFilter(qPlace, upperLocation),
-                        lowerLocationFilter(qPlace, lowerLocation)
-                )
-                .orderBy(qCourse.id.desc())
-                .limit(pageable.getPageSize() + 1);
+        List<Course> courses = courseRepository.findCourses(courseType, upperLocation, lowerLocation, member, lastId);
 
-        // lastId가 주어지면 다음 10개를 출력
-        // 주어지지 않았다면 커서를 그대로 두고 첫 10개를 출력
-        if (lastId != null) {
-            query.where(qCourse.id.lt(lastId));
-        }
+        // 페이징 설정
+        Pageable pageable = PageRequest.of(0, 10);
 
-        List<Course> courses = query
-                .distinct()
-                .orderBy(qCourse.id.desc())
-                .limit(pageable.getPageSize() + 1)
-                .fetch();
-
+        // courses가 11개면 다음 페이지가 있음
         boolean hasNext = courses.size() > pageable.getPageSize();
 
         if (hasNext) {
@@ -343,19 +310,5 @@ public class CourseService {
                 .map(Category::getBigCategory)
                 .distinct()
                 .toList();
-    }
-
-    private BooleanExpression upperLocationFilter(QPlace qPlace, String upperLocation) {
-        if ("all".equals(upperLocation)) {
-            return null;
-        }
-        return qPlace.roadAddress.startsWith(upperLocation + " ");
-    }
-
-    private BooleanExpression lowerLocationFilter(QPlace qPlace, String lowerLocation) {
-        if ("all".equals(lowerLocation)) {
-            return null;
-        }
-        return qPlace.roadAddress.contains(" " + lowerLocation);
     }
 }
