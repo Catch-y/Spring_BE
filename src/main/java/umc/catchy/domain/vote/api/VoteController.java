@@ -17,15 +17,11 @@ import umc.catchy.domain.vote.dto.response.CategoryResponse;
 import umc.catchy.domain.vote.dto.response.GroupPlaceResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteResultResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
-import umc.catchy.domain.vote.dto.response.PlaceResponse;
-import umc.catchy.domain.vote.dto.response.PlaceVoteResponse;
 import umc.catchy.domain.vote.dto.response.VoteResponse;
 import umc.catchy.domain.vote.dto.response.VoteResultResponse;
 import umc.catchy.domain.vote.service.VoteService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
-
-import java.util.List;
 
 @Tag(name = "Vote", description = "투표 관련 API")
 @RestController
