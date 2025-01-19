@@ -7,16 +7,18 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
+import umc.catchy.domain.vote.dto.request.PlaceVoteRequest;
 import umc.catchy.domain.vote.dto.request.SubmitVoteRequest;
 import umc.catchy.domain.vote.dto.response.CategoryResponse;
 import umc.catchy.domain.vote.dto.response.GroupPlaceResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteResultResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
 import umc.catchy.domain.vote.dto.response.PlaceResponse;
+import umc.catchy.domain.vote.dto.response.PlaceVoteResponse;
 import umc.catchy.domain.vote.dto.response.VoteResponse;
 import umc.catchy.domain.vote.dto.response.VoteResultResponse;
 import umc.catchy.domain.vote.service.VoteService;
@@ -95,5 +97,14 @@ public class VoteController {
             @PathVariable BigCategory category) {
         GroupPlaceResponse response = voteService.getPlacesByCategory(groupId, category.name());
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @PatchMapping("/{groupId}/{voteId}/places/vote")
+    public ResponseEntity<PlaceVoteResponse> voteForPlace(
+            @PathVariable Long groupId,
+            @PathVariable Long voteId,
+            @Validated @RequestBody PlaceVoteRequest request) {
+        PlaceVoteResponse response = voteService.voteForPlace(voteId, groupId, request);
+        return ResponseEntity.ok(response);
     }
 }

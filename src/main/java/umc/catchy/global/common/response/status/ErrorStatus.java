@@ -54,7 +54,9 @@ public enum ErrorStatus implements BaseErrorCode {
     INVALID_CATEGORY_SELECTION(HttpStatus.BAD_REQUEST, "VOTE400", "선택한 카테고리가 유효하지 않습니다."),
     CATEGORY_SELECTION_INSUFFICIENT(HttpStatus.BAD_REQUEST, "VOTE401", "최소 두 개 이상의 카테고리를 선택해야 합니다."),
     CATEGORY_ALREADY_VOTED(HttpStatus.CONFLICT, "VOTE409", "이미 해당 투표에 참여했습니다."),
-    VOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "VOTE402", "해당 투표를 찾을 수 없습니다.");
+    VOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "VOTE402", "해당 투표를 찾을 수 없습니다."),
+    ALREADY_VOTED(HttpStatus.CONFLICT, "VOTE403", "이미 해당 장소에 투표했습니다."),
+    PLACE_VOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "VOTE406", "해당 장소 투표 정보를 찾을 수 없습니다."),
     ;
 
     private final HttpStatus httpStatus;

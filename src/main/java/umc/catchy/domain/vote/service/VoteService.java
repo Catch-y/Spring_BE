@@ -13,15 +13,20 @@ import umc.catchy.domain.group.domain.Groups;
 import umc.catchy.domain.mapping.memberCategoryVote.dao.MemberCategoryVoteRepository;
 import umc.catchy.domain.mapping.memberCategoryVote.domain.MemberCategoryVote;
 import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
+import umc.catchy.domain.mapping.memberPlaceVote.dao.MemberPlaceVoteRepository;
+import umc.catchy.domain.mapping.memberPlaceVote.domain.MemberPlaceVote;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
+import umc.catchy.domain.placeVote.dao.PlaceVoteRepository;
+import umc.catchy.domain.placeVote.domain.PlaceVote;
 import umc.catchy.domain.vote.dao.VoteRepository;
 import umc.catchy.domain.vote.domain.Vote;
 import umc.catchy.domain.vote.domain.VoteStatus;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
+import umc.catchy.domain.vote.dto.request.PlaceVoteRequest;
 import umc.catchy.domain.vote.dto.response.CategoryDto;
 import umc.catchy.domain.vote.dto.response.CategoryResponse;
 import umc.catchy.domain.vote.dto.response.CategoryResult;
@@ -30,6 +35,7 @@ import umc.catchy.domain.vote.dto.response.GroupVoteResultResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
 import umc.catchy.domain.vote.dto.response.MemberVoteStatus;
 import umc.catchy.domain.vote.dto.response.PlaceResponse;
+import umc.catchy.domain.vote.dto.response.PlaceVoteResponse;
 import umc.catchy.domain.vote.dto.response.VoteResult;
 import umc.catchy.domain.vote.dto.response.VoteResultResponse;
 import umc.catchy.domain.vote.dto.response.VotedMemberResponse;
@@ -55,6 +61,8 @@ public class VoteService {
     private final PlaceRepository placeRepository;
     private final CategoryRepository categoryRepository;
     private final PlaceReviewRepository placeReviewRepository;
+    private final MemberPlaceVoteRepository memberPlaceVoteRepository;
+    private final PlaceVoteRepository placeVoteRepository;
 
     @Transactional
     public Vote createVote(CreateVoteRequest request) {
@@ -70,17 +78,16 @@ public class VoteService {
         voteRepository.save(vote);
 
         for (BigCategory bigCategory : BigCategory.values()) {
-            // Category 객체를 데이터베이스에서 조회
-            Category category = categoryRepository.findByBigCategory(bigCategory)
-                    .orElseThrow(() -> new GeneralException(ErrorStatus.CATEGORY_NOT_FOUND));
-
-            // CategoryVote 생성 시 Category 객체 전달
-            CategoryVote categoryVote = new CategoryVote(vote, bigCategory, category);
+            CategoryVote categoryVote = CategoryVote.builder()
+                    .vote(vote)
+                    .bigCategory(bigCategory)
+                    .build();
             categoryVoteRepository.save(categoryVote);
         }
 
         return vote;
     }
+
 
     @Transactional
     public void submitVote(Long voteId, List<Long> categoryIds) {
@@ -238,5 +245,43 @@ public class VoteService {
                 .toList();
 
         return new GroupPlaceResponse(groupLocation, placeResponses);
+    }
+
+    @Transactional
+    public PlaceVoteResponse voteForPlace(Long voteId, Long groupId, PlaceVoteRequest request) {
+        Long placeId = request.getPlaceId();
+
+        // 현재 사용자 조회
+        Member member = memberRepository.findById(SecurityUtil.getCurrentMemberId())
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        // Place 조회
+        Place place = placeRepository.findById(placeId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+
+        // Vote 조회
+        Vote vote = voteRepository.findById(voteId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_FOUND));
+
+        // Group 조회
+        Groups group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
+
+        // 중복 투표 방지
+        if (memberPlaceVoteRepository.existsByMemberIdAndPlaceIdAndVoteId(member.getId(), place.getId(), vote.getId())) {
+            throw new GeneralException(ErrorStatus.ALREADY_VOTED);
+        }
+
+        // MemberPlaceVote 생성 및 저장
+        MemberPlaceVote memberPlaceVote = MemberPlaceVote.builder()
+                .place(place)
+                .member(member)
+                .vote(vote)
+                .group(group)
+                .build();
+
+        memberPlaceVoteRepository.save(memberPlaceVote);
+
+        return new PlaceVoteResponse(memberPlaceVote.getId(), "Vote successfully recorded.");
     }
 }
