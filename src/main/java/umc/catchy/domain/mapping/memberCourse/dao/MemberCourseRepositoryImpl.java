@@ -8,11 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
-import umc.catchy.domain.mapping.memberCourse.domain.QMemberCourse;
+
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
-import umc.catchy.domain.mapping.placeCourse.domain.QPlaceCourse;
-import umc.catchy.domain.member.domain.QMember;
-import umc.catchy.domain.place.domain.QPlace;
+
 
 import java.util.List;
 
