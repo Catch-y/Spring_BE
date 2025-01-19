@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
-import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.categoryVote.dao.CategoryVoteRepository;
 import umc.catchy.domain.categoryVote.domain.CategoryVote;
 import umc.catchy.domain.group.dao.GroupRepository;
@@ -21,7 +20,6 @@ import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
 import umc.catchy.domain.placeVote.dao.PlaceVoteRepository;
-import umc.catchy.domain.placeVote.domain.PlaceVote;
 import umc.catchy.domain.vote.dao.VoteRepository;
 import umc.catchy.domain.vote.domain.Vote;
 import umc.catchy.domain.vote.domain.VoteStatus;
@@ -35,7 +33,6 @@ import umc.catchy.domain.vote.dto.response.GroupVoteResultResponse;
 import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
 import umc.catchy.domain.vote.dto.response.MemberVoteStatus;
 import umc.catchy.domain.vote.dto.response.PlaceResponse;
-import umc.catchy.domain.vote.dto.response.PlaceVoteResponse;
 import umc.catchy.domain.vote.dto.response.VoteResult;
 import umc.catchy.domain.vote.dto.response.VoteResultResponse;
 import umc.catchy.domain.vote.dto.response.VotedMemberResponse;
@@ -199,7 +196,6 @@ public class VoteService {
 
     @Transactional(readOnly = true)
     public GroupVoteResultResponse getGroupVoteResults(Long groupId, Long voteId) {
-        // 그룹 정보 조회
         Groups group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         String groupLocation = group.getGroupLocation();
@@ -231,10 +227,8 @@ public class VoteService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         String groupLocation = group.getGroupLocation();
 
-        List<Place> places = placeRepository.findByBigCategoryAndLocation(BigCategory.valueOf(category), groupLocation)
-                .stream()
-                .sorted(Comparator.comparing(Place::getPlaceName))
-                .toList();
+        // 해당 카테고리의 장소 조회
+        List<Place> places = placeRepository.findByBigCategoryAndLocation(BigCategory.valueOf(category), groupLocation);
 
         List<PlaceResponse> placeResponses = places.stream()
                 .map(place -> {
@@ -251,8 +245,6 @@ public class VoteService {
                             ))
                             .toList();
 
-
-                    // 장소 응답 생성
                     return new PlaceResponse(
                             place.getId(),
                             place.getPlaceName(),
@@ -262,6 +254,16 @@ public class VoteService {
                             place.getImageUrl(),
                             votedMembers
                     );
+                })
+                .sorted((p1, p2) -> {
+                    int voteCount1 = memberPlaceVoteRepository.countByPlaceId(p1.getPlaceId());
+                    int voteCount2 = memberPlaceVoteRepository.countByPlaceId(p2.getPlaceId());
+
+                    if (voteCount1 != voteCount2) {
+                        return Integer.compare(voteCount2, voteCount1);
+                    }
+
+                    return p1.getPlaceName().compareTo(p2.getPlaceName());
                 })
                 .toList();
 
