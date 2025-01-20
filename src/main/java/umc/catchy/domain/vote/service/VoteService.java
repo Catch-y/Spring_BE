@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
-import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.categoryVote.dao.CategoryVoteRepository;
 import umc.catchy.domain.categoryVote.domain.CategoryVote;
 import umc.catchy.domain.group.dao.GroupRepository;
@@ -13,15 +12,19 @@ import umc.catchy.domain.group.domain.Groups;
 import umc.catchy.domain.mapping.memberCategoryVote.dao.MemberCategoryVoteRepository;
 import umc.catchy.domain.mapping.memberCategoryVote.domain.MemberCategoryVote;
 import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
+import umc.catchy.domain.mapping.memberPlaceVote.dao.MemberPlaceVoteRepository;
+import umc.catchy.domain.mapping.memberPlaceVote.domain.MemberPlaceVote;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
+import umc.catchy.domain.placeVote.dao.PlaceVoteRepository;
 import umc.catchy.domain.vote.dao.VoteRepository;
 import umc.catchy.domain.vote.domain.Vote;
 import umc.catchy.domain.vote.domain.VoteStatus;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
+import umc.catchy.domain.vote.dto.request.PlaceVoteRequest;
 import umc.catchy.domain.vote.dto.response.CategoryDto;
 import umc.catchy.domain.vote.dto.response.CategoryResponse;
 import umc.catchy.domain.vote.dto.response.CategoryResult;
@@ -55,6 +58,8 @@ public class VoteService {
     private final PlaceRepository placeRepository;
     private final CategoryRepository categoryRepository;
     private final PlaceReviewRepository placeReviewRepository;
+    private final MemberPlaceVoteRepository memberPlaceVoteRepository;
+    private final PlaceVoteRepository placeVoteRepository;
 
     @Transactional
     public Vote createVote(CreateVoteRequest request) {
@@ -70,17 +75,16 @@ public class VoteService {
         voteRepository.save(vote);
 
         for (BigCategory bigCategory : BigCategory.values()) {
-            // Category 객체를 데이터베이스에서 조회
-            Category category = categoryRepository.findByBigCategory(bigCategory)
-                    .orElseThrow(() -> new GeneralException(ErrorStatus.CATEGORY_NOT_FOUND));
-
-            // CategoryVote 생성 시 Category 객체 전달
-            CategoryVote categoryVote = new CategoryVote(vote, bigCategory, category);
+            CategoryVote categoryVote = CategoryVote.builder()
+                    .vote(vote)
+                    .bigCategory(bigCategory)
+                    .build();
             categoryVoteRepository.save(categoryVote);
         }
 
         return vote;
     }
+
 
     @Transactional
     public void submitVote(Long voteId, List<Long> categoryIds) {
@@ -192,7 +196,6 @@ public class VoteService {
 
     @Transactional(readOnly = true)
     public GroupVoteResultResponse getGroupVoteResults(Long groupId, Long voteId) {
-        // 그룹 정보 조회
         Groups group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         String groupLocation = group.getGroupLocation();
@@ -224,19 +227,80 @@ public class VoteService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         String groupLocation = group.getGroupLocation();
 
-        // 해당 카테고리의 장소 조회 및 정렬
-        List<Place> places = placeRepository.findByBigCategoryAndLocation(BigCategory.valueOf(category), groupLocation)
-                .stream()
-                .sorted(Comparator.comparing(Place::getPlaceName)) // 가게 이름 기준으로 정렬
-                .toList();
+        // 해당 카테고리의 장소 조회
+        List<Place> places = placeRepository.findByBigCategoryAndLocation(BigCategory.valueOf(category), groupLocation);
 
         List<PlaceResponse> placeResponses = places.stream()
                 .map(place -> {
-                    long reviewCount = placeReviewRepository.countByPlaceId(place.getId()); // 리뷰 수 조회
-                    return new PlaceResponse(place.getId(), place.getPlaceName(), place.getRoadAddress(), place.getRating(), reviewCount);
+                    long reviewCount = placeReviewRepository.countByPlaceId(place.getId());
+
+                    // 해당 장소에 투표한 멤버 정보 조회
+                    List<Member> votingMembers = memberPlaceVoteRepository.findMembersByPlaceId(place.getId());
+
+                    List<VotedMemberResponse> votedMembers = votingMembers.stream()
+                            .map(member -> new VotedMemberResponse(
+                                    member.getId(),
+                                    member.getNickname(),
+                                    member.getProfileImage()
+                            ))
+                            .toList();
+
+                    return new PlaceResponse(
+                            place.getId(),
+                            place.getPlaceName(),
+                            place.getRoadAddress(),
+                            place.getRating(),
+                            reviewCount,
+                            place.getImageUrl(),
+                            votedMembers
+                    );
+                })
+                .sorted((p1, p2) -> {
+                    int voteCount1 = memberPlaceVoteRepository.countByPlaceId(p1.getPlaceId());
+                    int voteCount2 = memberPlaceVoteRepository.countByPlaceId(p2.getPlaceId());
+
+                    if (voteCount1 != voteCount2) {
+                        return Integer.compare(voteCount2, voteCount1);
+                    }
+
+                    return p1.getPlaceName().compareTo(p2.getPlaceName());
                 })
                 .toList();
 
         return new GroupPlaceResponse(groupLocation, placeResponses);
+    }
+
+
+    @Transactional
+    public String togglePlaceVote(Long voteId, Long groupId, PlaceVoteRequest request) {
+        Long placeId = request.getPlaceId();
+
+        Member member = memberRepository.findById(SecurityUtil.getCurrentMemberId())
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        Place place = placeRepository.findById(placeId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+
+        Vote vote = voteRepository.findById(voteId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_FOUND));
+
+        Groups group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
+
+        MemberPlaceVote existingVote = memberPlaceVoteRepository.findByMemberIdAndPlaceIdAndVoteId(member.getId(), place.getId(), vote.getId());
+
+        if (existingVote != null) {
+            memberPlaceVoteRepository.delete(existingVote);
+            return "Vote removed successfully.";
+        } else {
+            MemberPlaceVote memberPlaceVote = MemberPlaceVote.builder()
+                    .place(place)
+                    .member(member)
+                    .vote(vote)
+                    .group(group)
+                    .build();
+            memberPlaceVoteRepository.save(memberPlaceVote);
+            return "Vote added successfully.";
+        }
     }
 }
