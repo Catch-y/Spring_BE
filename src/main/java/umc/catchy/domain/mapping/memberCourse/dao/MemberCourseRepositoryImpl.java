@@ -2,13 +2,13 @@ package umc.catchy.domain.mapping.memberCourse.dao;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 
+import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 
 
@@ -29,29 +29,32 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
     public Slice<MemberCourseResponse> findCourseByBookmarks(Long memberId, int pageSize, Long lastCourseId) {
 
         List<MemberCourseResponse> results = queryFactory.select(Projections.constructor(MemberCourseResponse.class,
-                        course.id,
-                        course.courseType,
-                        course.courseImage,
-                        course.courseName,
-                        course.courseDescription,
-                        JPAExpressions
-                                .select(place.category.bigCategory)
-                                .from(placeCourse)
-                                .leftJoin(placeCourse.place, place)
-                                .on(placeCourse.place.id.eq(place.id))
-                                .where(placeCourse.course.id.eq(course.id))
-                )).from(memberCourse)
-                .leftJoin(memberCourse.course, course)
-                .on(memberCourse.course.id.eq(course.id))
-                .leftJoin(memberCourse.member, member)
-                .on(memberCourse.member.id.eq(member.id))
+                course.id,
+                course.courseType,
+                course.courseImage,
+                course.courseName,
+                course.courseDescription))
+                .from(memberCourse)
+                .leftJoin(memberCourse.course,course).on(memberCourse.course.id.eq(course.id))
+                .leftJoin(memberCourse.member,member).on(memberCourse.member.id.eq(member.id))
                 .where(
                         memberCourse.member.id.eq(memberId),
                         lastCourseId(lastCourseId),
                         markedCondition
-                ).orderBy(course.createdDate.desc())
-                .limit(pageSize + 1)
+                )
+                .orderBy(course.createdDate.desc())
+                .limit(pageSize+1)
                 .fetch();
+
+        for (MemberCourseResponse result : results) {
+            List<BigCategory> bigCategories = queryFactory.select(placeCourse.place.category.bigCategory)
+                    .from(placeCourse)
+                    .innerJoin(placeCourse.place,place).on(placeCourse.place.id.eq(place.id))
+                    .innerJoin(placeCourse.course,course).on(placeCourse.course.id.eq(course.id))
+                    .where(placeCourse.course.id.eq(result.getCourseId()))
+                    .fetch();
+            result.setCategories(bigCategories);
+        }
 
         return checkLastPage(pageSize,results);
     }
