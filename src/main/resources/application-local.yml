@@ -37,3 +37,9 @@ security:
   kakao:
     client-id: ${REST_API_KEY}
     client-secret: ${SECRET_KEY}
+
+openai:
+  model: ${GPT_MODEL}
+  api:
+    key: ${GPT_API_KEY}
+    url: ${GPT_API_URL}
