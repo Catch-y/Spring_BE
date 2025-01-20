@@ -1,18 +1,26 @@
 package umc.catchy.domain.place.domain;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.common.BaseTimeEntity;
 
 @Entity
 @Getter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class Place extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "place_id")
     private Long id;
+
+    private Long poiId;
 
     private String placeName;
 
