@@ -65,5 +65,8 @@ jobs:
               -e S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }} \
               -e KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }} \
               -e KAKAO_CLIENT_PRIVATE_ID=${{ secrets.KAKAO_CLIENT_PRIVATE_ID }} \
+              -e GPT_MODEL=${{ secrets.GPT_MODEL }} \
+              -e GPT_API_KEY=${{ secrets.GPT_API_KEY }} \
+              -e GPT_API_URL=${{ secrets.GPT_API_URL }} \
               ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}
             sudo docker image prune -f
