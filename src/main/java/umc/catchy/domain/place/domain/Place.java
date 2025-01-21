@@ -38,6 +38,7 @@ public class Place extends BaseTimeEntity {
 
     private String placeSite; // 장소 사이트
 
+    @Column(length = 50000)
     private String imageUrl; // 장소 이미지
 
     @Setter

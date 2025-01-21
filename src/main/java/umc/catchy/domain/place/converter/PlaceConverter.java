@@ -2,7 +2,8 @@ package umc.catchy.domain.place.converter;
 
 import java.util.Map;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfo;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
 import umc.catchy.domain.place.domain.Place;
 
 public class PlaceConverter {
@@ -18,7 +19,7 @@ public class PlaceConverter {
                 .build();
     }
 
-    public static PlaceInfoResponse toPlaceInfoResponse(Place place, Long reviewCount) {
+    public static PlaceInfo toPlaceInfo(Place place, Long reviewCount) {
         String categoryName = "";
         Double rating = 0.0;
 
@@ -30,18 +31,15 @@ public class PlaceConverter {
             rating = place.getRating();
         }
 
-        return PlaceInfoResponse.builder()
+        return PlaceInfo.builder()
                 .placeId(place.getId())
                 .poiId(place.getPoiId())
-                .imageUrl(place.getImageUrl())
                 .placeName(place.getPlaceName())
-                .placeDescription(place.getPlaceDescription())
                 .category(categoryName)
                 .roadAddress(place.getRoadAddress())
                 .activeTime(place.getActiveTime())
                 .rating(rating)
                 .reviewCount(reviewCount)
-                .placeSite(place.getPlaceSite())
                 .build();
     }
 
@@ -49,6 +47,7 @@ public class PlaceConverter {
         return Place.builder()
                 .poiId(Long.parseLong(placeInfo.get("id")))
                 .placeName(placeInfo.get("name"))
+                .imageUrl(placeInfo.get("image"))
                 .placeDescription(placeInfo.get("desc"))
                 .roadAddress(placeInfo.get("bldAddr"))
                 .numberAddress(placeInfo.get("address"))
