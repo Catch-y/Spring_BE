@@ -9,6 +9,7 @@ import lombok.Setter;
 @Setter
 public class PlaceInfoResponse {
     private Long placeId;
+    private Long poiId;
     private String imageUrl;
     private String placeName;
     private String placeDescription;

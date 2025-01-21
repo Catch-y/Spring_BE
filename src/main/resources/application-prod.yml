@@ -37,6 +37,8 @@ security:
   kakao:
     client-id: ${KAKAO_CLIENT_ID}
     client-secret: ${KAKAO_CLIENT_PRIVATE_ID}
+  tmap:
+    app-key: ${TMAP_APP_KEY}
 
 server:
   port: 8081

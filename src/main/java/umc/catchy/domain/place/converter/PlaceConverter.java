@@ -20,20 +20,26 @@ public class PlaceConverter {
 
     public static PlaceInfoResponse toPlaceInfoResponse(Place place, Long reviewCount) {
         String categoryName = "";
+        Double rating = 0.0;
 
         if (place.getCategory() != null) {
             categoryName = place.getCategory().getName();
         }
 
+        if (place.getRating() != null) {
+            rating = place.getRating();
+        }
+
         return PlaceInfoResponse.builder()
                 .placeId(place.getId())
+                .poiId(place.getPoiId())
                 .imageUrl(place.getImageUrl())
                 .placeName(place.getPlaceName())
                 .placeDescription(place.getPlaceDescription())
                 .category(categoryName)
                 .roadAddress(place.getRoadAddress())
                 .activeTime(place.getActiveTime())
-                .rating(place.getRating())
+                .rating(rating)
                 .reviewCount(reviewCount)
                 .placeSite(place.getPlaceSite())
                 .build();

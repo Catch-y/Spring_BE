@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
@@ -28,7 +29,8 @@ import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
 @RequiredArgsConstructor
 public class PlaceCourseService {
 
-    private static final String APP_KEY = "yrBgObXPpI1JaoLesS3g79MWrtlSNrkT6xeabWMz";
+    @Value("${security.tmap.app-key}")
+    private String APP_KEY;
     private static final String API_URL = "https://apis.openapi.sk.com/tmap/pois";
 
     private final PlaceRepository placeRepository;
