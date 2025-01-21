@@ -43,6 +43,33 @@ public class PlaceConverter {
                 .build();
     }
 
+    public static PlaceInfoDetail toPlaceInfoDetail(Place place, Long reviewCount) {
+        String categoryName = "";
+        Double rating = 0.0;
+
+        if (place.getCategory() != null) {
+            categoryName = place.getCategory().getName();
+        }
+
+        if (place.getRating() != null) {
+            rating = place.getRating();
+        }
+
+        return PlaceInfoDetail.builder()
+                .placeId(place.getId())
+                .poiId(place.getPoiId())
+                .imageUrl(place.getImageUrl())
+                .placeName(place.getPlaceName())
+                .placeDescription(place.getPlaceDescription())
+                .category(categoryName)
+                .roadAddress(place.getRoadAddress())
+                .activeTime(place.getActiveTime())
+                .placeSite(place.getPlaceSite())
+                .rating(rating)
+                .reviewCount(reviewCount)
+                .build();
+    }
+
     public static Place toPlace(Map<String, String> placeInfo) {
         return Place.builder()
                 .poiId(Long.parseLong(placeInfo.get("id")))

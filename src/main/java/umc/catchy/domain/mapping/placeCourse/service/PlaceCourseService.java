@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfo;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
 import umc.catchy.domain.place.converter.PlaceConverter;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
@@ -57,6 +58,15 @@ public class PlaceCourseService {
                         return createPlace(poiId);
                     }
                 }).toList();
+    }
+
+    public PlaceInfoDetail getPlaceDetailByPlaceId(Long placeId) {
+        Place place = placeRepository.findById(placeId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+
+        Long reviewCount = placeReviewRepository.countByPlaceId(placeId);
+
+        return PlaceConverter.toPlaceInfoDetail(place, reviewCount);
     }
 
     private List<Long> getPoiIds(String keyword, Float latitude, Float longitude, Integer page) {

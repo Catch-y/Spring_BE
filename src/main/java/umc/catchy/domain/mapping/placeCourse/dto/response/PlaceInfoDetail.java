@@ -7,7 +7,7 @@ import lombok.Setter;
 @Builder
 @Getter
 @Setter
-public class PlaceInfoResponse {
+public class PlaceInfoDetail {
     private Long placeId;
     private Long poiId;
     private String imageUrl;
@@ -16,7 +16,7 @@ public class PlaceInfoResponse {
     private String category;
     private String roadAddress;
     private String activeTime;
+    private String placeSite;
     private Double rating;
     private Long reviewCount;
-    private String placeSite;
 }

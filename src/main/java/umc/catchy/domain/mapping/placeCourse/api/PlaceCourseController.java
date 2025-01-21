@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfo;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
 import umc.catchy.domain.mapping.placeCourse.service.PlaceCourseService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
@@ -45,5 +46,16 @@ public class PlaceCourseController {
 
         List<PlaceInfo> responses = placeCourseService.getPlacesByLocation(searchKeyword, null, null, page);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, responses));
+    }
+
+    @GetMapping
+    @Operation(summary = "지역 상세 화면 API", description = "지도에서 장소 검색 후 클릭하면 나오는 상세 화면")
+    public ResponseEntity<BaseResponse<PlaceInfoDetail>> getPlaceInfoDetail(
+            @RequestParam Long placeId
+    ) {
+
+        PlaceInfoDetail response = placeCourseService.getPlaceDetailByPlaceId(placeId);
+
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }
