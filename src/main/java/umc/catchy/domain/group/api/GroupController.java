@@ -23,6 +23,7 @@ import umc.catchy.domain.group.dto.response.CreateGroupResponse;
 import umc.catchy.domain.group.dto.response.GroupCalendarResponse;
 import umc.catchy.domain.group.dto.response.GroupInfoResponse;
 import umc.catchy.domain.group.dto.response.GroupJoinResponse;
+import umc.catchy.domain.group.dto.response.GroupMemberResponse;
 import umc.catchy.domain.group.service.GroupService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
@@ -80,6 +81,17 @@ public class GroupController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Slice<GroupCalendarResponse> response = groupService.getUserGroups(page, size);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "그룹 유저 조회", description = "그룹 ID로 그룹에 속한 모든 유저를 조회합니다.")
+    @GetMapping("/{groupId}/members")
+    public ResponseEntity<BaseResponse<List<GroupMemberResponse>>> getGroupMembers(
+            @Parameter(description = "그룹 ID", required = true)
+            @PathVariable Long groupId) {
+
+        List<GroupMemberResponse> response = groupService.getGroupMembers(groupId);
+
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }
