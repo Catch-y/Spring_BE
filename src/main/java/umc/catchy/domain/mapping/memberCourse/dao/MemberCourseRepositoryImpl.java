@@ -12,6 +12,8 @@ import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import static umc.catchy.domain.course.domain.QCourse.course;
@@ -47,12 +49,13 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
                 .fetch();
 
         for (MemberCourseResponse result : results) {
-            List<BigCategory> bigCategories = queryFactory.select(placeCourse.place.category.bigCategory)
+            List<BigCategory> bigCategoriesDuplicates = queryFactory.select(placeCourse.place.category.bigCategory)
                     .from(placeCourse)
                     .innerJoin(placeCourse.place,place).on(placeCourse.place.id.eq(place.id))
                     .innerJoin(placeCourse.course,course).on(placeCourse.course.id.eq(course.id))
                     .where(placeCourse.course.id.eq(result.getCourseId()))
                     .fetch();
+            List<BigCategory> bigCategories = new ArrayList<>(new HashSet<>(bigCategoriesDuplicates));
             result.setCategories(bigCategories);
         }
 
