@@ -21,4 +21,14 @@ public interface MemberCategoryVoteRepository extends JpaRepository<MemberCatego
     boolean existsByVoteIdAndMemberId(@Param("voteId") Long voteId, @Param("memberId") Long memberId);
     @Query("SELECT COUNT(DISTINCT mcv.member.id) FROM MemberCategoryVote mcv WHERE mcv.voteId = :voteId")
     int countDistinctMembersByVoteId(@Param("voteId") Long voteId);
+    @Query("SELECT COUNT(mcv) " +
+            "FROM MemberCategoryVote mcv " +
+            "WHERE mcv.categoryVote.vote.id = :voteId " +
+            "AND mcv.categoryVote.id = :categoryVoteId")
+    int countByVoteIdAndCategoryVoteId(@Param("voteId") Long voteId, @Param("categoryVoteId") Long categoryVoteId);
+    @Query("SELECT COUNT(mcv) " +
+            "FROM MemberCategoryVote mcv " +
+            "WHERE mcv.categoryVote.id = :categoryVoteId " +
+            "AND mcv.categoryVote.vote.group.id = :groupId")
+    int countByCategoryVoteIdAndGroupId(@Param("categoryVoteId") Long categoryVoteId, @Param("groupId") Long groupId);
 }
