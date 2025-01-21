@@ -1,20 +1,10 @@
 package umc.catchy.domain.course.service;
 
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.IntStream;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -58,11 +48,22 @@ import umc.catchy.domain.place.domain.Place;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
-
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.stream.Collectors;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
+
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @Transactional
@@ -374,7 +375,8 @@ public class CourseService {
         String gptPrompt = buildGptPrompt(limitedPlaces, region);
         String gptResponse = callOpenAiApi(gptPrompt);
 
-        // 6. GPT 응답 파싱 및 place_id 매칭
+        // 6. GPT 응답 파싱
+        Pair<LocalTime, LocalTime> recommendTime = parseRecommendTime(gptResponse);
         List<Long> matchedPlaceIds = parseGptResponseAndMatchPlaceIds(gptResponse, limitedPlaces);
 
         // 7. 현재 사용자 가져오기
@@ -387,7 +389,9 @@ public class CourseService {
                 .courseName(region + " AI 추천 코스")
                 .courseDescription("사용자의 지역을 기반으로 생성된 추천 코스")
                 .courseType(CourseType.AI_GENERATED)
-                .member(member) // 현재 사용자 설정
+                .recommendTimeStart(recommendTime.getLeft())
+                .recommendTimeEnd(recommendTime.getRight())
+                .member(member)
                 .build();
         courseRepository.save(course);
 
@@ -413,6 +417,62 @@ public class CourseService {
                 .toList();
 
         return CourseConverter.toCourseInfoDTO(course, matchedPlaceIds.size(), getRecommendTimeToString(course), placeListOfCourse);
+    }
+
+    // GPT 응답에서 recommendTime 파싱
+    private Pair<LocalTime, LocalTime> parseRecommendTime(String gptResponse) {
+        try {
+            System.out.println("Raw GPT Response: " + gptResponse);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(gptResponse);
+            String content = rootNode.path("choices").get(0).path("message").path("content").asText();
+            System.out.println("Extracted Content: " + content);
+
+            String recommendTimeRegex = "\\*\\*RecommendTime:\\s*(\\d{2}:\\d{2})~(\\d{2}:\\d{2})\\*\\*";
+            Pattern recommendTimePattern = Pattern.compile(recommendTimeRegex);
+            Matcher recommendTimeMatcher = recommendTimePattern.matcher(content);
+
+            LocalTime earliest = LocalTime.MAX;
+            LocalTime latest = LocalTime.MIN;
+
+            // 각 장소의 Recommend Time 파싱
+            while (recommendTimeMatcher.find()) {
+                // parseTime 메서드를 사용하여 24:00 처리
+                LocalTime start = parseTime(recommendTimeMatcher.group(1));
+                LocalTime end = parseTime(recommendTimeMatcher.group(2));
+
+                if (start.isBefore(earliest)) {
+                    earliest = start;
+                }
+                if (end.isAfter(latest)) {
+                    latest = end;
+                }
+            }
+
+            // Recommend Time이 없을 경우 기본값 사용
+            if (earliest.equals(LocalTime.MAX) || latest.equals(LocalTime.MIN)) {
+                System.out.println("Recommend Time not found. Using default: 09:00~21:00.");
+                earliest = LocalTime.of(9, 0); // 기본 시작 시간
+                latest = LocalTime.of(21, 0); // 기본 종료 시간
+            }
+
+            return Pair.of(earliest, latest);
+        } catch (JsonProcessingException e) {
+            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR,
+                    "JSON 파싱 실패: " + e.getMessage());
+        } catch (Exception e) {
+            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR,
+                    "Recommend Time 파싱 실패: " + e.getMessage());
+        }
+    }
+
+    private LocalTime parseTime(String time) {
+        // 24:00 처리
+        if ("24:00".equals(time)) {
+            return LocalTime.MIDNIGHT; // LocalTime.MIDNIGHT은 00:00을 의미
+        }
+        return LocalTime.parse(time);
     }
 
     // GPT 응답 내용 파싱
@@ -483,13 +543,20 @@ public class CourseService {
                     place.getId(), place.getPlaceName(), place.getRoadAddress(), place.getActiveTime()));
         }
 
-        prompt.append("\nThe itinerary should include the following details for each location:\n");
-        prompt.append("- Place ID\n");
-        prompt.append("- Name\n");
-        prompt.append("- Road Address\n");
-        prompt.append("- Operating Hours\n");
-        prompt.append("Ensure that the places in the itinerary are all from the specified region. ");
-        prompt.append("Arrange the places in an order that reflects the typical flow of a day, starting from morning to late night.");
+        prompt.append("\nThe itinerary should include the following details for each location, strictly following this format:\n");
+        prompt.append("- Place ID: [numeric ID]\n");
+        prompt.append("- Name: [Place name]\n");
+        prompt.append("- Road Address: [Road address]\n");
+        prompt.append("- Operating Hours: HH:mm-HH:mm\n");
+        prompt.append("- Recommend Visit Time: HH:mm~HH:mm\n");
+        prompt.append("\nAdditionally, provide the overall start and end times for the entire day in this format:\n");
+        prompt.append("**RecommendTime: HH:mm~HH:mm**\n");
+        prompt.append("\nEnsure that:\n");
+        prompt.append("1. All times strictly follow the HH:mm format.\n");
+        prompt.append("2. Use `~` as the separator for Recommend Visit Time and overall RecommendTime.\n");
+        prompt.append("3. Do not include any additional comments or extra information.\n");
+        prompt.append("4. The response should be structured and clean, strictly adhering to the format above.\n");
+        prompt.append("\nArrange the places in an order that reflects the typical flow of a day, starting from morning to late night.\n");
         prompt.append("Return the data in a structured and easy-to-read format.");
         return prompt.toString();
     }
