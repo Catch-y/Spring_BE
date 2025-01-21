@@ -24,6 +24,7 @@ public class Place extends BaseTimeEntity {
 
     private String placeName;
 
+    @Column(length = 50000)
     private String placeDescription;
 
     private String roadAddress; //도로명 주소
