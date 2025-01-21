@@ -142,13 +142,10 @@ public class GroupService {
 
     @Transactional(readOnly = true)
     public List<GroupMemberResponse> getGroupMembers(Long groupId) {
-        Groups group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
+        List<Member> members = memberGroupRepository.findMembersByGroupId(groupId);
 
-        List<MemberGroup> memberGroups = memberGroupRepository.findByGroupId(group.getId());
-
-        return memberGroups.stream()
-                .map(memberGroup -> GroupMemberResponse.fromEntity(memberGroup.getMember()))
+        return members.stream()
+                .map(GroupMemberResponse::fromEntity)
                 .collect(Collectors.toList());
     }
 }
