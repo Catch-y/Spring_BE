@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
@@ -30,6 +31,7 @@ import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.course.dto.response.GPTPlaceDTO;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
 import umc.catchy.domain.mapping.memberActivetime.dao.MemberActiveTimeRepository;
+import umc.catchy.domain.mapping.memberCategory.dao.MemberCategoryRepository;
 import umc.catchy.domain.mapping.memberCourse.converter.MemberCourseConverter;
 import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
@@ -89,6 +91,8 @@ public class CourseService {
     private final PlaceRepository placeRepository;
     private final MemberLocationRepository memberLocationRepository;
     private final MemberActiveTimeRepository memberActiveTimeRepository;
+    private final MemberCategoryRepository memberCategoryRepository;
+    private CategoryRepository categoryRepository;
 
     private Course getCourse(Long courseId){
         return courseRepository.findById(courseId)
@@ -343,6 +347,7 @@ public class CourseService {
         if (memberLocations.isEmpty()) {
             throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "사용자의 관심 지역이 설정되지 않았습니다.");
         }
+        List<String> preferredCategories = getPreferredCategories(memberId);
 
         // 2. 랜덤으로 관심 지역 선택
         Random random = new Random();
@@ -364,15 +369,18 @@ public class CourseService {
         // 4. 장소 순서 랜덤 섞기
         Collections.shuffle(places);
 
-        // 상위 5개의 장소만 선택
-        int maxPlaces = Math.min(5, places.size());
-        List<Place> limitedPlaces = places.subList(0, maxPlaces);
+        // 최소 2개에서 최대 5개 사이의 랜덤 개수로 장소 선택
+        int minPlaces = 2;
+        int maxPlaces = Math.min(5, places.size()); // 최대 장소 개수는 전체 장소 개수와 5 중 더 작은 값
+        int randomPlacesCount = new Random().nextInt((maxPlaces - minPlaces) + 1) + minPlaces; // 최소 2개에서 최대 maxPlaces 개
+
+        List<Place> limitedPlaces = places.subList(0, randomPlacesCount);
 
         // 디버깅 로그
         System.out.println("Limited Places: " + limitedPlaces.stream().map(Place::getPlaceName).toList());
 
         // 5. GPT 프롬프트 생성 및 호출
-        String gptPrompt = buildGptPrompt(limitedPlaces, region);
+        String gptPrompt = buildGptPrompt(places, region, preferredCategories); // preferredCategories 전달
         String gptResponse = callOpenAiApi(gptPrompt);
 
         // 6. GPT 응답 파싱
@@ -498,7 +506,12 @@ public class CourseService {
                         .toList();
 
                 if (matchedPlaceIds.size() < 2) {
-                    throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "최소 2개의 장소가 필요합니다.");
+                    System.out.println("Matched places are less than 2. Adjusting to default places.");
+                    // 디폴트 값 설정 또는 예외 처리 대신 기본 로직으로 대체
+                    matchedPlaceIds = filteredPlaces.stream()
+                            .map(Place::getId)
+                            .limit(2) // 최소 2개를 선택
+                            .toList();
                 }
                 return matchedPlaceIds.stream().limit(5).toList();
             }
@@ -533,15 +546,26 @@ public class CourseService {
         return placeIds;
     }
 
-    private String buildGptPrompt(List<Place> places, String region) {
+    private List<String> getPreferredCategories(Long memberId) {
+        return memberCategoryRepository.findByMemberId(memberId).stream()
+                .map(memberCategory -> memberCategory.getCategory().getName())
+                .toList();
+    }
+
+    private String buildGptPrompt(List<Place> places, String region, List<String> preferredCategories) {
         StringBuilder prompt = new StringBuilder();
         prompt.append(String.format("Create a full-day itinerary for the region '%s'. ", region));
         prompt.append("Use only the following places in the itinerary:\n");
 
         for (Place place : places) {
-            prompt.append(String.format("- Place ID: %d, Name: %s, Road Address: %s, Operating Hours: %s\n",
-                    place.getId(), place.getPlaceName(), place.getRoadAddress(), place.getActiveTime()));
+            prompt.append(String.format("- Place ID: %d, Name: %s, Road Address: %s, Operating Hours: %s, Category: %s, Description: %s\n",
+                    place.getId(), place.getPlaceName(), place.getRoadAddress(), place.getActiveTime(),
+                    place.getCategory().getName(), place.getPlaceDescription()));
         }
+
+        prompt.append("\nThe user's preferred categories are: ");
+        prompt.append(String.join(", ", preferredCategories));
+        prompt.append(". Prioritize places that match these categories, but also include diverse options for a complete experience.\n");
 
         prompt.append("\nThe itinerary should include the following details for each location, strictly following this format:\n");
         prompt.append("- Place ID: [numeric ID]\n");
