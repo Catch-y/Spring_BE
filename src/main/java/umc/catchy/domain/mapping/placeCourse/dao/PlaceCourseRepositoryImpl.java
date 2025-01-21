@@ -34,12 +34,11 @@ public class PlaceCourseRepositoryImpl implements PlaceCourseRepositoryCustom{
                         place.roadAddress.as("roadAddress"),
                         place.activeTime.as("activeTime"),
                         placeReview.rating.avg().as("rating"),
-                        placeReview.count().as("reviewCount"),
-                        null
+                        placeReview.count().as("reviewCount")
                         ))
                 .from(placeVisit)
-                .leftJoin(placeVisit.place, place).on(placeVisit.place.id.eq(place.id)).fetchJoin()
-                .leftJoin(placeVisit.member, member).on(placeVisit.member.id.eq(member.id)).fetchJoin()
+                .leftJoin(placeVisit.place, place).on(placeVisit.place.id.eq(place.id))
+                .leftJoin(placeVisit.member, member).on(placeVisit.member.id.eq(member.id))
                 .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
                 .where(
                         placeVisit.member.id.eq(memberId),
