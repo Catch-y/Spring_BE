@@ -16,7 +16,7 @@ public class OsrmService {
         this.restTemplate = new RestTemplate();
     }
 
-    public String getRoute(CourseOSRMRequest.courseInfo request){
+    public OsrmResponse getRoute(CourseOSRMRequest.courseInfo request){
         String start = request.getStart().getLongitude() + "," + request.getStart().getLatitude();
         String end = request.getEnd().getLongitude() + "," + request.getEnd().getLatitude();
 
@@ -27,6 +27,6 @@ public class OsrmService {
             osrmUrl.append(routeUrl);
         }
         osrmUrl.append(end).append("?steps=true");
-        return restTemplate.getForObject(osrmUrl.toString(), String.class);
+        return restTemplate.getForObject(osrmUrl.toString(), OsrmResponse.class);
     }
 }

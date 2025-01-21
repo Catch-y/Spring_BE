@@ -22,6 +22,7 @@ import umc.catchy.domain.courseReview.service.CourseReviewService;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
+import umc.catchy.infra.osrm.OsrmResponse;
 import umc.catchy.infra.osrm.OsrmService;
 
 import java.util.Collections;
@@ -39,11 +40,11 @@ public class CourseController {
 
     @Operation(summary = "osrm-route API", description = "OSRM 서버의 route 서비스를 사용하기 위한 API입니다.")
     @PostMapping("/map")
-    public ResponseEntity<BaseResponse<String>> getRouteOfCourse(
+    public ResponseEntity<BaseResponse<OsrmResponse>> getRouteOfCourse(
             //@PathVariable Long courseId,
             @Valid @RequestBody CourseOSRMRequest.courseInfo request
             ){
-        String response = osrmService.getRoute(request);
+        OsrmResponse response = osrmService.getRoute(request);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
