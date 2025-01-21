@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
+import umc.catchy.domain.course.dto.request.GPTCourseRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
@@ -21,6 +22,7 @@ import umc.catchy.domain.courseReview.service.CourseReviewService;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
+import umc.catchy.global.util.SecurityUtil;
 
 import java.util.Collections;
 
@@ -106,6 +108,13 @@ public class CourseController {
     @PatchMapping("/{courseId}/bookmark")
     public ResponseEntity<BaseResponse<CourseBookmarkResponse>> toggleBookmark(@PathVariable Long courseId) {
         CourseBookmarkResponse response = memberCourseService.toggleBookmark(courseId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "AI 코스 생성 API", description = "사용자 데이터 기반으로 AI가 코스를 자동 생성합니다.")
+    @PostMapping("/generate/ai")
+    public ResponseEntity<BaseResponse<CourseInfoResponse.getCourseInfoDTO>> generateCourseWithAI() {
+        CourseInfoResponse.getCourseInfoDTO response = courseService.generateCourseAutomatically();
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

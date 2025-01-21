@@ -13,4 +13,11 @@ import java.util.List;
 public interface PlaceRepository extends JpaRepository<Place, Long> {
     @Query("SELECT p FROM Place p WHERE p.category.bigCategory = :bigCategory AND p.roadAddress LIKE %:groupLocation%")
     List<Place> findByBigCategoryAndLocation(@Param("bigCategory") BigCategory bigCategory, @Param("groupLocation") String groupLocation);
+    @Query("SELECT p FROM Place p " +
+            "WHERE p.roadAddress LIKE CONCAT('%', :upperLocation, '%') " +
+            "AND p.roadAddress LIKE CONCAT('%', :lowerLocation, '%')")
+    List<Place> findPlacesByRegion(
+            @Param("upperLocation") String upperLocation,
+            @Param("lowerLocation") String lowerLocation
+    );
 }
