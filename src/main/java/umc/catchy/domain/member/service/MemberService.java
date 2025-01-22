@@ -498,7 +498,12 @@ public class MemberService {
         List<Category> categories = categoryRepository.findAllByNameIn(request.getCategories());
         List<MemberCategory> collect = categories.stream().map(category -> MemberCategory.createMemberCategory(currentMember, category)).collect(Collectors.toList());
         memberCategoryRepository.saveAll(collect);
-        return new MemberCategoryCreatedResponse(true,"member`s categories are created");
+
+        List<Long> memberCategoryIds = collect.stream()
+                .map(MemberCategory::getId)
+                .toList();
+
+        return new MemberCategoryCreatedResponse(memberCategoryIds);
     }
 
     public StyleAndActiveTimeSurveyCreatedResponse createStyleAndActiveTimeSurvey(StyleAndActiveTimeSurveyRequest request) {
