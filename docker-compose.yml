@@ -8,7 +8,7 @@ services:
     ports:
       - "8081:8081"
     volumes:
-      - ./application-prod.yml:/config/application-prod.yml
+      - ./src/resources/application-prod.yml:/config/application-prod.yml
 
   osrm-routed:
     image: ghcr.io/project-osrm/osrm-backend

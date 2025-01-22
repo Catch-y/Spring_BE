@@ -39,6 +39,18 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     steps:
+      - name: Upload docker-compose.yml
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          port: 22
+          source: |
+            ./docker-compose.yml
+            ./src/resources/application-prod.yml
+          target: /home/ubuntu/
+
       - name: SSH into EC2 and Deploy
         uses: appleboy/ssh-action@master
         with:
@@ -47,9 +59,9 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           port: 22
           script: |
+            cd /home/ubuntu
             sudo docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+            sudo docker-compose down
             sudo docker-compose up -d --build
-# application 만 재배포 하는 경우
-#            sudo docker-compose pull app
-#            sudo docker-compose up -d --no-deps --build app
+            sudo docker-compose logs -f
             sudo docker image prune -f
