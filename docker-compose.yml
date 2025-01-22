@@ -11,7 +11,7 @@ services:
       - ./src/main/resources/application-prod.yml:/config/application-prod.yml
 
   osrm-routed:
-    image: ghcr.io/project-osrm/osrm-backend
+    image: osrm/osrm-backend:latest
     container_name: catchy-osrm
     ports:
       - "5000:5000"
