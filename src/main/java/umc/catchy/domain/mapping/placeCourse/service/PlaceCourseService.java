@@ -15,33 +15,42 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfo;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
+import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.place.converter.PlaceConverter;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
+import umc.catchy.global.util.SecurityUtil;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class PlaceCourseService {
     private static final String TMAP_API_URL = "https://apis.openapi.sk.com/tmap/pois";
     private static final String GOOGLE_API_URL = "https://maps.googleapis.com/maps/api/place/";
 
-    @Value("${security.tmap.app-key}")
+    @Value("${map.tmap.app-key}")
     private String TMAP_APP_KEY;
 
-    @Value("${security.google.api-key}")
+    @Value("${map.google.api-key}")
     private String GOOGLE_API_KEY;
 
     private final PlaceRepository placeRepository;
     private final PlaceReviewRepository placeReviewRepository;
+    private final PlaceCourseRepository placeCourseRepository;
+    private final MemberRepository memberRepository;
 
     public List<PlaceInfo> getPlacesByLocation(String searchKeyword, Double latitude, Double longitude, Integer page) {
         List<Long> poiIds = getPoiIds(searchKeyword, latitude, longitude, page);
@@ -82,7 +91,7 @@ public class PlaceCourseService {
                 query = String.format(
                         "?version=1&searchKeyword=%s&searchType=all&searchtypCd=R&centerLon=%f&centerLat=%f" +
                                 "&reqCoordType=WGS84GEO&resCoordType=WGS84GEO&radius=5&page=%d&count=10&multiPoint=Y&poiGroupYn=N",
-                        encodedKeyword, latitude, longitude, page
+                        encodedKeyword, longitude, latitude, page
                 );
             }
             // 지역 키워드 기반 검색(지역과 장소를 함께 입력)
@@ -305,5 +314,10 @@ public class PlaceCourseService {
         );
 
         return GOOGLE_API_URL + query;
+    }
+
+    public Slice<PlaceInfoResponse> searchLikedPlace(int pageSize, Long lastPlaceId) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        return placeCourseRepository.searchPlaceByLiked(memberId, pageSize, lastPlaceId);
     }
 }

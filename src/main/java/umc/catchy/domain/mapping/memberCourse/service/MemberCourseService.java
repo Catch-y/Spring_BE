@@ -2,11 +2,13 @@ package umc.catchy.domain.mapping.memberCourse.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
+import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.global.common.response.code.BaseErrorCode;
@@ -31,5 +33,11 @@ public class MemberCourseService {
                 .memberCourseId(memberCourse.getId())
                 .bookmarked(memberCourse.isBookmark())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public Slice<MemberCourseResponse> findAllCourseByBookmarked(int pageSize, Long lastCourseId) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        return memberCourseRepository.findCourseByBookmarks(memberId,pageSize,lastCourseId);
     }
 }
