@@ -38,7 +38,6 @@ public class MemberCourseService {
     @Transactional(readOnly = true)
     public Slice<MemberCourseResponse> findAllCourseByBookmarked(int pageSize, Long lastCourseId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        Member currentMember = memberRepository.findById(memberId).orElseThrow(() ->new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        return memberCourseRepository.findCourseByBookmarks(currentMember.getId(),pageSize,lastCourseId);
+        return memberCourseRepository.findCourseByBookmarks(memberId,pageSize,lastCourseId);
     }
 }
