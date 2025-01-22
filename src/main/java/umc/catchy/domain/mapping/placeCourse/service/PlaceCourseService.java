@@ -21,7 +21,6 @@ public class PlaceCourseService {
 
     public Slice<PlaceInfoResponse> searchLikedPlace(int pageSize, Long lastPlaceId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        return placeCourseRepository.searchPlaceByLiked(currentMember.getId(), pageSize, lastPlaceId);
+        return placeCourseRepository.searchPlaceByLiked(memberId, pageSize, lastPlaceId);
     }
 }
