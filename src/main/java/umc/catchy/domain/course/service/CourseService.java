@@ -22,13 +22,14 @@ import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
+import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
-import umc.catchy.domain.course.dto.response.GPTPlaceDTO;
+import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
 import umc.catchy.domain.mapping.memberActivetime.dao.MemberActiveTimeRepository;
 import umc.catchy.domain.mapping.memberCategory.dao.MemberCategoryRepository;
@@ -54,16 +55,13 @@ import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -340,62 +338,52 @@ public class CourseService {
                 .toList();
     }
 
-    public CourseInfoResponse.getCourseInfoDTO generateCourseAutomatically() {
+    public GptCourseInfoResponse generateCourseAutomatically() {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        // 1. 모든 관심 지역 조회
+
+        // 관심 지역 및 장소 조회
         List<MemberLocation> memberLocations = memberLocationRepository.findAllByMemberId(memberId);
-        if (memberLocations.isEmpty()) {
-            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "사용자의 관심 지역이 설정되지 않았습니다.");
-        }
         List<String> preferredCategories = getPreferredCategories(memberId);
 
-        // 2. 랜덤으로 관심 지역 선택
-        Random random = new Random();
-        MemberLocation selectedRegion = memberLocations.get(random.nextInt(memberLocations.size()));
-        String region = selectedRegion.getLocation().getUpperLocation() + " " + selectedRegion.getLocation().getLowerLocation();
-        System.out.println("Selected Region: " + region); // 디버깅용
-
-        // 3. 관심 지역 기반 장소 조회
-        List<Place> places = placeRepository.findPlacesByRegion(
-                selectedRegion.getLocation().getUpperLocation(),
-                selectedRegion.getLocation().getLowerLocation()
-        );
-
-        // 장소가 없으면 예외 처리
-        if (places.isEmpty()) {
-            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "추천할 장소가 없습니다.");
+        if (memberLocations.isEmpty()) {
+            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "관심 지역이 설정되지 않았습니다.");
         }
 
-        // 4. 장소 순서 랜덤 섞기
+        // 랜덤 장소 선택
+        List<Place> places = placeRepository.findAll(); // 모든 장소 조회
         Collections.shuffle(places);
+        List<Place> limitedPlaces = places.subList(0, Math.min(5, places.size()));
 
-        // 최소 2개에서 최대 5개 사이의 랜덤 개수로 장소 선택
-        int minPlaces = 2;
-        int maxPlaces = Math.min(5, places.size()); // 최대 장소 개수는 전체 장소 개수와 5 중 더 작은 값
-        int randomPlacesCount = new Random().nextInt((maxPlaces - minPlaces) + 1) + minPlaces; // 최소 2개에서 최대 maxPlaces 개
+        // 지역 정보 생성
+        String region = LocationUtils.extractUpperLocation(limitedPlaces.get(0).getRoadAddress()) + " "
+                + LocationUtils.extractLowerLocation(limitedPlaces.get(0).getRoadAddress());
 
-        List<Place> limitedPlaces = places.subList(0, randomPlacesCount);
-
-        // 디버깅 로그
-        System.out.println("Limited Places: " + limitedPlaces.stream().map(Place::getPlaceName).toList());
-
-        // 5. GPT 프롬프트 생성 및 호출
-        String gptPrompt = buildGptPrompt(places, region, preferredCategories); // preferredCategories 전달
+        // GPT 호출 및 응답 처리
+        String gptPrompt = buildGptPrompt(limitedPlaces, region, preferredCategories);
         String gptResponse = callOpenAiApi(gptPrompt);
 
-        // 6. GPT 응답 파싱
-        Pair<LocalTime, LocalTime> recommendTime = parseRecommendTime(gptResponse);
-        List<Long> matchedPlaceIds = parseGptResponseAndMatchPlaceIds(gptResponse, limitedPlaces);
+        // GPT 응답 파싱
+        GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
 
-        // 7. 현재 사용자 가져오기
-        Long currentMemberId = SecurityUtil.getCurrentMemberId();
-        Member member = memberRepository.findById(currentMemberId)
+        // 데이터베이스 저장 로직 추가
+        saveCourseAndPlaces(parsedResponse, memberId);
+
+        // 반환
+        return parsedResponse;
+    }
+
+    private void saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Long memberId) {
+        // 현재 사용자 가져오기
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        // 8. 코스 생성 및 저장
+        // 추천 시간 파싱
+        Pair<LocalTime, LocalTime> recommendTime = parseRecommendTime(parsedResponse.getRecommendTime());
+
+        // 코스 저장
         Course course = Course.builder()
-                .courseName(region + " AI 추천 코스")
-                .courseDescription("사용자의 지역을 기반으로 생성된 추천 코스")
+                .courseName(parsedResponse.getCourseName())
+                .courseDescription(parsedResponse.getCourseDescription())
                 .courseType(CourseType.AI_GENERATED)
                 .recommendTimeStart(recommendTime.getLeft())
                 .recommendTimeEnd(recommendTime.getRight())
@@ -403,77 +391,41 @@ public class CourseService {
                 .build();
         courseRepository.save(course);
 
-        // 9. place_course 저장
-        IntStream.range(0, matchedPlaceIds.size())
-                .forEach(index -> {
-                    Long placeId = matchedPlaceIds.get(index);
+        // 디버깅 로그
+        System.out.println("Saved Course: " + course.getCourseName());
 
-                    PlaceCourse placeCourse = PlaceCourse.builder()
-                            .course(course)
-                            .place(placeRepository.findById(placeId)
-                                    .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND)))
-                            .placeOrder(index + 1)
-                            .build();
+        // 장소-코스 관계 저장
+        int order = 1;
+        for (GptCourseInfoResponse.GptPlaceInfoResponse placeInfo : parsedResponse.getPlaceInfos()) {
+            // Place 조회
+            Place place = placeRepository.findById(placeInfo.getPlaceId())
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND, "장소를 찾을 수 없습니다: " + placeInfo.getPlaceId()));
 
-                    placeCourseRepository.save(placeCourse);
-                });
+            // PlaceCourse 생성 및 저장
+            PlaceCourse placeCourse = PlaceCourse.builder()
+                    .course(course)
+                    .place(place)
+                    .placeOrder(order++)
+                    .build();
+            placeCourseRepository.save(placeCourse);
 
-        // 10. 반환 데이터 구성
-        List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = matchedPlaceIds.stream()
-                .map(placeId -> PlaceConverter.toPlaceInfoOfCourseDTO(
-                        placeRepository.findById(placeId).orElse(null), false))
-                .toList();
-
-        return CourseConverter.toCourseInfoDTO(course, matchedPlaceIds.size(), getRecommendTimeToString(course), placeListOfCourse);
+            // 디버깅 로그
+            System.out.println("Saved PlaceCourse: " + place.getPlaceName() + " (Order: " + (order - 1) + ")");
+        }
     }
 
     // GPT 응답에서 recommendTime 파싱
-    private Pair<LocalTime, LocalTime> parseRecommendTime(String gptResponse) {
+    private Pair<LocalTime, LocalTime> parseRecommendTime(String recommendTime) {
         try {
-            System.out.println("Raw GPT Response: " + gptResponse);
-
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(gptResponse);
-            String content = rootNode.path("choices").get(0).path("message").path("content").asText();
-            System.out.println("Extracted Content: " + content);
-
-            String recommendTimeRegex = "\\*\\*RecommendTime:\\s*(\\d{2}:\\d{2})~(\\d{2}:\\d{2})\\*\\*";
-            Pattern recommendTimePattern = Pattern.compile(recommendTimeRegex);
-            Matcher recommendTimeMatcher = recommendTimePattern.matcher(content);
-
-            LocalTime earliest = LocalTime.MAX;
-            LocalTime latest = LocalTime.MIN;
-
-            // 각 장소의 Recommend Time 파싱
-            while (recommendTimeMatcher.find()) {
-                // parseTime 메서드를 사용하여 24:00 처리
-                LocalTime start = parseTime(recommendTimeMatcher.group(1));
-                LocalTime end = parseTime(recommendTimeMatcher.group(2));
-
-                if (start.isBefore(earliest)) {
-                    earliest = start;
-                }
-                if (end.isAfter(latest)) {
-                    latest = end;
-                }
-            }
-
-            // Recommend Time이 없을 경우 기본값 사용
-            if (earliest.equals(LocalTime.MAX) || latest.equals(LocalTime.MIN)) {
-                System.out.println("Recommend Time not found. Using default: 09:00~21:00.");
-                earliest = LocalTime.of(9, 0); // 기본 시작 시간
-                latest = LocalTime.of(21, 0); // 기본 종료 시간
-            }
-
-            return Pair.of(earliest, latest);
-        } catch (JsonProcessingException e) {
-            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR,
-                    "JSON 파싱 실패: " + e.getMessage());
-        } catch (Exception e) {
-            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR,
-                    "Recommend Time 파싱 실패: " + e.getMessage());
+            String[] times = recommendTime.split("~");
+            LocalTime startTime = LocalTime.parse(times[0].trim());
+            LocalTime endTime = times[1].equals("24:00") ? LocalTime.MIDNIGHT : LocalTime.parse(times[1].trim());
+            return Pair.of(startTime, endTime);
+        } catch (DateTimeParseException e) {
+            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "시간 형식 파싱 실패: " + recommendTime);
         }
     }
+
 
     private LocalTime parseTime(String time) {
         // 24:00 처리
@@ -481,69 +433,6 @@ public class CourseService {
             return LocalTime.MIDNIGHT; // LocalTime.MIDNIGHT은 00:00을 의미
         }
         return LocalTime.parse(time);
-    }
-
-    // GPT 응답 내용 파싱
-    private List<Long> parseGptResponseAndMatchPlaceIds(String response, List<Place> filteredPlaces) {
-        try {
-            System.out.println("Raw GPT Response: " + response);
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode root = objectMapper.readTree(response);
-
-            JsonNode choices = root.path("choices");
-            if (choices.isArray() && choices.size() > 0) {
-                JsonNode content = choices.get(0).path("message").path("content");
-                System.out.println("Extracted Content: " + content.asText());
-
-                List<Long> gptPlaceIds = parsePlaceIdsFromContent(content.asText());
-
-                Set<Long> validPlaceIds = filteredPlaces.stream()
-                        .map(Place::getId)
-                        .collect(Collectors.toSet());
-
-                List<Long> matchedPlaceIds = gptPlaceIds.stream()
-                        .filter(validPlaceIds::contains)
-                        .toList();
-
-                if (matchedPlaceIds.size() < 2) {
-                    System.out.println("Matched places are less than 2. Adjusting to default places.");
-                    // 디폴트 값 설정 또는 예외 처리 대신 기본 로직으로 대체
-                    matchedPlaceIds = filteredPlaces.stream()
-                            .map(Place::getId)
-                            .limit(2) // 최소 2개를 선택
-                            .toList();
-                }
-                return matchedPlaceIds.stream().limit(5).toList();
-            }
-
-            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR, "GPT 응답 형식이 잘못되었습니다.");
-        } catch (JsonProcessingException e) {
-            System.err.println("Invalid JSON structure: " + e.getMessage());
-            System.err.println("Response content: " + response);
-            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR, "잘못된 JSON 형식입니다: " + e.getMessage());
-        } catch (Exception e) {
-            System.err.println("Unexpected error: " + e.getMessage());
-            System.err.println("Response content: " + response);
-            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR, "JSON 파싱 실패: " + e.getMessage());
-        }
-
-    }
-
-    private List<Long> parsePlaceIdsFromContent(String content) {
-        List<Long> placeIds = new ArrayList<>();
-        String[] lines = content.split("\n");
-        for (String line : lines) {
-            line = line.trim();
-            if (line.startsWith("- Place ID:")) {
-                try {
-                    Long placeId = Long.parseLong(line.substring(11).trim());
-                    placeIds.add(placeId);
-                } catch (NumberFormatException e) {
-                    System.err.println("Invalid Place ID: " + line);
-                }
-            }
-        }
-        return placeIds;
     }
 
     private List<String> getPreferredCategories(Long memberId) {
@@ -554,7 +443,13 @@ public class CourseService {
 
     private String buildGptPrompt(List<Place> places, String region, List<String> preferredCategories) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append(String.format("Create a full-day itinerary for the region '%s'. ", region));
+
+        if ("전체 지역".equals(region)) {
+            prompt.append("Create a full-day itinerary for all regions. ");
+        } else {
+            prompt.append(String.format("Create a full-day itinerary for the region '%s'. ", region));
+        }
+
         prompt.append("Use only the following places in the itinerary:\n");
 
         for (Place place : places) {
@@ -565,48 +460,80 @@ public class CourseService {
 
         prompt.append("\nThe user's preferred categories are: ");
         prompt.append(String.join(", ", preferredCategories));
-        prompt.append(". Prioritize places that match these categories, but also include diverse options for a complete experience.\n");
+        prompt.append(". Prioritize places that match these categories but include diverse options for a complete experience.\n");
 
-        prompt.append("\nThe itinerary should include the following details for each location, strictly following this format:\n");
-        prompt.append("- Place ID: [numeric ID]\n");
-        prompt.append("- Name: [Place name]\n");
-        prompt.append("- Road Address: [Road address]\n");
-        prompt.append("- Operating Hours: HH:mm-HH:mm\n");
-        prompt.append("- Recommend Visit Time: HH:mm~HH:mm\n");
-        prompt.append("\nAdditionally, provide the overall start and end times for the entire day in this format:\n");
-        prompt.append("**RecommendTime: HH:mm~HH:mm**\n");
-        prompt.append("\nEnsure that:\n");
-        prompt.append("1. All times strictly follow the HH:mm format.\n");
-        prompt.append("2. Use `~` as the separator for Recommend Visit Time and overall RecommendTime.\n");
-        prompt.append("3. Do not include any additional comments or extra information.\n");
-        prompt.append("4. The response should be structured and clean, strictly adhering to the format above.\n");
-        prompt.append("\nArrange the places in an order that reflects the typical flow of a day, starting from morning to late night.\n");
-        prompt.append("Return the data in a structured and easy-to-read format.");
+        prompt.append("\n반환 결과는 JSON 형식이어야 하며, 코스 이름과 설명은 반드시 한국어로 작성해 주세요. 예시는 다음과 같습니다:\n");
+        prompt.append("{\n");
+        prompt.append("  \"courseName\": \"string\",\n");
+        prompt.append("  \"courseDescription\": \"string\",\n");
+        prompt.append("  \"recommendTime\": \"HH:mm~HH:mm\",\n");
+        prompt.append("  \"places\": [\n");
+        prompt.append("    {\n");
+        prompt.append("      \"placeId\": \"numeric\",\n");
+        prompt.append("      \"name\": \"string\",\n");
+        prompt.append("      \"roadAddress\": \"string\",\n");
+        prompt.append("      \"operatingHours\": \"HH:mm-HH:mm\",\n");
+        prompt.append("      \"recommendVisitTime\": \"HH:mm~HH:mm\"\n");
+        prompt.append("    }\n");
+        prompt.append("  ]\n");
+        prompt.append("}\n");
+
+        prompt.append("Ensure the response adheres strictly to this JSON format without additional comments or text.");
         return prompt.toString();
     }
 
-    private List<GPTPlaceDTO> filterValidPlaces(List<GPTPlaceDTO> gptPlaces) {
-        return gptPlaces.stream()
-                .filter(gptPlace -> placeRepository.existsById(gptPlace.getId()))
-                .toList();
-    }
+    private GptCourseInfoResponse parseGptResponseToDto(String gptResponse) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(gptResponse);
 
-    private String extractRegionFromRoadAddress(String roadAddress) {
-        if (roadAddress == null || roadAddress.isEmpty()) {
-            return null;
+            JsonNode choicesNode = rootNode.path("choices");
+            if (choicesNode.isArray() && choicesNode.size() > 0) {
+                String content = choicesNode.get(0).path("message").path("content").asText();
+                JsonNode contentNode = objectMapper.readTree(content);
+
+                // 코스 정보 추출
+                String courseName = contentNode.path("courseName").asText("AI 추천 코스");
+                String courseDescription = contentNode.path("courseDescription").asText("AI가 추천한 여행 코스입니다.");
+                String recommendTime = contentNode.path("recommendTime").asText("09:00~21:00");
+
+                // 장소 정보 추출
+                List<GptCourseInfoResponse.GptPlaceInfoResponse> places = new ArrayList<>();
+                JsonNode placesNode = contentNode.path("places");
+                if (placesNode.isArray()) {
+                    for (JsonNode placeNode : placesNode) {
+                        GptCourseInfoResponse.GptPlaceInfoResponse place = new GptCourseInfoResponse.GptPlaceInfoResponse();
+
+                        // `placeId`를 강제로 숫자로 변환
+                        try {
+                            place.setPlaceId(placeNode.path("placeId").asLong());
+                        } catch (NumberFormatException e) {
+                            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR,
+                                    "Invalid placeId format: " + placeNode.path("placeId").asText());
+                        }
+
+                        place.setName(placeNode.path("name").asText());
+                        place.setRoadAddress(placeNode.path("roadAddress").asText());
+                        place.setOperatingHours(placeNode.path("operatingHours").asText());
+                        place.setRecommendVisitTime(placeNode.path("recommendVisitTime").asText());
+                        places.add(place);
+                    }
+                }
+
+                // DTO 생성
+                GptCourseInfoResponse response = new GptCourseInfoResponse();
+                response.setCourseName(courseName);
+                response.setCourseDescription(courseDescription);
+                response.setRecommendTime(recommendTime);
+                response.setPlaceInfos(places);
+
+                return response;
+            } else {
+                throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR, "GPT 응답 형식이 잘못되었습니다.");
+            }
+        } catch (JsonProcessingException e) {
+            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR, "JSON 파싱 실패: " + e.getMessage());
         }
-
-        String[] parts = roadAddress.split(" ");
-        return parts.length > 0 ? parts[0] : null;
-    }
-
-    private String extractCityFromRoadAddress(String roadAddress) {
-        if (roadAddress == null || roadAddress.isEmpty()) {
-            return null;
-        }
-
-        String[] parts = roadAddress.split(" ");
-        return parts.length > 1 ? parts[1] : null;
     }
 
     private String callOpenAiApi(String prompt) {
@@ -629,6 +556,7 @@ public class CourseService {
             ResponseEntity<String> response = new RestTemplate()
                     .postForEntity(openAiApiUrl, request, String.class);
 
+            System.out.println("GPT Response: " + response.getBody()); // 디버깅용
             return response.getBody();
         } catch (Exception e) {
             System.err.println("Error while calling OpenAI API: " + e.getMessage());
