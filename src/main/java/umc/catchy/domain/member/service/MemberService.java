@@ -19,7 +19,9 @@ import java.net.URL;
 import java.text.ParseException;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -504,19 +506,16 @@ public class MemberService {
         Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
         List<Style> styleList = styleRepository.findAllByNameIn(request.getStyleNames());
 
-        List<ActiveTime> activeTimeList = activeTimeRepository.findAllByDayOfWeekInAndStartTimeAndEndTime(request.getDaysOfWeeks()
-                ,request.getStartTime(),request.getEndTime());
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
-        if(activeTimeList.isEmpty()){
-            for (DayOfWeek dayOfWeek : request.getDaysOfWeeks()) {
-                activeTimeList.add(ActiveTime.builder()
-                        .dayOfWeek(dayOfWeek)
-                        .startTime(request.getStartTime())
-                        .endTime(request.getEndTime())
-                        .build());
-            }
-            activeTimeRepository.saveAll(activeTimeList);
-        }
+        List<ActiveTime> activeTimeList = request.getActiveTimes().stream().map(activeTime ->
+                activeTimeRepository.findByDayOfWeekAndStartTimeAndEndTime(activeTime.getDayOfWeek(),
+                                LocalTime.parse(activeTime.getStartTime(),dateTimeFormatter),
+                                LocalTime.parse(activeTime.getEndTime(), dateTimeFormatter))
+                .orElseGet(() -> activeTimeRepository.save(ActiveTime.createActiveTime(activeTime.getDayOfWeek(),
+                        LocalTime.parse(activeTime.getStartTime(),dateTimeFormatter),
+                        LocalTime.parse(activeTime.getEndTime(), dateTimeFormatter)))
+                )).toList();
 
         List<MemberStyle> memberStyleList = styleList.stream().map(style -> MemberStyle.createMemberStyle(currentMember, style)).collect(Collectors.toList());
         List<Long> memberStyleIds = saveMemberStyleAndReturnIds(memberStyleList);
