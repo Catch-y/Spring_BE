@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfo;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoSliceResponse;
 import umc.catchy.domain.mapping.placeCourse.service.PlaceCourseService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
@@ -57,9 +58,9 @@ public class PlaceCourseController {
 
     @Operation(summary = "좋아요한 장소 무한 스크롤 API", description = "좋아요한 장소 정보들을 무한 스크롤로 보여줍니다.")
     @GetMapping("/mypage/like")
-    public BaseResponse<Slice<PlaceInfoResponse>> findAllCourseByBookmarked(@RequestParam int pageSize,
+    public BaseResponse<PlaceInfoSliceResponse> findAllCourseByBookmarked(@RequestParam int pageSize,
                                                                             @RequestParam(required = false) Long lastPlaceId) {
-        Slice<PlaceInfoResponse> response = placeCourseService.searchLikedPlace(pageSize, lastPlaceId);
+        PlaceInfoSliceResponse response = placeCourseService.searchLikedPlace(pageSize, lastPlaceId);
         return BaseResponse.onSuccess(SuccessStatus._OK,response);
     }
 }
