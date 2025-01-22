@@ -34,10 +34,10 @@ public class PlaceCourseService {
     private static final String TMAP_API_URL = "https://apis.openapi.sk.com/tmap/pois";
     private static final String GOOGLE_API_URL = "https://maps.googleapis.com/maps/api/place/";
 
-    @Value("${security.tmap.app-key}")
+    @Value("${map.tmap.app-key}")
     private String TMAP_APP_KEY;
 
-    @Value("${security.google.api-key}")
+    @Value("${map.google.api-key}")
     private String GOOGLE_API_KEY;
 
     private final PlaceRepository placeRepository;
@@ -82,7 +82,7 @@ public class PlaceCourseService {
                 query = String.format(
                         "?version=1&searchKeyword=%s&searchType=all&searchtypCd=R&centerLon=%f&centerLat=%f" +
                                 "&reqCoordType=WGS84GEO&resCoordType=WGS84GEO&radius=5&page=%d&count=10&multiPoint=Y&poiGroupYn=N",
-                        encodedKeyword, latitude, longitude, page
+                        encodedKeyword, longitude, latitude, page
                 );
             }
             // 지역 키워드 기반 검색(지역과 장소를 함께 입력)
