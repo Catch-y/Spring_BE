@@ -28,8 +28,8 @@ public class PlaceCourseController {
     @Operation(summary = "내 위치 기반 장소 검색 API", description = "사용자 반경 5km 이내에 사용자 키워드 관련 장소를 불러온다.")
     public ResponseEntity<BaseResponse<List<PlaceInfo>>> searchPlacesByMemberLocation(
             @RequestParam String searchKeyword,
-            @RequestParam Float latitude,
-            @RequestParam Float longitude,
+            @RequestParam Double latitude,
+            @RequestParam Double longitude,
             @RequestParam Integer page
     ) {
         List<PlaceInfo> responses = placeCourseService.getPlacesByLocation(searchKeyword, latitude, longitude, page);

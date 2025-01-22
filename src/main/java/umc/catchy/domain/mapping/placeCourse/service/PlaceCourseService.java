@@ -43,7 +43,7 @@ public class PlaceCourseService {
     private final PlaceRepository placeRepository;
     private final PlaceReviewRepository placeReviewRepository;
 
-    public List<PlaceInfo> getPlacesByLocation(String searchKeyword, Float latitude, Float longitude, Integer page) {
+    public List<PlaceInfo> getPlacesByLocation(String searchKeyword, Double latitude, Double longitude, Integer page) {
         List<Long> poiIds = getPoiIds(searchKeyword, latitude, longitude, page);
 
         return poiIds.stream()
@@ -69,7 +69,7 @@ public class PlaceCourseService {
         return PlaceConverter.toPlaceInfoDetail(place, reviewCount);
     }
 
-    private List<Long> getPoiIds(String keyword, Float latitude, Float longitude, Integer page) {
+    private List<Long> getPoiIds(String keyword, Double latitude, Double longitude, Integer page) {
         try {
             // keyword 인코딩
             String encodedKeyword = URLEncoder.encode(keyword, "UTF-8");
