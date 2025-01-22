@@ -1,5 +1,6 @@
 package umc.catchy.domain.place.dao;
 
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,4 +14,6 @@ import java.util.List;
 public interface PlaceRepository extends JpaRepository<Place, Long> {
     @Query("SELECT p FROM Place p WHERE p.category.bigCategory = :bigCategory AND p.roadAddress LIKE %:groupLocation%")
     List<Place> findByBigCategoryAndLocation(@Param("bigCategory") BigCategory bigCategory, @Param("groupLocation") String groupLocation);
+
+    Optional<Place> findByPoiId(Long poiId);
 }

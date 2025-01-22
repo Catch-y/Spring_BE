@@ -9,7 +9,9 @@ public record SignUpResponse(
         String email,
         String nickname,
         String profileImage,
-        LocalDateTime createdDate
+        LocalDateTime createdDate,
+        String accessToken,
+        String refreshToken
 ) {
     public static SignUpResponse of(Member member) {
         return new SignUpResponse(
@@ -18,7 +20,9 @@ public record SignUpResponse(
                 member.getEmail(),
                 member.getNickname(),
                 member.getProfileImage(),
-                member.getCreatedDate()
+                member.getCreatedDate(),
+                member.getAccessToken(),
+                member.getRefreshToken()
         );
     }
 
