@@ -82,6 +82,7 @@ public class PlaceConverter {
                 .longitude(Double.parseDouble(placeInfo.get("lon")))
                 .activeTime(placeInfo.get("additionalInfo"))
                 .placeSite(placeInfo.get("homepageURL"))
+                .rating(0.0)
                 .build();
     }
 }
