@@ -11,7 +11,7 @@ import umc.catchy.domain.place.domain.Place;
 import java.util.List;
 
 @Repository
-public interface PlaceCourseRepository extends JpaRepository<PlaceCourse, Long> {
+public interface PlaceCourseRepository extends JpaRepository<PlaceCourse, Long>, PlaceCourseRepositoryCustom {
     List<PlaceCourse> findAllByCourse(Course course);
     List<PlaceCourse> findAllByPlace(Place place);
 

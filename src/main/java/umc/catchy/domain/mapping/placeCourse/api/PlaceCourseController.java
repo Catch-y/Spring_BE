@@ -5,12 +5,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Slice;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfo;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 import umc.catchy.domain.mapping.placeCourse.service.PlaceCourseService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
@@ -31,9 +33,8 @@ public class PlaceCourseController {
             @RequestParam Double latitude,
             @RequestParam Double longitude,
             @RequestParam Integer page
-    ) {
+    ){
         List<PlaceInfo> responses = placeCourseService.getPlacesByLocation(searchKeyword, latitude, longitude, page);
-
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, responses));
     }
 
@@ -42,20 +43,23 @@ public class PlaceCourseController {
     public ResponseEntity<BaseResponse<List<PlaceInfo>>> searchPlacesByLocation(
             @RequestParam String searchKeyword,
             @RequestParam Integer page
-    ) {
-
+    ){
         List<PlaceInfo> responses = placeCourseService.getPlacesByLocation(searchKeyword, null, null, page);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, responses));
     }
 
     @GetMapping
     @Operation(summary = "지역 상세 화면 API", description = "지도에서 장소 검색 후 클릭하면 나오는 상세 화면")
-    public ResponseEntity<BaseResponse<PlaceInfoDetail>> getPlaceInfoDetail(
-            @RequestParam Long placeId
-    ) {
-
+    public ResponseEntity<BaseResponse<PlaceInfoDetail>> getPlaceInfoDetail(@RequestParam Long placeId){
         PlaceInfoDetail response = placeCourseService.getPlaceDetailByPlaceId(placeId);
-
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "좋아요한 장소 무한 스크롤 API", description = "좋아요한 장소 정보들을 무한 스크롤로 보여줍니다.")
+    @GetMapping("/mypage/like")
+    public BaseResponse<Slice<PlaceInfoResponse>> findAllCourseByBookmarked(@RequestParam int pageSize,
+                                                                            @RequestParam(required = false) Long lastPlaceId) {
+        Slice<PlaceInfoResponse> response = placeCourseService.searchLikedPlace(pageSize, lastPlaceId);
+        return BaseResponse.onSuccess(SuccessStatus._OK,response);
     }
 }
