@@ -38,6 +38,12 @@ security:
     client-id: ${KAKAO_CLIENT_ID}
     client-secret: ${KAKAO_CLIENT_PRIVATE_ID}
 
+map:
+  tmap:
+    app-key: ${TMAP_APP_KEY}
+  google:
+    api-key: ${GOOGLE_API_KEY}
+
 openai:
   model: ${GPT_MODEL}
   api:

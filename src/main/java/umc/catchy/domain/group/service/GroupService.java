@@ -13,6 +13,7 @@ import umc.catchy.domain.group.dto.response.CreateGroupResponse;
 import umc.catchy.domain.group.dto.response.GroupCalendarResponse;
 import umc.catchy.domain.group.dto.response.GroupInfoResponse;
 import umc.catchy.domain.group.dto.response.GroupJoinResponse;
+import umc.catchy.domain.group.dto.response.GroupMemberResponse;
 import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
 import umc.catchy.domain.mapping.memberGroup.domain.MemberGroup;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -137,5 +138,14 @@ public class GroupService {
                     .promiseTime(group.getPromiseTime())
                     .build();
         });
+    }
+
+    @Transactional(readOnly = true)
+    public List<GroupMemberResponse> getGroupMembers(Long groupId) {
+        List<Member> members = memberGroupRepository.findMembersByGroupId(groupId);
+
+        return members.stream()
+                .map(GroupMemberResponse::fromEntity)
+                .collect(Collectors.toList());
     }
 }
