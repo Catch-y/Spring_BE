@@ -96,7 +96,8 @@ public class CourseReviewService {
         return PostCourseReviewResponse.courseReviewAllResponseDTO.builder()
                 .courseRating(course.getRating())
                 .totalCount(countReviews)
-                .courseReviewSliceResponse(CourseReviews)
+                .content(CourseReviews.content())
+                .last(CourseReviews.last())
                 .build();
     }
 }

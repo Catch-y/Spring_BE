@@ -42,6 +42,7 @@ public class PostCourseReviewResponse {
     public static class courseReviewAllResponseDTO{
         Double courseRating;
         Integer totalCount;
-        CourseReviewSliceResponse courseReviewSliceResponse;
+        List<PostCourseReviewResponse.newCourseReviewResponseDTO> content;
+        Boolean last;
     }
 }
