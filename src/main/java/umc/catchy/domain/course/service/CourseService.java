@@ -354,7 +354,7 @@ public class CourseService {
         List<String> activeTimes = getUserActiveTimes(memberId);
 
         if (memberLocations.isEmpty()) {
-            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "관심 지역이 설정되지 않았습니다.");
+            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
         }
 
         // 관심 지역 리스트 생성
@@ -390,7 +390,7 @@ public class CourseService {
 
     public List<String> getUserStyles(Long memberId) {
         return memberStyleRepository.findByMemberId(memberId).stream()
-                .map(memberStyle -> memberStyle.getStyle().getName().name()) // Convert StyleName to String
+                .map(memberStyle -> memberStyle.getStyle().getName().name())
                 .collect(Collectors.toList());
     }
 
@@ -414,26 +414,18 @@ public class CourseService {
                 .build();
         courseRepository.save(course);
 
-        // 디버깅 로그
-        System.out.println("Saved Course: " + course.getCourseName());
-
         // 장소-코스 관계 저장
         int order = 1;
         for (GptCourseInfoResponse.GptPlaceInfoResponse placeInfo : parsedResponse.getPlaceInfos()) {
-            // Place 조회
             Place place = placeRepository.findById(placeInfo.getPlaceId())
-                    .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND, "장소를 찾을 수 없습니다: " + placeInfo.getPlaceId()));
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
-            // PlaceCourse 생성 및 저장
             PlaceCourse placeCourse = PlaceCourse.builder()
                     .course(course)
                     .place(place)
                     .placeOrder(order++)
                     .build();
             placeCourseRepository.save(placeCourse);
-
-            // 디버깅 로그
-            System.out.println("Saved PlaceCourse: " + place.getPlaceName() + " (Order: " + (order - 1) + ")");
         }
     }
 
@@ -445,7 +437,7 @@ public class CourseService {
             LocalTime endTime = times[1].equals("24:00") ? LocalTime.MIDNIGHT : LocalTime.parse(times[1].trim());
             return Pair.of(startTime, endTime);
         } catch (DateTimeParseException e) {
-            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "시간 형식 파싱 실패: " + recommendTime);
+            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
         }
     }
 
@@ -557,7 +549,6 @@ public class CourseService {
                     for (JsonNode placeNode : placesNode) {
                         GptCourseInfoResponse.GptPlaceInfoResponse place = new GptCourseInfoResponse.GptPlaceInfoResponse();
 
-                        // `placeId`를 강제로 숫자로 변환
                         try {
                             place.setPlaceId(placeNode.path("placeId").asLong());
                         } catch (NumberFormatException e) {
@@ -583,10 +574,10 @@ public class CourseService {
 
                 return response;
             } else {
-                throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR, "GPT 응답 형식이 잘못되었습니다.");
+                throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR);
             }
         } catch (JsonProcessingException e) {
-            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR, "JSON 파싱 실패: " + e.getMessage());
+            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR);
         }
     }
 
@@ -610,11 +601,10 @@ public class CourseService {
             ResponseEntity<String> response = new RestTemplate()
                     .postForEntity(openAiApiUrl, request, String.class);
 
-            System.out.println("GPT Response: " + response.getBody()); // 디버깅용
             return response.getBody();
         } catch (Exception e) {
             System.err.println("Error while calling OpenAI API: " + e.getMessage());
-            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "GPT API 호출 실패");
+            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
         }
     }
 
@@ -632,13 +622,13 @@ public class CourseService {
             // DALL-E API 요청 헤더 생성
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(openAiApiKey); // OpenAI API Key
+            headers.setBearerAuth(openAiApiKey);
 
             // DALL-E 요청 바디
             Map<String, Object> requestBody = Map.of(
-                    "prompt", prompt, // 프롬프트
-                    "n", 1, // 생성할 이미지 개수
-                    "size", "512x512" // 이미지 크기
+                    "prompt", prompt,
+                    "n", 1,
+                    "size", "512x512"
             );
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
@@ -650,15 +640,15 @@ public class CourseService {
             // 응답 파싱
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode rootNode = objectMapper.readTree(response.getBody());
-            JsonNode imageUrlNode = rootNode.path("data").get(0).path("url"); // 첫 번째 이미지 URL
+            JsonNode imageUrlNode = rootNode.path("data").get(0).path("url");
 
             if (imageUrlNode.isMissingNode()) {
-                throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "이미지 생성 실패");
+                throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
             }
 
             return imageUrlNode.asText();
         } catch (Exception e) {
-            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "이미지 생성 중 오류 발생: " + e.getMessage());
+            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
         }
     }
 
@@ -668,8 +658,8 @@ public class CourseService {
             InputStream inputStream = new URL(imageUrl).openStream();
 
             // 이미지 메타데이터 설정
-            String contentType = "image/png"; // 다운로드된 이미지가 PNG라고 가정
-            long contentLength = inputStream.available(); // InputStream의 바이트 길이
+            String contentType = "image/png";
+            long contentLength = inputStream.available();
 
             // S3에 업로드
             String keyName = "course-images/" + UUID.randomUUID() + ".png";
@@ -678,7 +668,7 @@ public class CourseService {
             // 업로드된 S3 URL 반환
             return amazonS3Manager.getFileUrl(keyName);
         } catch (Exception e) {
-            throw new GeneralException(ErrorStatus.IMAGE_GENERATION_ERROR, "이미지 업로드 실패: " + e.getMessage());
+            throw new GeneralException(ErrorStatus.IMAGE_GENERATION_ERROR);
         }
     }
 
