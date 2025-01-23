@@ -426,15 +426,6 @@ public class CourseService {
         }
     }
 
-
-    private LocalTime parseTime(String time) {
-        // 24:00 처리
-        if ("24:00".equals(time)) {
-            return LocalTime.MIDNIGHT; // LocalTime.MIDNIGHT은 00:00을 의미
-        }
-        return LocalTime.parse(time);
-    }
-
     private List<String> getPreferredCategories(Long memberId) {
         return memberCategoryRepository.findByMemberId(memberId).stream()
                 .map(memberCategory -> memberCategory.getCategory().getName())
@@ -445,12 +436,17 @@ public class CourseService {
         StringBuilder prompt = new StringBuilder();
 
         if ("전체 지역".equals(region)) {
-            prompt.append("Create a full-day itinerary for all regions. ");
+            prompt.append("Create a full-day itinerary for all regions and suggest places to visit. ");
         } else {
-            prompt.append(String.format("Create a full-day itinerary for the region '%s'. ", region));
+            prompt.append(String.format("Create a full-day itinerary for the region '%s' and suggest places to visit based on this region. Ensure all places belong to the same region as the itinerary's region. ", region));
         }
 
-        prompt.append("Use only the following places in the itinerary:\n");
+        prompt.append("Consider the following categories and locations:\n");
+        prompt.append("The user's preferred categories are: ");
+        prompt.append(String.join(", ", preferredCategories));
+        prompt.append(". Please recommend places that align with these preferences but ensure diversity in the suggested itinerary.\n");
+
+        prompt.append("Here are the available places you can consider for the itinerary:\n");
 
         for (Place place : places) {
             prompt.append(String.format("- Place ID: %d, Name: %s, Road Address: %s, Operating Hours: %s, Category: %s, Description: %s\n",
@@ -458,11 +454,11 @@ public class CourseService {
                     place.getCategory().getName(), place.getPlaceDescription()));
         }
 
-        prompt.append("\nThe user's preferred categories are: ");
-        prompt.append(String.join(", ", preferredCategories));
-        prompt.append(". Prioritize places that match these categories but include diverse options for a complete experience.\n");
+        prompt.append("\nPlease generate a course name and description that fits the selected places. The course description should reflect the type of places included (e.g., cafes, restaurants, bakeries, etc.) and the general theme of the itinerary.\n");
 
-        prompt.append("\n반환 결과는 JSON 형식이어야 하며, 코스 이름과 설명은 반드시 한국어로 작성해 주세요. 예시는 다음과 같습니다:\n");
+        prompt.append("\nThe response should include a course name, course description, recommended visit time for each place, and the full list of recommended places in the region.\n");
+
+        prompt.append("\nReturn the result in JSON format with the following structure:\n");
         prompt.append("{\n");
         prompt.append("  \"courseName\": \"string\",\n");
         prompt.append("  \"courseDescription\": \"string\",\n");
@@ -478,7 +474,7 @@ public class CourseService {
         prompt.append("  ]\n");
         prompt.append("}\n");
 
-        prompt.append("Ensure the response adheres strictly to this JSON format without additional comments or text.");
+        prompt.append("Ensure the response strictly follows the JSON format above without any additional text.");
         return prompt.toString();
     }
 
