@@ -51,5 +51,8 @@ openai:
     url: ${GPT_API_URL}
     img-url: ${GPT_IMG_URL}
 
+osrm:
+  base-url: ${OSRM_BASE_URL}
+
 server:
   port: 8081
