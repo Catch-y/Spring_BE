@@ -30,4 +30,14 @@ public class PostCourseReviewResponse {
         Long reviewImageId;
         String imageUrl;
     }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class courseReviewAllResponseDTO{
+        Float totalRating;
+        Integer totalCount;
+        CourseReviewSliceResponse courseReviewSliceResponse;
+    }
 }

@@ -8,4 +8,5 @@ import umc.catchy.domain.courseReview.domain.CourseReview;
 @Repository
 public interface CourseReviewRepository extends JpaRepository<CourseReview, Long>, CourseReviewRepositoryCustom {
     Integer countAllByCourse(Course course);
+    Double avgRatingByCourse(Course course);
 }
