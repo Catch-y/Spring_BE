@@ -87,14 +87,14 @@ public class CourseReviewService {
         return CourseReviewConverter.toNewCourseReviewResponseDTO(newCourseReview, images, visitedDate);
     }
 
+    @Transactional(readOnly = true)
     public PostCourseReviewResponse.courseReviewAllResponseDTO searchAllReview(Long courseId, int pageSize, Long lastReviewId ) {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
         Integer countReviews = courseReviewRepository.countAllByCourse(course);
-        Float courseRating = courseRepository.findRatingByCourse(course);
         Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> CourseReviewResponses = courseReviewRepository.searchAllReviewByCourseId(courseId, pageSize, lastReviewId);
         CourseReviewSliceResponse CourseReviews = CourseReviewSliceResponse.from(CourseReviewResponses);
         return PostCourseReviewResponse.courseReviewAllResponseDTO.builder()
-                .courseRating(courseRating)
+                .courseRating(course.getRating())
                 .totalCount(countReviews)
                 .courseReviewSliceResponse(CourseReviews)
                 .build();

@@ -108,4 +108,15 @@ public class CourseController {
         CourseBookmarkResponse response = memberCourseService.toggleBookmark(courseId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
+
+    @Operation(summary = "코스 리뷰 전체보기 API", description = "코스 리뷰 전체를 보여줍니다.")
+    @GetMapping("/{courseId}/review/all")
+    public ResponseEntity<BaseResponse<PostCourseReviewResponse.courseReviewAllResponseDTO>> searchAllReview(
+            @PathVariable Long courseId,
+            @RequestParam int pageSize,
+            @RequestParam(required = false) Long lastReviewId
+    ){
+        PostCourseReviewResponse.courseReviewAllResponseDTO response = courseReviewService.searchAllReview(courseId, pageSize, lastReviewId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
 }

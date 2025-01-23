@@ -49,7 +49,7 @@ public class Course extends BaseTimeEntity {
     private boolean hasReview;
 
     @Setter
-    private Float rating;
+    private Double rating;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
