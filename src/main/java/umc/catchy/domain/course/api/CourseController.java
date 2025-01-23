@@ -112,7 +112,8 @@ public class CourseController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
-    @PostMapping("/generate/ai")
+    @Operation(summary = "코스 생성(AI) API", description = "AI가 생성하는 코스")
+    @PostMapping("/generate-ai")
     public ResponseEntity<BaseResponse<GptCourseInfoResponse>> generateCourseWithAI() {
         GptCourseInfoResponse response = courseService.generateCourseAutomatically();
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
