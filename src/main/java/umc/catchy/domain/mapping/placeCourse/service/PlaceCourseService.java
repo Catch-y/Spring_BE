@@ -24,6 +24,7 @@ import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfo;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoSliceResponse;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.place.converter.PlaceConverter;
 import umc.catchy.domain.place.dao.PlaceRepository;
@@ -316,8 +317,9 @@ public class PlaceCourseService {
         return GOOGLE_API_URL + query;
     }
 
-    public Slice<PlaceInfoResponse> searchLikedPlace(int pageSize, Long lastPlaceId) {
+    public PlaceInfoSliceResponse searchLikedPlace(int pageSize, Long lastPlaceId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        return placeCourseRepository.searchPlaceByLiked(memberId, pageSize, lastPlaceId);
+        Slice<PlaceInfoResponse> placeInfoResponses = placeCourseRepository.searchPlaceByLiked(memberId, pageSize, lastPlaceId);
+        return PlaceInfoSliceResponse.from(placeInfoResponses);
     }
 }
