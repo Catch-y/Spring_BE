@@ -1,21 +1,30 @@
 package umc.catchy.domain.place.domain;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.common.BaseTimeEntity;
 
 @Entity
 @Getter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class Place extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "place_id")
     private Long id;
 
+    private Long poiId;
+
     private String placeName;
 
+    @Column(length = 50000)
     private String placeDescription;
 
     private String roadAddress; //도로명 주소
@@ -30,6 +39,7 @@ public class Place extends BaseTimeEntity {
 
     private String placeSite; // 장소 사이트
 
+    @Column(length = 50000)
     private String imageUrl; // 장소 이미지
 
     @Setter

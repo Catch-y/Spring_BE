@@ -1,5 +1,6 @@
 package umc.catchy.domain.place.dao;
 
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,4 +21,5 @@ public interface PlaceRepository extends JpaRepository<Place, Long> {
             @Param("upperLocation") String upperLocation,
             @Param("lowerLocation") String lowerLocation
     );
+    Optional<Place> findByPoiId(Long poiId);
 }

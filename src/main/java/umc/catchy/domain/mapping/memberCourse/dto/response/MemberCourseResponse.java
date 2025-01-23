@@ -21,4 +21,16 @@ public class MemberCourseResponse {
     String courseDescription;
     List<BigCategory> categories;
     LocalDateTime createdDate;
+
+    public MemberCourseResponse(Long courseId, CourseType courseType, String courseImage, String courseName, String courseDescription) {
+        this.courseId = courseId;
+        this.courseType = courseType;
+        this.courseImage = courseImage;
+        this.courseName = courseName;
+        this.courseDescription = courseDescription;
+    }
+
+    public void setCategories(List<BigCategory> categories) {
+        this.categories = categories;
+    }
 }
