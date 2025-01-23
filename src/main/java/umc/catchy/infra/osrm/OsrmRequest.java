@@ -1,14 +1,16 @@
-package umc.catchy.domain.course.dto.request;
+package umc.catchy.infra.osrm;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.*;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
-public class CourseOSRMRequest {
+public class OsrmRequest {
 
     @Getter
     @Setter
