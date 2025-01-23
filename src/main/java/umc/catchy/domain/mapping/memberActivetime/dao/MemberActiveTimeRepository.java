@@ -11,7 +11,6 @@ import java.util.List;
 
 @Repository
 public interface MemberActiveTimeRepository extends JpaRepository<MemberActiveTime, Long> {
-    // 사용자 ID로 다중 결과 반환
     List<MemberActiveTime> findByMemberId(Long memberId);
 
     @Query("SELECT mat FROM MemberActiveTime mat JOIN FETCH mat.activeTime at " +

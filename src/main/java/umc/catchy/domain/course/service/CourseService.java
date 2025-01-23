@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
@@ -347,6 +348,7 @@ public class CourseService {
         List<MemberLocation> memberLocations = memberLocationRepository.findAllByMemberId(memberId);
         List<String> preferredCategories = getPreferredCategories(memberId);
         List<String> userStyles = getUserStyles(memberId);
+        List<String> activeTimes = getUserActiveTimes(memberId);
 
         if (memberLocations.isEmpty()) {
             throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "관심 지역이 설정되지 않았습니다.");
@@ -364,7 +366,7 @@ public class CourseService {
         List<Place> places = placeRepository.findAll();
 
         // GPT 프롬프트 생성 및 호출
-        String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles);
+        String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles, activeTimes);
         String gptResponse = callOpenAiApi(gptPrompt);
 
         // 응답 파싱 및 저장
@@ -440,7 +442,18 @@ public class CourseService {
                 .toList();
     }
 
-    private String buildGptPrompt(List<String> regionList, List<Place> places, List<String> preferredCategories, List<String> userStyles) {
+    public List<String> getUserActiveTimes(Long memberId) {
+        return memberActiveTimeRepository.findByMemberId(memberId).stream()
+                .map(memberActiveTime -> {
+                    ActiveTime activeTime = memberActiveTime.getActiveTime();
+                    return activeTime.getDayOfWeek().toString() + " " +
+                            activeTime.getStartTime().toString() + "~" +
+                            activeTime.getEndTime().toString();
+                })
+                .collect(Collectors.toList());
+    }
+
+    private String buildGptPrompt(List<String> regionList, List<Place> places, List<String> preferredCategories, List<String> userStyles, List<String> activeTimes) {
         StringBuilder prompt = new StringBuilder();
 
         // 지역 정보
@@ -462,6 +475,11 @@ public class CourseService {
         prompt.append("The user prefers the following styles: ");
         prompt.append(String.join(", ", userStyles));
         prompt.append(". Please take these styles into account when recommending the itinerary.\n");
+
+        // 선호 시간대 추가
+        prompt.append("The user's preferred active times are: ");
+        prompt.append(String.join(", ", activeTimes));
+        prompt.append(". Please generate a recommendTime that aligns with these active times.\n");
 
         // 장소 상세 정보
         prompt.append("Here are the available places you can consider for the itinerary:\n");
