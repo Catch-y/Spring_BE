@@ -18,7 +18,6 @@ public class MemberCourseConverter {
                 .courseName(course.getCourseName())
                 .courseDescription(course.getCourseDescription())
                 .categories(categories)
-                .createdDate(course.getCreatedDate())
                 .build();
     }
 }

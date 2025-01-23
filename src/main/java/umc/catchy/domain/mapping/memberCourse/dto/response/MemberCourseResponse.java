@@ -1,6 +1,5 @@
 package umc.catchy.domain.mapping.memberCourse.dto.response;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,7 +19,6 @@ public class MemberCourseResponse {
     String courseName;
     String courseDescription;
     List<BigCategory> categories;
-    LocalDateTime createdDate;
 
     public MemberCourseResponse(Long courseId, CourseType courseType, String courseImage, String courseName, String courseDescription) {
         this.courseId = courseId;
