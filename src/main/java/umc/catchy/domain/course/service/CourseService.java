@@ -486,8 +486,9 @@ public class CourseService {
         prompt.append(String.join(", ", activeTimes));
         prompt.append(". Please generate a recommendTime that aligns with these active times.\n");
 
+        prompt.append("Ensure that the itinerary includes at least 2 places and at most 5 places.\n");
+
         // 장소 상세 정보
-        prompt.append("Here are the available places you can consider for the itinerary:\n");
         for (Place place : places) {
             prompt.append(String.format(
                     "- Place ID: %d, Name: %s, Road Address: %s, Operating Hours: %s, Category: %s, Description: %s\n",
@@ -558,7 +559,6 @@ public class CourseService {
 
                         place.setName(placeNode.path("name").asText());
                         place.setRoadAddress(placeNode.path("roadAddress").asText());
-                        place.setOperatingHours(placeNode.path("operatingHours").asText());
                         place.setRecommendVisitTime(placeNode.path("recommendVisitTime").asText());
                         places.add(place);
                     }

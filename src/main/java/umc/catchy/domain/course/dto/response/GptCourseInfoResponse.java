@@ -26,7 +26,6 @@ public class GptCourseInfoResponse {
         private Long placeId;
         private String name;
         private String roadAddress;
-        private String operatingHours; // "HH:mm-HH:mm" 형식
         private String recommendVisitTime; // "HH:mm~HH:mm" 형식
     }
 }
