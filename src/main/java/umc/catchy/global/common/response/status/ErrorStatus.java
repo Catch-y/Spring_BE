@@ -60,8 +60,8 @@ public enum ErrorStatus implements BaseErrorCode {
     PLACE_VOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "VOTE406", "해당 장소 투표 정보를 찾을 수 없습니다."),
 
     // gpt 관련 에러
-    JSON_PARSING_ERROR(HttpStatus.NOT_FOUND, "gpt404", "json 파싱 에러"),
-    IMAGE_GENERATION_ERROR(HttpStatus.BAD_REQUEST, "gpt402", "이미지 생성에 실패하였습니다."),
+    JSON_PARSING_ERROR(HttpStatus.NOT_FOUND, "GPT404", "json 파싱 에러"),
+    IMAGE_GENERATION_ERROR(HttpStatus.BAD_REQUEST, "GPT402", "이미지 생성에 실패하였습니다."),
     ;
 
     private final HttpStatus httpStatus;

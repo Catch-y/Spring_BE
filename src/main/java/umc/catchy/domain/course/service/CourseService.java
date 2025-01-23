@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.activetime.domain.ActiveTime;
-import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
@@ -56,11 +55,12 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
+import java.io.InputStream;
+import java.net.URL;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +75,9 @@ public class CourseService {
 
     @Value("${openai.model}")
     private String openAiModel;
+
+    @Value("${openai.api.img-url}")
+    private String dallEApiUrl;
 
     @Value("${openai.api.key}")
     private String openAiApiKey;
@@ -369,8 +372,17 @@ public class CourseService {
         String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles, activeTimes);
         String gptResponse = callOpenAiApi(gptPrompt);
 
-        // 응답 파싱 및 저장
+        // 응답 파싱
         GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
+
+        // 이미지 생성 및 업로드
+        String courseImage = generateAndUploadCourseImage(
+                parsedResponse.getCourseName(),
+                parsedResponse.getCourseDescription()
+        );
+        parsedResponse.setCourseImage(courseImage);
+
+        // 데이터베이스 저장
         saveCourseAndPlaces(parsedResponse, memberId);
 
         return parsedResponse;
@@ -397,6 +409,7 @@ public class CourseService {
                 .courseType(CourseType.AI_GENERATED)
                 .recommendTimeStart(recommendTime.getLeft())
                 .recommendTimeEnd(recommendTime.getRight())
+                .courseImage(parsedResponse.getCourseImage())
                 .member(member)
                 .build();
         courseRepository.save(course);
@@ -501,10 +514,12 @@ public class CourseService {
         prompt.append("Please generate a course name and description that fits the selected places and reflects the user's preferred styles.\n");
         prompt.append("The response should include a course name, course description, recommended visit time for each place, and the full list of recommended places in the region.\n");
         prompt.append("Please strictly return the response in the following JSON format. Do not include any extra text, comments, or explanations outside the JSON structure:\n");
+        prompt.append("The response should include a field `courseImage` with a URL to the generated image.\n");
         prompt.append("{\n");
         prompt.append("  \"courseName\": \"string (in Korean)\",\n");
         prompt.append("  \"courseDescription\": \"string (in Korean)\",\n");
         prompt.append("  \"recommendTime\": \"HH:mm~HH:mm\",\n");
+        prompt.append("  \"courseImage\": \"string (image URL)\",\n");
         prompt.append("  \"places\": [\n");
         prompt.append("    {\n");
         prompt.append("      \"placeId\": \"numeric\",\n");
@@ -533,6 +548,7 @@ public class CourseService {
                 String courseName = contentNode.path("courseName").asText("AI 추천 코스");
                 String courseDescription = contentNode.path("courseDescription").asText("AI가 추천한 여행 코스입니다.");
                 String recommendTime = contentNode.path("recommendTime").asText("09:00~21:00");
+                String courseImage = contentNode.path("courseImage").asText("");
 
                 // 장소 정보 추출
                 List<GptCourseInfoResponse.GptPlaceInfoResponse> places = new ArrayList<>();
@@ -562,6 +578,7 @@ public class CourseService {
                 response.setCourseName(courseName);
                 response.setCourseDescription(courseDescription);
                 response.setRecommendTime(recommendTime);
+                response.setCourseImage(courseImage);
                 response.setPlaceInfos(places);
 
                 return response;
@@ -599,5 +616,77 @@ public class CourseService {
             System.err.println("Error while calling OpenAI API: " + e.getMessage());
             throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "GPT API 호출 실패");
         }
+    }
+
+    private String generateCourseImage(String courseName, String courseDescription) {
+        try {
+            // 프롬프트 작성: 코스 이름과 설명 기반
+            String prompt = String.format(
+                    "Create a visually balanced and centered image that represents the theme of the course: '%s'. " +
+                            "Ensure the image utilizes the full canvas (e.g., not just the top area) and reflects the course's description: '%s'. " +
+                            "The image should be artistic and visually appealing for a 512x512 size.",
+                    courseName,
+                    courseDescription
+            );
+
+            // DALL-E API 요청 헤더 생성
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(openAiApiKey); // OpenAI API Key
+
+            // DALL-E 요청 바디
+            Map<String, Object> requestBody = Map.of(
+                    "prompt", prompt, // 프롬프트
+                    "n", 1, // 생성할 이미지 개수
+                    "size", "512x512" // 이미지 크기
+            );
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+            // DALL-E API 호출
+            ResponseEntity<String> response = new RestTemplate()
+                    .postForEntity(dallEApiUrl, request, String.class);
+
+            // 응답 파싱
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(response.getBody());
+            JsonNode imageUrlNode = rootNode.path("data").get(0).path("url"); // 첫 번째 이미지 URL
+
+            if (imageUrlNode.isMissingNode()) {
+                throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "이미지 생성 실패");
+            }
+
+            return imageUrlNode.asText();
+        } catch (Exception e) {
+            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "이미지 생성 중 오류 발생: " + e.getMessage());
+        }
+    }
+
+    private String uploadImageToS3(String imageUrl) {
+        try {
+            // 이미지 다운로드
+            InputStream inputStream = new URL(imageUrl).openStream();
+
+            // 이미지 메타데이터 설정
+            String contentType = "image/png"; // 다운로드된 이미지가 PNG라고 가정
+            long contentLength = inputStream.available(); // InputStream의 바이트 길이
+
+            // S3에 업로드
+            String keyName = "course-images/" + UUID.randomUUID() + ".png";
+            amazonS3Manager.uploadInputStream(keyName, inputStream, contentType, contentLength);
+
+            // 업로드된 S3 URL 반환
+            return amazonS3Manager.getFileUrl(keyName);
+        } catch (Exception e) {
+            throw new GeneralException(ErrorStatus.IMAGE_GENERATION_ERROR, "이미지 업로드 실패: " + e.getMessage());
+        }
+    }
+
+    public String generateAndUploadCourseImage(String courseName, String courseDescription) {
+        // DALL-E API로 이미지 생성
+        String dallEImageUrl = generateCourseImage(courseName, courseDescription);
+
+        // 생성된 이미지를 S3에 업로드
+        return uploadImageToS3(dallEImageUrl);
     }
 }
