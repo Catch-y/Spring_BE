@@ -33,6 +33,7 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                         courseReview.comment.as("comment"),
                         courseReview.createdDate.as("visitedDate"),
                         courseReview.member.nickname.as("creatorNickname")))
+                .distinct()
                 .from(courseReview)
                 .leftJoin(courseReview.member, member).on(courseReview.member.id.eq(member.id))
                 .leftJoin(courseReviewImage).on(courseReviewImage.courseReview.id.eq(courseReview.id))
@@ -54,6 +55,7 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                     .leftJoin(courseReviewImage.courseReview,courseReview).on(courseReviewImage.courseReview.id.eq(courseReview.id))
                     .where(courseReviewImage.courseReview.id.eq(result.getReviewId()))
                     .fetch();
+
             result.setReviewImages(imageResponse);
         }
 
