@@ -8,4 +8,5 @@ import java.util.List;
 
 @Repository
 public interface MemberStyleRepository extends JpaRepository<MemberStyle, Long> {
+    List<MemberStyle> findByMemberId(Long memberId);
 }

@@ -40,6 +40,7 @@ import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 import umc.catchy.domain.mapping.memberLocation.dao.MemberLocationRepository;
 import umc.catchy.domain.mapping.memberLocation.domain.MemberLocation;
+import umc.catchy.domain.mapping.memberStyle.dao.MemberStyleRepository;
 import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
 import umc.catchy.domain.mapping.placeCourse.domain.PlaceCourse;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
@@ -91,7 +92,7 @@ public class CourseService {
     private final MemberLocationRepository memberLocationRepository;
     private final MemberActiveTimeRepository memberActiveTimeRepository;
     private final MemberCategoryRepository memberCategoryRepository;
-    private CategoryRepository categoryRepository;
+    private final MemberStyleRepository memberStyleRepository;
 
     private Course getCourse(Long courseId){
         return courseRepository.findById(courseId)
@@ -345,6 +346,7 @@ public class CourseService {
         // 관심 지역 및 선호 카테고리 조회
         List<MemberLocation> memberLocations = memberLocationRepository.findAllByMemberId(memberId);
         List<String> preferredCategories = getPreferredCategories(memberId);
+        List<String> userStyles = getUserStyles(memberId);
 
         if (memberLocations.isEmpty()) {
             throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO, "관심 지역이 설정되지 않았습니다.");
@@ -362,7 +364,7 @@ public class CourseService {
         List<Place> places = placeRepository.findAll();
 
         // GPT 프롬프트 생성 및 호출
-        String gptPrompt = buildGptPrompt(regionList, places, preferredCategories);
+        String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles);
         String gptResponse = callOpenAiApi(gptPrompt);
 
         // 응답 파싱 및 저장
@@ -370,6 +372,12 @@ public class CourseService {
         saveCourseAndPlaces(parsedResponse, memberId);
 
         return parsedResponse;
+    }
+
+    public List<String> getUserStyles(Long memberId) {
+        return memberStyleRepository.findByMemberId(memberId).stream()
+                .map(memberStyle -> memberStyle.getStyle().getName().name()) // Convert StyleName to String
+                .collect(Collectors.toList());
     }
 
     private void saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Long memberId) {
@@ -432,24 +440,30 @@ public class CourseService {
                 .toList();
     }
 
-    private String buildGptPrompt(List<String> regionList, List<Place> places, List<String> preferredCategories) {
+    private String buildGptPrompt(List<String> regionList, List<Place> places, List<String> preferredCategories, List<String> userStyles) {
         StringBuilder prompt = new StringBuilder();
 
-        // 지역 정보를 프롬프트에 추가
+        // 지역 정보
         if (regionList.isEmpty() || regionList.contains("전체 지역")) {
             prompt.append("Create a full-day itinerary for all regions and suggest places to visit. ");
         } else {
             prompt.append("Create a full-day itinerary for the following regions: ");
             prompt.append(String.join(", ", regionList));
-            prompt.append(". All places in the itinerary must belong to the same region (UpperLocation and LowerLocation) to ensure a cohesive experience.\n");
+            prompt.append(". All places in the itinerary **must strictly belong to the same region** ");
+            prompt.append("(UpperLocation and LowerLocation). Do not include places from different regions.\n");
         }
 
-        // 선호 카테고리 정보 추가
+        // 선호 카테고리
         prompt.append("The user's preferred categories are: ");
         prompt.append(String.join(", ", preferredCategories));
         prompt.append(". Please recommend places that align with these preferences while ensuring diversity in the suggested itinerary.\n");
 
-        // 장소 상세 정보 추가
+        // 관심 스타일 추가
+        prompt.append("The user prefers the following styles: ");
+        prompt.append(String.join(", ", userStyles));
+        prompt.append(". Please take these styles into account when recommending the itinerary.\n");
+
+        // 장소 상세 정보
         prompt.append("Here are the available places you can consider for the itinerary:\n");
         for (Place place : places) {
             prompt.append(String.format(
@@ -463,12 +477,12 @@ public class CourseService {
             ));
         }
 
+        // 응답 형식
         prompt.append("\nThe course name and description must be written in Korean.\n");
-
-        // 응답 형식 정의
-        prompt.append("\nPlease generate a course name and description that fits the selected places. The course description should reflect the type of places included (e.g., cafes, restaurants, bakeries, etc.) and the general theme of the itinerary.\n");
-        prompt.append("\nThe response should include a course name, course description, recommended visit time for each place, and the full list of recommended places in the region.\n");
-        prompt.append("Ensure that the response is strictly in valid JSON format. Do not include any extra text or formatting. The response should look like this:\n");
+        prompt.append("The course description should be concise, no more than 80 characters.\n");
+        prompt.append("Please generate a course name and description that fits the selected places and reflects the user's preferred styles.\n");
+        prompt.append("The response should include a course name, course description, recommended visit time for each place, and the full list of recommended places in the region.\n");
+        prompt.append("Please strictly return the response in the following JSON format. Do not include any extra text, comments, or explanations outside the JSON structure:\n");
         prompt.append("{\n");
         prompt.append("  \"courseName\": \"string (in Korean)\",\n");
         prompt.append("  \"courseDescription\": \"string (in Korean)\",\n");
@@ -483,7 +497,7 @@ public class CourseService {
         prompt.append("    }\n");
         prompt.append("  ]\n");
         prompt.append("}\n");
-        prompt.append("Ensure the response strictly follows the JSON format above without any additional text.");
+        prompt.append("Return only this JSON structure, with no additional text.");
         return prompt.toString();
     }
 
