@@ -10,7 +10,6 @@ import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
-import umc.catchy.domain.course.dto.request.CourseOSRMRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.course.service.CourseService;
@@ -22,8 +21,6 @@ import umc.catchy.domain.courseReview.service.CourseReviewService;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
-import umc.catchy.infra.osrm.OsrmResponse;
-import umc.catchy.infra.osrm.OsrmService;
 
 import java.util.Collections;
 
@@ -36,17 +33,6 @@ public class CourseController {
     private final CourseService courseService;
     private final CourseReviewService courseReviewService;
     private final MemberCourseService memberCourseService;
-    private final OsrmService osrmService;
-
-    @Operation(summary = "osrm-route API", description = "OSRM 서버의 route 서비스를 사용하기 위한 API입니다.")
-    @PostMapping("/map")
-    public ResponseEntity<BaseResponse<OsrmResponse>> getRouteOfCourse(
-            //@PathVariable Long courseId,
-            @Valid @RequestBody CourseOSRMRequest.courseInfo request
-            ){
-        OsrmResponse response = osrmService.getRoute(request);
-        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
-    }
 
     @Operation(summary = "코스 상세정보 조회 API", description = "코스 상세 화면에서 코스에 대한 상세정보를 나타내기 위한 정보 조회 기능입니다.")
     @GetMapping("/detail/{courseId}")
