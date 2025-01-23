@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
+import umc.catchy.domain.courseReview.domain.CourseReview;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 
 import java.util.List;
@@ -30,23 +31,11 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                 .select(Projections.fields(PostCourseReviewResponse.newCourseReviewResponseDTO.class,
                         courseReview.id.as("reviewId"),
                         courseReview.comment.as("comment"),
-                        ExpressionUtils.as(
-                                JPAExpressions.select(Projections.fields(PostCourseReviewResponse.courseReviewImageResponseDTO.class,
-                                                courseReviewImage.id.as("reviewImageId"),
-                                                courseReviewImage.imageUrl.as("imageUrl")
-                                        ))
-                                        .from(courseReviewImage)
-                                        .where(courseReviewImage.courseReview.id.eq(courseReview.id)),
-                                "reviewImages"
-                        ),
-                        courseReview.createdDate.as("visitedDate"),
-                        courseReview.member.nickname.as("creatorNickname"),
                         courseReview.createdDate.as("visitedDate"),
                         courseReview.member.nickname.as("creatorNickname")))
                 .from(courseReview)
                 .leftJoin(courseReview.member, member).on(courseReview.member.id.eq(member.id))
-                .leftJoin(courseReview.course, course).on(courseReview.course.id.eq(course.id))
-                .leftJoin(courseReviewImage.courseReview,courseReview).on(courseReviewImage.courseReview.id.eq(courseReview.id))
+                .leftJoin(courseReviewImage).on(courseReviewImage.courseReview.id.eq(courseReview.id))
                 .where(
                         courseReview.course.id.eq(courseId),
                         lastReviewId(lastReviewId)
@@ -54,6 +43,19 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                 .orderBy(courseReview.createdDate.desc())
                 .limit(pageSize + 1)
                 .fetch();
+
+        for (PostCourseReviewResponse.newCourseReviewResponseDTO result : results) {
+            List<PostCourseReviewResponse.courseReviewImageResponseDTO> imageResponse = queryFactory
+                    .select(Projections.fields(PostCourseReviewResponse.courseReviewImageResponseDTO.class,
+                            courseReviewImage.id.as("reviewImageId"),
+                            courseReviewImage.imageUrl.as("imageUrl")
+                    ))
+                    .from(courseReviewImage)
+                    .leftJoin(courseReviewImage.courseReview,courseReview).on(courseReviewImage.courseReview.id.eq(courseReview.id))
+                    .where(courseReviewImage.courseReview.id.eq(result.getReviewId()))
+                    .fetch();
+            result.setReviewImages(imageResponse);
+        }
 
         return checkLastPage(pageSize,results);
     }

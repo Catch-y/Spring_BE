@@ -20,6 +20,10 @@ public class PostCourseReviewResponse {
         List<courseReviewImageResponseDTO> reviewImages;
         LocalDateTime visitedDate;
         String creatorNickname;
+
+        public void setReviewImages(List<courseReviewImageResponseDTO> reviewImages) {
+            this.reviewImages = reviewImages;
+        }
     }
 
     @Getter
