@@ -1,6 +1,7 @@
 package umc.catchy.domain.courseReview.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -10,6 +11,7 @@ import umc.catchy.domain.courseReview.converter.CourseReviewConverter;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
 import umc.catchy.domain.courseReview.domain.CourseReview;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
+import umc.catchy.domain.courseReview.dto.response.CourseReviewSliceResponse;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReviewImage.converter.CourseReviewImageConverter;
 import umc.catchy.domain.courseReviewImage.dao.CourseReviewImageRepository;
@@ -83,5 +85,18 @@ public class CourseReviewService {
             images.add(CourseReviewImageConverter.toCourseReviewImageResponseDTO(courseReviewImage));
         }
         return CourseReviewConverter.toNewCourseReviewResponseDTO(newCourseReview, images, visitedDate);
+    }
+
+    public PostCourseReviewResponse.courseReviewAllResponseDTO searchAllReview(Long courseId, int pageSize, Long lastReviewId ) {
+        Course course = courseRepository.findById(courseId).orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
+        Integer countReviews = courseReviewRepository.countAllByCourse(course);
+        Float courseRating = courseRepository.findRatingByCourse(course);
+        Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> CourseReviewResponses = courseReviewRepository.searchAllReviewByCourseId(courseId, pageSize, lastReviewId);
+        CourseReviewSliceResponse CourseReviews = CourseReviewSliceResponse.from(CourseReviewResponses);
+        return PostCourseReviewResponse.courseReviewAllResponseDTO.builder()
+                .courseRating(courseRating)
+                .totalCount(countReviews)
+                .courseReviewSliceResponse(CourseReviews)
+                .build();
     }
 }

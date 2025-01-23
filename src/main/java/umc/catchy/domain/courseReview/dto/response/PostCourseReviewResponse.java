@@ -36,7 +36,7 @@ public class PostCourseReviewResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class courseReviewAllResponseDTO{
-        Float totalRating;
+        Float courseRating;
         Integer totalCount;
         CourseReviewSliceResponse courseReviewSliceResponse;
     }

@@ -48,4 +48,6 @@ public class CourseConverter {
                 .rating(0.0)
                 .build();
     }
+
+
 }

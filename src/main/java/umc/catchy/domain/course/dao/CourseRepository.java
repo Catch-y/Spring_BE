@@ -6,4 +6,5 @@ import umc.catchy.domain.course.domain.Course;
 
 @Repository
 public interface CourseRepository extends JpaRepository<Course, Long>, CourseRepositoryCustom {
+    Float findRatingByCourse(Course course);
 }
