@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
-import umc.catchy.domain.course.dto.request.GPTCourseRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.service.CourseService;
@@ -23,7 +22,6 @@ import umc.catchy.domain.courseReview.service.CourseReviewService;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
-import umc.catchy.global.util.SecurityUtil;
 
 import java.util.Collections;
 
