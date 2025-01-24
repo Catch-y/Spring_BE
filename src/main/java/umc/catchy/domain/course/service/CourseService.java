@@ -9,13 +9,8 @@ import org.springframework.data.domain.Slice;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
-import org.springframework.data.domain.SliceImpl;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -44,9 +39,6 @@ import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResp
 import umc.catchy.domain.location.domain.Location;
 import umc.catchy.domain.mapping.memberActivetime.dao.MemberActiveTimeRepository;
 import umc.catchy.domain.mapping.memberCategory.dao.MemberCategoryRepository;
-import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
-import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
-import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 import umc.catchy.domain.mapping.memberLocation.dao.MemberLocationRepository;
 import umc.catchy.domain.mapping.memberLocation.domain.MemberLocation;
 import umc.catchy.domain.mapping.memberStyle.dao.MemberStyleRepository;
@@ -66,16 +58,12 @@ import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
 import java.io.InputStream;
 import java.net.URL;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Service
 @Transactional
