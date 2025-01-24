@@ -12,6 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.global.config.s3.AmazonConfig;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 
 @Slf4j
 @Component
@@ -45,5 +47,23 @@ public class AmazonS3Manager {
         catch(SdkClientException e){
             log.error("Error deleting file from s3");
         }
+    }
+
+    public String uploadInputStream(String keyName, InputStream inputStream, String contentType, long contentLength) {
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentType(contentType);
+        metadata.setContentLength(contentLength);
+
+        try {
+            s3.putObject(new PutObjectRequest(amazonConfig.getBucket(), keyName, inputStream, metadata));
+        } catch (Exception e) {
+            log.error("Error uploading InputStream to S3: {}", e.getMessage());
+            throw new RuntimeException("Error uploading InputStream to S3", e);
+        }
+        return getFileUrl(keyName);
+    }
+
+    public String getFileUrl(String keyName) {
+        return s3.getUrl(amazonConfig.getBucket(), keyName).toString();
     }
 }
