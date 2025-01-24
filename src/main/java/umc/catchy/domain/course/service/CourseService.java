@@ -1,5 +1,6 @@
 package umc.catchy.domain.course.service;
 
+import java.io.IOException;
 import java.time.LocalTime;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -106,13 +107,13 @@ public class CourseService {
     private final MemberCategoryRepository memberCategoryRepository;
     private final MemberStyleRepository memberStyleRepository;
 
-    private Course getCourse(Long courseId){
+    private Course getCourse(Long courseId) {
         return courseRepository.findById(courseId)
-                .orElseThrow(()-> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
     }
 
     //코스의 각 장소 별 간단한 정보 받아오기
-    private List<CourseInfoResponse.getPlaceInfoOfCourseDTO> getPlaceListOfCourse(Course course, Member member){
+    private List<CourseInfoResponse.getPlaceInfoOfCourseDTO> getPlaceListOfCourse(Course course, Member member) {
         return placeCourseRepository.findAllByCourse(course).stream()
                 .map(placeCourse -> {
                     // 멤버의 장소 방문 여부 확인
@@ -125,11 +126,10 @@ public class CourseService {
     }
 
     //Course : 리뷰 개수 로직
-    private Integer calculateNumberOfReviews(Course course){
-        if(!course.isHasReview()){
+    private Integer calculateNumberOfReviews(Course course) {
+        if (!course.isHasReview()) {
             return 0;
-        }
-        else{
+        } else {
             return courseReviewRepository.countAllByCourse(course);
         }
     }
@@ -149,7 +149,7 @@ public class CourseService {
         Course course = getCourse(courseId);
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
         return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
@@ -182,7 +182,7 @@ public class CourseService {
 
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         // 사용자가 가지고 있는 코스인지 검증
         memberCourseRepository.findByCourseAndMember(course, member)
@@ -258,7 +258,7 @@ public class CourseService {
 
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         // 사용자가 가지고 있는 코스인지 검증
         MemberCourse memberCourse = memberCourseRepository.findByCourseAndMember(course, member)
@@ -278,7 +278,7 @@ public class CourseService {
     public CourseInfoResponse.getCourseInfoDTO createCourseByDIY(CourseCreateRequest request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(()-> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         // 이미지 불러오기
         String courseImageUrl = "";
@@ -601,11 +601,14 @@ public class CourseService {
 
     private String generateCourseImage(String courseName, String courseDescription) {
         try {
-            // 프롬프트 작성: 코스 이름과 설명 기반
             String prompt = String.format(
-                    "Create a visually balanced and centered image that represents the theme of the course: '%s'. " +
-                            "Ensure the image utilizes the full canvas (e.g., not just the top area) and reflects the course's description: '%s'. " +
-                            "The image should be artistic and visually appealing for a 512x512 size.",
+                    "Create a visually appealing image for the course titled '%s' with the theme: '%s'. " +
+                            "Analyze the course title and description to determine the most relevant visual elements. " +
+                            "If the course involves food or restaurants, include items such as dishes, drinks, or a dining setup. " +
+                            "If the course involves activities or sightseeing, include elements like scenic views, fun attractions, or interactive spaces. " +
+                            "Use a soft and inviting pink color palette to align with the romantic and light-hearted theme of the app. " +
+                            "Do not include any text or logos in the image. " +
+                            "Ensure the composition is visually complete, well-balanced, and fully utilizes the 512x512 canvas without any cropped or incomplete elements.",
                     courseName,
                     courseDescription
             );
@@ -615,7 +618,7 @@ public class CourseService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(openAiApiKey);
 
-            // DALL-E 요청 바디
+            // 요청 바디 생성
             Map<String, Object> requestBody = Map.of(
                     "prompt", prompt,
                     "n", 1,
@@ -644,22 +647,34 @@ public class CourseService {
     }
 
     private String uploadImageToS3(String imageUrl) {
+        InputStream inputStream = null;
         try {
             // 이미지 다운로드
-            InputStream inputStream = new URL(imageUrl).openStream();
+            inputStream = new URL(imageUrl).openStream();
 
             // 이미지 메타데이터 설정
             String contentType = "image/png";
             long contentLength = inputStream.available();
 
-            // S3에 업로드
             String keyName = "course-images/" + UUID.randomUUID() + ".png";
+
             amazonS3Manager.uploadInputStream(keyName, inputStream, contentType, contentLength);
 
-            // 업로드된 S3 URL 반환
-            return amazonS3Manager.getFileUrl(keyName);
+            // S3에서 업로드된 파일 URL 가져오기
+            String s3Url = amazonS3Manager.getFileUrl(keyName);
+
+            return s3Url;
+
         } catch (Exception e) {
             throw new GeneralException(ErrorStatus.IMAGE_GENERATION_ERROR);
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+
+                }
+            }
         }
     }
 

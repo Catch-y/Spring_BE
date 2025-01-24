@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.global.config.s3.AmazonConfig;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -55,11 +57,27 @@ public class AmazonS3Manager {
         metadata.setContentLength(contentLength);
 
         try {
-            s3.putObject(new PutObjectRequest(amazonConfig.getBucket(), keyName, inputStream, metadata));
+            // InputStream 복사
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+
+            // InputStream을 다시 사용
+            InputStream validatedInputStream = new ByteArrayInputStream(outputStream.toByteArray());
+            long validatedContentLength = outputStream.size();
+
+            // 검증된 InputStream으로 업로드
+            metadata.setContentLength(validatedContentLength);
+            s3.putObject(new PutObjectRequest(amazonConfig.getBucket(), keyName, validatedInputStream, metadata));
+            System.out.println("Uploaded content length: " + validatedContentLength);
         } catch (Exception e) {
             log.error("Error uploading InputStream to S3: {}", e.getMessage());
             throw new RuntimeException("Error uploading InputStream to S3", e);
         }
+
         return getFileUrl(keyName);
     }
 
