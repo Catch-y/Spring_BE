@@ -7,7 +7,7 @@ import java.util.List;
 
 public record MemberCourseSliceResponse(
     @Schema(description = "코스 데이터") List<MemberCourseResponse> content,
-    @Schema(description = "마지막 페이지 여부") Boolean last){
+    @Schema(description = "마지막 페이지 여부") Boolean isLast){
 
     public static MemberCourseSliceResponse from(Slice<MemberCourseResponse> memberCourseResponses) {
         return new MemberCourseSliceResponse(memberCourseResponses.getContent(),memberCourseResponses.isLast());

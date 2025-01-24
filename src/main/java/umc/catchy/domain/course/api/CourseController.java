@@ -19,6 +19,7 @@ import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReview.service.CourseReviewService;
+import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
@@ -47,7 +48,7 @@ public class CourseController {
 
     @Operation(summary = "내 코스 조회 API", description = "코스 탭에서 DIY/AI, 지역별로 사용자의 코스를 최신순으로 조회")
     @GetMapping("/search")
-    public ResponseEntity<BaseResponse<Slice<MemberCourseResponse>>> getMemberCourses(
+    public ResponseEntity<BaseResponse<MemberCourseSliceResponse>> getMemberCourses(
             @Parameter(description = "AI/DIY 선택", required = true)
             @RequestParam(value = "type") String type,
             @RequestParam(value = "upperLocation", defaultValue = "all") String upperLocation,
@@ -55,8 +56,8 @@ public class CourseController {
             @RequestParam(required = false) Long lastId
     ) {
 
-        Slice<MemberCourseResponse> responses = courseService.getMemberCourses(type.toUpperCase(), upperLocation, lowerLocation, lastId);
-        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, responses));
+        MemberCourseSliceResponse response = courseService.getMemberCourses(type.toUpperCase(), upperLocation, lowerLocation, lastId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
     @Operation(summary = "코스 생성(DIY) API", description = "사용자가 직접 생성하는 코스")

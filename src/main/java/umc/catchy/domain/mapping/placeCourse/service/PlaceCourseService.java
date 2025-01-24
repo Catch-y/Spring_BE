@@ -21,11 +21,10 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfo;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoSliceResponse;
-import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.place.converter.PlaceConverter;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
@@ -51,12 +50,21 @@ public class PlaceCourseService {
     private final PlaceRepository placeRepository;
     private final PlaceReviewRepository placeReviewRepository;
     private final PlaceCourseRepository placeCourseRepository;
-    private final MemberRepository memberRepository;
 
-    public List<PlaceInfo> getPlacesByLocation(String searchKeyword, Double latitude, Double longitude, Integer page) {
-        List<Long> poiIds = getPoiIds(searchKeyword, latitude, longitude, page);
+    public PlaceInfoPreviewResponse getPlacesByLocation(String searchKeyword, Double latitude, Double longitude, Integer page) {
 
-        return poiIds.stream()
+        StringBuilder response = getSearchResponse(searchKeyword, latitude, longitude, page);
+
+        List<Long> poiIds;
+        Boolean isLast;
+        try {
+            poiIds = parsePoiIds(response.toString());
+            isLast = getIsLast(response.toString());
+        } catch (IOException e) {
+            throw new GeneralException(ErrorStatus.SEARCH_PLACE_NOT_FOUND);
+        }
+
+        List<PlaceInfoPreview> placeInfoPreviews = poiIds.stream()
                 .map(poiId -> {
                     Optional<Place> place = placeRepository.findByPoiId(poiId);
 
@@ -68,18 +76,20 @@ public class PlaceCourseService {
                         return createPlace(poiId);
                     }
                 }).toList();
+
+        return PlaceConverter.toPlaceInfoPreviewResponse(placeInfoPreviews, isLast);
     }
 
-    public PlaceInfoDetail getPlaceDetailByPlaceId(Long placeId) {
+    public PlaceInfoResponse getPlaceResponseByPlaceId(Long placeId) {
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
         Long reviewCount = placeReviewRepository.countByPlaceId(placeId);
 
-        return PlaceConverter.toPlaceInfoDetail(place, reviewCount);
+        return PlaceConverter.toPlaceInfoResponse(place, reviewCount);
     }
 
-    private List<Long> getPoiIds(String keyword, Double latitude, Double longitude, Integer page) {
+    private StringBuilder getSearchResponse(String keyword, Double latitude, Double longitude, Integer page) {
         try {
             // keyword 인코딩
             String encodedKeyword = URLEncoder.encode(keyword, "UTF-8");
@@ -125,7 +135,7 @@ public class PlaceCourseService {
                 }
                 in.close();
 
-                return parsePoiIds(response.toString());
+                return response;
             } else {
                 throw new GeneralException(ErrorStatus.SEARCH_PLACE_NOT_FOUND);
             }
@@ -135,12 +145,12 @@ public class PlaceCourseService {
         }
     }
 
-    private List<Long> parsePoiIds(String jsonResponse) throws IOException {
+    private List<Long> parsePoiIds(String searchResponse) throws IOException {
         // Jackson ObjectMapper 초기화
         ObjectMapper objectMapper = new ObjectMapper();
 
         // JSON 파싱
-        JsonNode rootNode = objectMapper.readTree(jsonResponse);
+        JsonNode rootNode = objectMapper.readTree(searchResponse);
         JsonNode poisNode = rootNode.path("searchPoiInfo").path("pois").path("poi");
 
         // ID 리스트 추출
@@ -159,7 +169,22 @@ public class PlaceCourseService {
         return poiIds;
     }
 
-    private PlaceInfo createPlace(Long poiId) {
+    private Boolean getIsLast(String searchResponse) throws JsonProcessingException {
+        // Jackson ObjectMapper 초기화
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        // JSON 파싱
+        JsonNode rootNode = objectMapper.readTree(searchResponse);
+        JsonNode pageNode = rootNode.path("searchPoiInfo");
+
+        long totalCount = Long.parseLong(pageNode.path("totalCount").asText());
+        long count = Long.parseLong(pageNode.path("count").asText());
+        long page = Long.parseLong(pageNode.path("page").asText());
+
+        return (page == Math.ceil((double) totalCount / count));
+    }
+
+    private PlaceInfoPreview createPlace(Long poiId) {
         Map<String, String> placeInfo = getPlaceInfo(poiId);
 
         Place place = PlaceConverter.toPlace(placeInfo);

@@ -1,5 +1,10 @@
 package umc.catchy.domain.course.service;
 
+import java.time.LocalTime;
+import java.util.UUID;
+import java.util.stream.IntStream;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Slice;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +36,10 @@ import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
+import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
+import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
+import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
+import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.location.domain.Location;
 import umc.catchy.domain.mapping.memberActivetime.dao.MemberActiveTimeRepository;
 import umc.catchy.domain.mapping.memberCategory.dao.MemberCategoryRepository;
@@ -148,7 +157,7 @@ public class CourseService {
     }
 
     // 현재 사용자의 코스를 불러옴
-    public Slice<MemberCourseResponse> getMemberCourses(String type, String upperLocation, String lowerLocation, Long lastId) {
+    public MemberCourseSliceResponse getMemberCourses(String type, String upperLocation, String lowerLocation, Long lastId) {
         CourseType courseType;
 
         if ("AI".equals(type)) {
@@ -163,26 +172,9 @@ public class CourseService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        List<Course> courses = courseRepository.findCourses(courseType, upperLocation, lowerLocation, member, lastId);
+        Slice<MemberCourseResponse> responses = memberCourseRepository.findCourseByFilters(courseType, upperLocation, lowerLocation, memberId, lastId);
 
-        // 페이징 설정
-        Pageable pageable = PageRequest.of(0, 10);
-
-        // courses가 11개면 다음 페이지가 있음
-        boolean hasNext = courses.size() > pageable.getPageSize();
-
-        if (hasNext) {
-            courses.remove(courses.size() - 1);
-        }
-
-        List<MemberCourseResponse> responses = courses.stream()
-                .sorted(Comparator.comparing(Course::getCreatedDate).reversed())
-                .map(course -> {
-                    List<BigCategory> categories = getCategories(course);
-                    return MemberCourseConverter.toMemberCourseResponse(course, categories);
-                }).toList();
-
-        return new SliceImpl<>(responses, pageable, hasNext);
+        return MemberCourseSliceResponse.from(responses);
     }
 
     // 코스 수정

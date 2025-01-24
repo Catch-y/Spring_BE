@@ -7,9 +7,8 @@ import lombok.Setter;
 @Builder
 @Setter
 @Getter
-public class PlaceInfo {
+public class PlaceInfoPreview {
     private Long placeId;
-    private Long poiId;
     private String placeName;
     private String category;
     private String roadAddress;
