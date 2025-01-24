@@ -43,7 +43,6 @@ import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResp
 import umc.catchy.domain.location.domain.Location;
 import umc.catchy.domain.mapping.memberActivetime.dao.MemberActiveTimeRepository;
 import umc.catchy.domain.mapping.memberCategory.dao.MemberCategoryRepository;
-import umc.catchy.domain.mapping.memberCourse.converter.MemberCourseConverter;
 import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
