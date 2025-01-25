@@ -386,14 +386,11 @@ public class CourseService {
     }
 
     private void saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Long memberId) {
-        // 현재 사용자 가져오기
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        // 추천 시간 파싱
         Pair<LocalTime, LocalTime> recommendTime = parseRecommendTime(parsedResponse.getRecommendTime());
 
-        // 코스 저장
         Course course = Course.builder()
                 .courseName(parsedResponse.getCourseName())
                 .courseDescription(parsedResponse.getCourseDescription())
@@ -401,12 +398,15 @@ public class CourseService {
                 .recommendTimeStart(recommendTime.getLeft())
                 .recommendTimeEnd(recommendTime.getRight())
                 .courseImage(parsedResponse.getCourseImage())
+                .participantsNumber(0L)
                 .member(member)
                 .build();
         courseRepository.save(course);
 
-        // 장소-코스 관계 저장
         int order = 1;
+        double totalRating = 0.0;
+        int placeCount = 0;
+
         for (GptCourseInfoResponse.GptPlaceInfoResponse placeInfo : parsedResponse.getPlaceInfos()) {
             Place place = placeRepository.findById(placeInfo.getPlaceId())
                     .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
@@ -417,7 +417,22 @@ public class CourseService {
                     .placeOrder(order++)
                     .build();
             placeCourseRepository.save(placeCourse);
+
+            // 평점 계산 (리뷰가 없는 경우 제외)
+            if (place.getRating() != null && place.getRating() > 0) {
+                totalRating += place.getRating();
+                placeCount++;
+            }
         }
+
+        // 코스 평점 계산 (소수 둘째 자리 반올림)
+        double courseRating = placeCount > 0 ? totalRating / placeCount : 0.0;
+        courseRating = Math.round(courseRating * 10) / 10.0;
+
+        course.setRating(courseRating);
+        courseRepository.save(course);
+
+        parsedResponse.setCourseRating(courseRating);
     }
 
     // GPT 응답에서 recommendTime 파싱
@@ -504,6 +519,7 @@ public class CourseService {
         prompt.append("  \"courseDescription\": \"string (in Korean)\",\n");
         prompt.append("  \"recommendTime\": \"HH:mm~HH:mm\",\n");
         prompt.append("  \"courseImage\": \"string (image URL)\",\n");
+        prompt.append("  \"courseRating\": \"numeric (0.0~5.0)\",\n");
         prompt.append("  \"places\": [\n");
         prompt.append("    {\n");
         prompt.append("      \"placeId\": \"numeric\",\n");
@@ -533,6 +549,7 @@ public class CourseService {
                 String courseDescription = contentNode.path("courseDescription").asText("AI가 추천한 여행 코스입니다.");
                 String recommendTime = contentNode.path("recommendTime").asText("09:00~21:00");
                 String courseImage = contentNode.path("courseImage").asText("");
+                Double courseRating = contentNode.path("courseRating").asDouble(0.0);
 
                 // 장소 정보 추출
                 List<GptCourseInfoResponse.GptPlaceInfoResponse> places = new ArrayList<>();
@@ -561,6 +578,7 @@ public class CourseService {
                 response.setCourseDescription(courseDescription);
                 response.setRecommendTime(recommendTime);
                 response.setCourseImage(courseImage);
+                response.setCourseRating(courseRating);
                 response.setPlaceInfos(places);
 
                 return response;
