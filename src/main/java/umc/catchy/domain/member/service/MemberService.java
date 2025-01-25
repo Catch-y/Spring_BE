@@ -14,10 +14,14 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.PrivateKey;
 import java.text.ParseException;
-import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -33,10 +37,16 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.minidev.json.JSONObject;
+import net.minidev.json.parser.JSONParser;
+import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -79,7 +89,6 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.JwtUtil;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
-import umc.catchy.infra.config.jwt.JwtProperties;
 
 @Service
 @RequiredArgsConstructor
@@ -96,23 +105,53 @@ public class MemberService {
     private final MemberStyleRepository memberStyleRepository;
     private final LocationRepository locationRepository;
     private final MemberLocationRepository memberLocationRepository;
-  
+
     private final AmazonS3Manager s3Manager;
     private final JwtUtil jwtUtil;
-    private final JwtProperties jwtProperties;
 
     @Value("${security.kakao.client-id}")
-    private String clientKey;
+    private String KAKAO_CLIENT_ID;
 
     @Value("${security.kakao.client-secret}")
-    private String clientSecretKey;
+    private String KAKAO_CLIENT_SECRET;
+
+    @Value("${security.kakao.redirect-url}")
+    private String KAKAO_REDIRECT_URL;
+
+    @Value("${security.kakao.token-request-url}")
+    private String KAKAO_TOKEN_URL;
+
+    @Value("${security.kakao.info-request-url}")
+    private String KAKAO_INFO_URL;
+
+    @Value("${security.apple.key-id}")
+    private String APPLE_KEY_ID;
+
+    @Value("${security.apple.service-id}")
+    private String APPLE_CLIENT_ID;
+
+    @Value("${security.apple.team-id}")
+    private String APPLE_TEAM_ID;
+
+    @Value("${security.apple.redirect-url}")
+    private String APPLE_REDIRECT_URL;
+
+    @Value("${security.apple.request-url}")
+    private String APPLE_REQUEST_URL;
+
+    @Value("${security.apple.private-key}")
+    private String APPLE_PRIVATE_KEY;
 
     public SignUpResponse signUp(SignUpRequest request, MultipartFile profileImage, SocialType socialType) {
         String accessToken = request.accessToken();
 
+        String profileImageUrl = "";
+
         // 프로필 이미지 url 생성
-        String keyName = "profile-images/" + profileImage.getOriginalFilename();
-        String profileImageUrl = s3Manager.uploadFile(keyName, profileImage);
+        if (profileImage != null) {
+            String keyName = "profile-images/" + profileImage.getOriginalFilename();
+            profileImageUrl = s3Manager.uploadFile(keyName, profileImage);
+        }
 
         // 유저 정보 받아오기
         Map<String, String> info = new HashMap<>();
@@ -145,8 +184,16 @@ public class MemberService {
         String authorizationCode = request.authorizationCode();
 
         // 애플 회원가입이면 인가 코드를 저장
-        if (authorizationCode != null && socialType == SocialType.APPLE)
+        if (socialType == SocialType.APPLE) {
+
+            if (authorizationCode == null) throw new GeneralException(ErrorStatus.AUTHORIZATION_CODE_NOT_FOUND);
+
             newMember.setAuthorizationCode(authorizationCode);
+        }
+
+        // 토큰 생성
+        newMember.setAccessToken(jwtUtil.createAccessToken(newMember.getEmail()));
+        newMember.setRefreshToken(jwtUtil.createRefreshToken(newMember.getEmail()));
 
         memberRepository.save(newMember);
 
@@ -206,7 +253,7 @@ public class MemberService {
     public String getKakaoAccessToken (String code) {
         String access_Token = "";
         String refresh_Token = "";
-        String reqURL = "https://kauth.kakao.com/oauth/token";
+        String reqURL = KAKAO_TOKEN_URL;
 
         try {
             URL url = new URL(reqURL);
@@ -220,9 +267,9 @@ public class MemberService {
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
             StringBuilder sb = new StringBuilder();
             sb.append("grant_type=authorization_code");
-            sb.append("&client_id="+clientKey); // TODO REST_API_KEY 입력
-            sb.append("&client_secret="+clientSecretKey); // TODO SECRET_KEY 입력
-            sb.append("&redirect_uri=http://localhost:8080/login/oauth2/code/kakao"); // TODO 인가코드 받은 redirect_uri 입력
+            sb.append("&client_id=" + KAKAO_CLIENT_ID);
+            sb.append("&client_secret=" + KAKAO_CLIENT_SECRET);
+            sb.append("&redirect_uri=" + KAKAO_REDIRECT_URL);
             sb.append("&code=" + code);
             bw.write(sb.toString());
             bw.flush();
@@ -340,7 +387,10 @@ public class MemberService {
             try {
                 appleWithdraw(authorizationCode);
             } catch (IOException e) {
+                System.out.println(e.getMessage());
                 throw new GeneralException(ErrorStatus.APPLE_WITHDRAW_FAILED);
+            } catch (net.minidev.json.parser.ParseException e) {
+                throw new RuntimeException(e);
             }
         }
 
@@ -390,7 +440,7 @@ public class MemberService {
     }
 
     private Map<String, String> getKakaoInfo(String token) {
-        String postURL = "https://kapi.kakao.com/v2/user/me";
+        String postURL = KAKAO_INFO_URL;
         Map<String, String> info = new HashMap<>();
 
         try {
@@ -437,15 +487,20 @@ public class MemberService {
                 socialType);
     }
 
-    private void appleWithdraw(String authorizationCode) throws IOException {
-        AppleAuthTokenResponse appleAuthToken = generateAuthToken(authorizationCode);
-        if (appleAuthToken.accessToken() != null) {
+    private void appleWithdraw(String authorizationCode)
+            throws IOException, net.minidev.json.parser.ParseException {
+        JSONParser jsonParser = new JSONParser();
+        JSONObject jsonObj = (JSONObject) jsonParser.parse(generateAuthToken(authorizationCode));
+
+        String accessToken = String.valueOf(jsonObj.get("access_token"));
+
+        if (accessToken != null) {
             RestTemplate restTemplate = new RestTemplateBuilder().build();
-            String revokeUrl = "https://appleid.apple.com/auth/oauth2/v2/revoke";
+            String revokeUrl = APPLE_REQUEST_URL + "/auth/oauth2/v2/revoke";
             LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-            params.add("client_id", "BUNDLEID"); // TODO: BUNDLE_ID 입력
+            params.add("client_id", APPLE_CLIENT_ID);
             params.add("client_secret", createClientSecret());
-            params.add("token", appleAuthToken.accessToken());
+            params.add("token", accessToken);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
             headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
@@ -454,42 +509,65 @@ public class MemberService {
         }
     }
 
-    private AppleAuthTokenResponse generateAuthToken(String authorizationCode) throws IOException {
-        RestTemplate restTemplate = new RestTemplateBuilder().build();
-        String authUrl = "https://appleid.apple.com/auth/oauth2/v2/token";
+    public String generateAuthToken(String code) throws IOException {
+        if (code == null) throw new IllegalArgumentException("Failed get authorization code");
 
-        LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("code", authorizationCode);
-        params.add("client_id", "BUNDLEID"); // TODO: BUNDLE_ID 입력
-        params.add("client_secret", createClientSecret());
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
+        params.add("client_id", APPLE_CLIENT_ID);
+        params.add("client_secret", createClientSecret());
+        params.add("code", code);
+        params.add("redirect_uri", APPLE_REDIRECT_URL);
+
+        RestTemplate restTemplate = new RestTemplate();
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
         HttpEntity<MultiValueMap<String, String>> httpEntity = new HttpEntity<>(params, headers);
+
         try {
-            ResponseEntity<AppleAuthTokenResponse> response = restTemplate.postForEntity(authUrl, httpEntity, AppleAuthTokenResponse.class);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    APPLE_REQUEST_URL + "/auth/token",
+                    HttpMethod.POST,
+                    httpEntity,
+                    String.class
+            );
+
             return response.getBody();
         } catch (HttpClientErrorException e) {
-            log.error(String.valueOf(e));
-            throw new GeneralException(ErrorStatus.APPLE_WITHDRAW_FAILED);
+            throw new IllegalArgumentException(e.getMessage());
         }
     }
 
     private String createClientSecret() throws IOException {
         Date expirationDate = Date.from(LocalDateTime.now().plusDays(30).atZone(ZoneId.systemDefault()).toInstant());
         Map<String, Object> jwtHeader = new HashMap<>();
-        jwtHeader.put("kid", "KID"); // TODO: KEY_ID 입력
+        jwtHeader.put("kid", APPLE_KEY_ID);
         jwtHeader.put("alg", "ES256"); // alg
+
         return Jwts.builder()
                 .setHeaderParams(jwtHeader)
-                .setIssuer("iss") // TODO: TEAM_ID 입력
+                .setIssuer(APPLE_TEAM_ID) // iss
                 .setIssuedAt(new Date(System.currentTimeMillis())) // 발행 시간
                 .setExpiration(expirationDate) // 만료 시간
-                .setAudience("https://appleid.apple.com") // aud
-                .setSubject("BUNDLEID") // sub
-                .signWith(SignatureAlgorithm.ES256, jwtProperties.getSecret())
+                .setAudience(APPLE_REQUEST_URL) // aud
+                .setSubject(APPLE_CLIENT_ID) // sub
+                .signWith(SignatureAlgorithm.ES256, getPrivateKey())
                 .compact();
+    }
+
+    private PrivateKey getPrivateKey() throws IOException {
+        String privateKey = APPLE_PRIVATE_KEY.replace("\\\\", "\\").replace("\\n", "\n");
+        Reader pemReader = new StringReader(privateKey);
+        PEMParser pemParser = new PEMParser(pemReader);
+        JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
+        try {
+            PrivateKeyInfo object = (PrivateKeyInfo) pemParser.readObject();
+            return converter.getPrivateKey(object);
+        } catch (IOException e) {
+            throw new GeneralException(ErrorStatus.AUTHORIZATION_CODE_UNAUTHORIZED);
+        }
     }
 
     public MemberCategoryCreatedResponse createMemberCategory(CategorySurveyRequest request) {
