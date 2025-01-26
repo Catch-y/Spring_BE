@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.activetime.domain.ActiveTime;
+import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
@@ -94,6 +95,8 @@ public class CourseService {
     private final MemberActiveTimeRepository memberActiveTimeRepository;
     private final MemberCategoryRepository memberCategoryRepository;
     private final MemberStyleRepository memberStyleRepository;
+    private final CategoryRepository categoryRepository;
+
 
     private Course getCourse(Long courseId) {
         return courseRepository.findById(courseId)
@@ -323,6 +326,44 @@ public class CourseService {
                 .toList();
     }
 
+    public List<Place> getRecommendedPlaces(List<String> regionList, List<Long> preferredCategoryIds, int maxPlaces) {
+        System.out.println("Region List: " + regionList);
+
+        List<Place> places = getFilteredPlaces(regionList, preferredCategoryIds, maxPlaces);
+
+        System.out.println("Filtered Places:");
+        for (Place place : places) {
+            System.out.println("- Place ID: " + place.getId() + ", Name: " + place.getPlaceName());
+        }
+
+        return places;
+    }
+
+    public List<Place> getFilteredPlaces(List<String> regionList, List<Long> preferredCategoryIds, int limit) {
+        // 모든 장소 조회
+        List<Place> allPlaces = placeRepository.findByCategoryIds(preferredCategoryIds);
+
+        // 메모리 내에서 지역별 필터링 수행
+        return allPlaces.stream()
+                .filter(place -> {
+                    String placeUpperRegion = LocationUtils.extractUpperLocation(place.getRoadAddress());
+                    String placeLowerRegion = LocationUtils.extractLowerLocation(place.getRoadAddress());
+
+                    // 지역 리스트에 매칭 여부 확인
+                    return regionList.stream().anyMatch(region -> {
+                        String upperRegion = LocationUtils.extractUpperLocation(region);
+                        String lowerRegion = LocationUtils.extractLowerLocation(region);
+
+                        boolean upperMatch = upperRegion == null || placeUpperRegion.equals(upperRegion);
+                        boolean lowerMatch = lowerRegion == null || placeLowerRegion.equals(lowerRegion);
+
+                        return upperMatch && lowerMatch;
+                    });
+                })
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+
     public GptCourseInfoResponse generateCourseAutomatically() {
         Long memberId = SecurityUtil.getCurrentMemberId();
 
@@ -332,6 +373,12 @@ public class CourseService {
         List<String> userStyles = getUserStyles(memberId);
         List<String> activeTimes = getUserActiveTimes(memberId);
 
+        // 디버깅: 사용자 관심 지역 및 선호 정보 출력
+        System.out.println("Member Locations: " + memberLocations);
+        System.out.println("Preferred Categories: " + preferredCategories);
+        System.out.println("User Styles: " + userStyles);
+        System.out.println("Active Times: " + activeTimes);
+
         if (memberLocations.isEmpty()) {
             throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
         }
@@ -339,17 +386,38 @@ public class CourseService {
         // 관심 지역 리스트 생성
         List<String> regionList = memberLocations.stream()
                 .map(memberLocation -> {
-                    Location location = memberLocation.getLocation();
-                    return LocationUtils.extractUpperLocation(location.getUpperLocation()) + " " +
-                            LocationUtils.extractLowerLocation(location.getLowerLocation());
+                    Location location = memberLocation.getLocation(); // location 테이블 데이터
+                    String upper = location.getUpperLocation(); // 상위 지역
+                    String lower = location.getLowerLocation(); // 하위 지역
+
+                    // "전체 지역"은 null로 변환
+                    upper = (upper != null && !upper.equals("전체")) ? upper : null;
+                    lower = (lower != null && !lower.equals("전체")) ? lower : null;
+
+                    return upper + (lower != null ? " " + lower : " 전체");
                 })
                 .collect(Collectors.toList());
+        System.out.println("Region List: " + regionList);
 
-        List<Place> places = placeRepository.findAll();
+        // 선호 카테고리 ID 가져오기
+        List<Long> preferredCategoryIds = categoryRepository.findIdsByNames(preferredCategories);
+        System.out.println("Preferred Category IDs: " + preferredCategoryIds); // 디버깅: 카테고리 ID 출력
+
+        // 필터링된 장소 리스트 가져오기
+        List<Place> places = getRecommendedPlaces(regionList, preferredCategoryIds, 10); // 최대 10개 장소
+        System.out.println("Filtered Places: ");
+        for (Place place : places) {
+            System.out.println("- Place ID: " + place.getId() + ", Name: " + place.getPlaceName());
+        }
 
         // GPT 프롬프트 생성 및 호출
         String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles, activeTimes);
+        System.out.println("GPT Prompt: \n" + gptPrompt); // 디버깅: 생성된 프롬프트 출력
+
         String gptResponse = callOpenAiApi(gptPrompt);
+
+        // 디버깅: GPT 응답 출력
+        System.out.println("GPT Response: " + gptResponse);
 
         // 응답 파싱
         GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
@@ -452,37 +520,39 @@ public class CourseService {
                 .collect(Collectors.toList());
     }
 
-    private String buildGptPrompt(List<String> regionList, List<Place> places, List<String> preferredCategories, List<String> userStyles, List<String> activeTimes) {
+    private String buildGptPrompt(
+            List<String> regionList,
+            List<Place> places,
+            List<String> preferredCategories,
+            List<String> userStyles,
+            List<String> activeTimes
+    ) {
         StringBuilder prompt = new StringBuilder();
 
         // 지역 정보
-        if (regionList.isEmpty() || regionList.contains("전체 지역")) {
-            prompt.append("Create a full-day itinerary for all regions and suggest places to visit. ");
-        } else {
-            prompt.append("Create a full-day itinerary for the following regions: ");
-            prompt.append(String.join(", ", regionList));
-            prompt.append(". All places in the itinerary **must strictly belong to the same region** ");
-            prompt.append("(UpperLocation and LowerLocation). Do not include places from different regions.\n");
-        }
+        prompt.append("Create a full-day itinerary for the following regions: ");
+        prompt.append(String.join(", ", regionList));
+        prompt.append(". All places in the itinerary **must be chosen strictly from the provided list of places**.\n");
 
         // 선호 카테고리
         prompt.append("The user's preferred categories are: ");
         prompt.append(String.join(", ", preferredCategories));
-        prompt.append(". Please recommend places that align with these preferences while ensuring diversity in the suggested itinerary.\n");
+        prompt.append(".\n");
 
-        // 관심 스타일 추가
-        prompt.append("The user prefers the following styles: ");
-        prompt.append(String.join(", ", userStyles));
-        prompt.append(". Please take these styles into account when recommending the itinerary.\n");
+        // 사용자 스타일
+        if (!userStyles.isEmpty()) {
+            prompt.append("The user prefers the following styles: ");
+            prompt.append(String.join(", ", userStyles)).append(".\n");
+        }
 
-        // 선호 시간대 추가
-        prompt.append("The user's preferred active times are: ");
-        prompt.append(String.join(", ", activeTimes));
-        prompt.append(". Please generate a recommendTime that aligns with these active times.\n");
+        // 활동 시간대
+        if (!activeTimes.isEmpty()) {
+            prompt.append("The user's preferred active times are: ");
+            prompt.append(String.join(", ", activeTimes)).append(".\n");
+        }
 
-        prompt.append("Ensure that the itinerary includes at least 2 places and at most 5 places.\n");
-
-        // 장소 상세 정보
+        // 장소 정보 추가
+        prompt.append("Here are the places to choose from:\n");
         for (Place place : places) {
             prompt.append(String.format(
                     "- Place ID: %d, Name: %s, Road Address: %s, Operating Hours: %s, Category: %s, Description: %s\n",
@@ -495,12 +565,12 @@ public class CourseService {
             ));
         }
 
-        // 응답 형식
+        // 응답 형식 안내
         prompt.append("\nThe course name and description must be written in Korean.\n");
         prompt.append("The course description should be concise, no more than 80 characters.\n");
         prompt.append("Please generate a course name and description that fits the selected places and reflects the user's preferred styles.\n");
         prompt.append("The response should include a course name, course description, recommended visit time for each place, and the full list of recommended places in the region.\n");
-        prompt.append("Please strictly return the response in the following JSON format. Do not include any extra text, comments, or explanations outside the JSON structure:\n");
+        prompt.append("Please return only the JSON structure below without any additional text, comments, or markdown formatting (e.g., no ```json). Return only the raw JSON structure:\n");
         prompt.append("The response should include a field `courseImage` with a URL to the generated image.\n");
         prompt.append("{\n");
         prompt.append("  \"courseName\": \"string (in Korean)\",\n");
@@ -521,7 +591,6 @@ public class CourseService {
         prompt.append("Return only this JSON structure, with no additional text.");
         return prompt.toString();
     }
-
     private GptCourseInfoResponse parseGptResponseToDto(String gptResponse) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
