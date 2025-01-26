@@ -16,6 +16,7 @@ public class GptCourseInfoResponse {
     private String courseDescription;
     private String recommendTime; // "HH:mm~HH:mm" 형식
     private String courseImage;
+    private Double courseRating;
     private List<GptPlaceInfoResponse> placeInfos;
 
     @Getter
