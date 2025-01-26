@@ -32,6 +32,10 @@ public enum ErrorStatus implements BaseErrorCode {
     PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "PLACE404", "해당 장소를 찾을 수 없습니다."),
     SEARCH_PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "SEARCH_PLACE404", "찾는 장소가 없습니다."),
 
+    // 카테고리 관련 에러
+    INVALID_CATEGORY(HttpStatus.BAD_REQUEST, "CATEGORY400", "존재하지 않는 카테고리입니다."),
+    PLACE_CATEGORY_EXIST(HttpStatus.CONFLICT, "PLACE_CATEGORY409", "해당 장소에 이미 카테고리가 존재합니다."),
+
     //코스 관련 에러
     COURSE_REVIEW_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "COURSE_REVIEW_MEMBER400", "해당 멤버는 코스 리뷰를 달 수 있는 권한이 없습니다."),
     COURSE_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "COURSE_MEMBER400", "해당 멤버는 코스를 수정하거나 삭제할 수 있는 권한이 없습니다."),
