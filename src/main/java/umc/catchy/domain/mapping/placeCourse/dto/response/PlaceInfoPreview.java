@@ -10,6 +10,7 @@ import lombok.Setter;
 public class PlaceInfoPreview {
     private Long placeId;
     private String placeName;
+    private String placeImage;
     private String category;
     private String roadAddress;
     private String activeTime;

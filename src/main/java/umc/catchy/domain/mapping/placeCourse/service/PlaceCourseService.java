@@ -70,7 +70,7 @@ public class PlaceCourseService {
 
                     if (place.isPresent()) {
                         Long reviewCount = placeReviewRepository.countByPlaceId(place.get().getId());
-                        return PlaceConverter.toPlaceInfo(place.get(), reviewCount);
+                        return PlaceConverter.toPlaceInfoPreview(place.get(), reviewCount);
                     }
                     else {
                         return createPlace(poiId);
@@ -191,7 +191,7 @@ public class PlaceCourseService {
 
         placeRepository.save(place);
 
-        return PlaceConverter.toPlaceInfo(place, 0L);
+        return PlaceConverter.toPlaceInfoPreview(place, 0L);
     }
 
     private Map<String, String> getPlaceInfo(Long poiId) {
