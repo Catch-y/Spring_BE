@@ -510,7 +510,7 @@ public class MemberService {
     }
 
     public String generateAuthToken(String code) throws IOException {
-        if (code == null) throw new IllegalArgumentException("Failed get authorization code");
+        if (code == null) throw new GeneralException(ErrorStatus.AUTHORIZATION_CODE_NOT_FOUND);
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
@@ -536,7 +536,7 @@ public class MemberService {
 
             return response.getBody();
         } catch (HttpClientErrorException e) {
-            throw new IllegalArgumentException(e.getMessage());
+            throw new GeneralException(ErrorStatus.AUTHORIZATION_CODE_UNAUTHORIZED);
         }
     }
 
