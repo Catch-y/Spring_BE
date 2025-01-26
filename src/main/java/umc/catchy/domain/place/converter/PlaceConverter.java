@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 import umc.catchy.domain.place.domain.Place;
@@ -22,7 +21,7 @@ public class PlaceConverter {
                 .build();
     }
 
-    public static PlaceInfoPreview toPlaceInfo(Place place, Long reviewCount) {
+    public static PlaceInfoPreview toPlaceInfoPreview(Place place, Long reviewCount) {
         String categoryName = "";
         Double rating = 0.0;
 
@@ -37,6 +36,7 @@ public class PlaceConverter {
         return PlaceInfoPreview.builder()
                 .placeId(place.getId())
                 .placeName(place.getPlaceName())
+                .placeImage(place.getImageUrl())
                 .category(categoryName)
                 .roadAddress(place.getRoadAddress())
                 .activeTime(place.getActiveTime())
