@@ -21,11 +21,14 @@ public enum ErrorStatus implements BaseErrorCode {
 
     // 소셜 로그인 관련 에러
     PLATFORM_BAD_REQUEST(HttpStatus.BAD_REQUEST, "SOCIAL400", "유효하지 않은 소셜 플랫폼입니다. (KAKAO 또는 APPLE만 허용)"),
-    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "SOCIAL404", "해당 소셜 플랫폼에 회원정보가 없습니다."),
+    SOCIAL_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "SOCIAL404", "해당 소셜 플랫폼에 회원정보가 없습니다."),
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER404", "존재하지 않는 사용자 입니다."),
     PROVIDER_ID_DUPLICATE(HttpStatus.CONFLICT, "MEMBER409", "이미 회원가입된 providerId입니다."),
     EMAIL_DUPLICATE(HttpStatus.CONFLICT, "MEMBER409", "이미 사용 중인 이메일입니다."),
     NICKNAME_DUPLICATE(HttpStatus.CONFLICT, "MEMBER409", "이미 사용 중인 닉네임입니다."),
     APPLE_WITHDRAW_FAILED(HttpStatus.UNAUTHORIZED, "MEMBER401", "애플 회원탈퇴에 실패하였습니다."),
+    AUTHORIZATION_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "SOCIAL404", "애플 회원가입 시 인가코드 입력은 필수입니다."),
+    AUTHORIZATION_CODE_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "SOCIAL401", "인가코드가 만료되었습니다."),
 
     //장소 관련 에러
     PLACE_REVIEW_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "PLACE_REVIEW_MEMBER400", "해당 멤버는 장소 리뷰를 달 수 있는 권한이 없습니다."),
