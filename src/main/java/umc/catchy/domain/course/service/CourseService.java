@@ -330,45 +330,7 @@ public class CourseService {
 
     public List<Place> getRecommendedPlaces(List<String> regionList, List<Long> preferredCategoryIds, Long memberId, int maxPlaces) {
 
-        // 1. 필터링된 장소 리스트 가져오기
-        List<Place> allPlaces = getFilteredPlaces(regionList, preferredCategoryIds);
-
-        // 2. 사용자 좋아요 및 방문 데이터 조회
-        List<Long> placeIds = allPlaces.stream().map(Place::getId).collect(Collectors.toList());
-        List<PlaceVisit> placeVisits = placeVisitRepository.findPlaceVisitsByMemberAndPlaces(memberId, placeIds);
-
-        // PlaceVisit 데이터를 Map으로 변환 (placeId -> PlaceVisit)
-        Map<Long, PlaceVisit> placeVisitMap = placeVisits.stream()
-                .collect(Collectors.toMap(pv -> pv.getPlace().getId(), pv -> pv));
-
-        // 3. 가중치 계산 및 정렬
-        List<Place> weightedPlaces = allPlaces.stream()
-                .sorted(Comparator.comparingDouble(place -> calculateWeight((Place) place, placeVisitMap)).reversed())
-                .collect(Collectors.toList());
-
-        // 4. 상위 n개에서 랜덤으로 섞기
-        int subsetSize = Math.min(3 * maxPlaces, weightedPlaces.size());
-        List<Place> topPlaces = weightedPlaces.subList(0, subsetSize);
-        Collections.shuffle(topPlaces);
-
-        // 5. 최대 maxPlaces만 반환
-        return topPlaces.stream().limit(maxPlaces).collect(Collectors.toList());
-    }
-
-    private double calculateWeight(Place place, Map<Long, PlaceVisit> placeVisitMap) {
-        double baseWeight = 1.0; // 기본 가중치
-
-        PlaceVisit visit = placeVisitMap.get(place.getId());
-        if (visit != null) {
-            if (visit.isLiked()) baseWeight += 0.5; // 좋아요 가중치
-            if (visit.isVisited()) baseWeight += 0.3; // 방문 여부 가중치
-        }
-
-        return baseWeight;
-    }
-
-    public List<Place> getFilteredPlaces(List<String> regionList, List<Long> preferredCategoryIds) {
-        // 상위/하위 지역 리스트 추출
+        // 1. 관심 지역에서 상위/하위 지역 정보 추출
         List<String> upperRegions = regionList.stream()
                 .map(LocationUtils::extractUpperLocation)
                 .filter(Objects::nonNull)
@@ -381,9 +343,19 @@ public class CourseService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        return placeRepository.findPlacesByDynamicFilters(preferredCategoryIds, upperRegions, lowerRegions);
-    }
+        // 2. QueryDSL로 필터링, 가중치 계산, 정렬된 장소 가져오기
+        List<Place> recommendedPlaces = placeRepository.findRecommendedPlaces(preferredCategoryIds, upperRegions, lowerRegions, memberId, maxPlaces);
 
+        // 3. 상위 n개의 데이터에서 랜덤으로 섞기
+        int subsetSize = Math.min(3 * maxPlaces, recommendedPlaces.size());
+        List<Place> topPlaces = recommendedPlaces.subList(0, subsetSize);
+        Collections.shuffle(topPlaces);
+
+        // 4. 최대 maxPlaces만 반환
+        List<Place> finalPlaces = topPlaces.stream().limit(maxPlaces).collect(Collectors.toList());
+
+        return finalPlaces;
+    }
 
     public GptCourseInfoResponse generateCourseAutomatically() {
         Long memberId = SecurityUtil.getCurrentMemberId();
