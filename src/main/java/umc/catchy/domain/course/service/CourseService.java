@@ -2,6 +2,7 @@ package umc.catchy.domain.course.service;
 
 import java.io.IOException;
 import java.time.LocalTime;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
@@ -329,7 +330,14 @@ public class CourseService {
     public List<Place> getRecommendedPlaces(List<String> regionList, List<Long> preferredCategoryIds, int maxPlaces) {
         System.out.println("Region List: " + regionList);
 
-        List<Place> places = getFilteredPlaces(regionList, preferredCategoryIds, maxPlaces);
+        // 필터링된 장소 리스트 가져오기
+        List<Place> places = getFilteredPlaces(regionList, preferredCategoryIds);
+
+        // 결과를 랜덤으로 섞음
+        Collections.shuffle(places);
+
+        // 최대 maxPlaces만큼 선택
+        places = places.stream().limit(maxPlaces).collect(Collectors.toList());
 
         System.out.println("Filtered Places:");
         for (Place place : places) {
@@ -339,8 +347,8 @@ public class CourseService {
         return places;
     }
 
-    public List<Place> getFilteredPlaces(List<String> regionList, List<Long> preferredCategoryIds, int limit) {
-        // 모든 장소 조회
+    public List<Place> getFilteredPlaces(List<String> regionList, List<Long> preferredCategoryIds) {
+        // 데이터베이스에서 카테고리 기준으로 모든 장소 조회
         List<Place> allPlaces = placeRepository.findByCategoryIds(preferredCategoryIds);
 
         // 메모리 내에서 지역별 필터링 수행
@@ -360,7 +368,6 @@ public class CourseService {
                         return upperMatch && lowerMatch;
                     });
                 })
-                .limit(limit)
                 .collect(Collectors.toList());
     }
 
@@ -403,8 +410,9 @@ public class CourseService {
         List<Long> preferredCategoryIds = categoryRepository.findIdsByNames(preferredCategories);
         System.out.println("Preferred Category IDs: " + preferredCategoryIds); // 디버깅: 카테고리 ID 출력
 
-        // 필터링된 장소 리스트 가져오기
-        List<Place> places = getRecommendedPlaces(regionList, preferredCategoryIds, 10); // 최대 10개 장소
+        // 필터링된 장소 리스트 가져오기 (최대 100개)
+        List<Place> places = getRecommendedPlaces(regionList, preferredCategoryIds, 100);
+
         System.out.println("Filtered Places: ");
         for (Place place : places) {
             System.out.println("- Place ID: " + place.getId() + ", Name: " + place.getPlaceName());
