@@ -7,7 +7,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+
+import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Slice;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -15,6 +18,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -89,6 +93,12 @@ public class CourseService {
     @Value("${openai.api.url}")
     private String openAiApiUrl;
 
+    @Value("${cache.recommended-courses.key}")
+    private String CACHE_KEY;
+
+    @Value("${cache.recommended-courses.ttl}")
+    private long CACHE_TTL;
+
     private final CourseRepository courseRepository;
     private final CourseReviewRepository courseReviewRepository;
     private final PlaceCourseRepository placeCourseRepository;
@@ -102,6 +112,8 @@ public class CourseService {
     private final MemberCategoryRepository memberCategoryRepository;
     private final MemberStyleRepository memberStyleRepository;
     private final CategoryRepository categoryRepository;
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
 
     private Course getCourse(Long courseId) {
         return courseRepository.findById(courseId)
@@ -409,7 +421,7 @@ public class CourseService {
         parsedResponse.setCourseImage(courseImage);
 
         // 데이터베이스 저장
-        saveCourseAndPlaces(parsedResponse, memberId);
+        saveCourseAndPlaces(parsedResponse);
 
         return parsedResponse;
     }
@@ -420,7 +432,11 @@ public class CourseService {
                 .collect(Collectors.toList());
     }
 
-    private void saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Long memberId) {
+    private void saveCourseAndPlaces(GptCourseInfoResponse parsedResponse) {
+        // 현재 인증된 사용자 ID 가져오기
+        Long memberId = SecurityUtil.getCurrentMemberId();
+
+        // 인증된 사용자로부터 Member 엔티티 조회
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
@@ -742,27 +758,41 @@ public class CourseService {
 
     public List<CourseRecommendationResponse> getHomeRecommendedCourses() {
         // 1. 로그인한 사용자 ID 조회
-        Long userId = SecurityUtil.getCurrentMemberId();
+        Long memberId = SecurityUtil.getCurrentMemberId();
 
-        // 2. 사용자 코스 최신 5개 가져오기 (USER_CREATED 타입만)
-        List<Course> userCourses = courseRepository.findTop5ByMemberIdAndCourseTypeOrderByCreatedDateDesc(userId, CourseType.DIY);
+        // 사용자별 Redis 캐시 키 생성
+        String userSpecificCacheKey = CACHE_KEY + ":" + memberId;
+
+        // 2. Redis에서 사용자별 캐시 데이터 조회
+        String cachedData = redisTemplate.opsForValue().get(userSpecificCacheKey);
+        if (cachedData != null) {
+            return deserializeCourseRecommendations(cachedData);
+        }
+
+        // 3. 캐시 데이터가 없으면 새 데이터를 생성
+        List<CourseRecommendationResponse> recommendedCourses = generateRecommendedCourses();
+
+        // 4. 생성된 데이터를 Redis에 캐싱
+        String serializedData = serializeCourseRecommendations(recommendedCourses);
+        redisTemplate.opsForValue().set(userSpecificCacheKey, serializedData, CACHE_TTL, TimeUnit.SECONDS);
+
+        return recommendedCourses;
+    }
+
+    private List<CourseRecommendationResponse> generateRecommendedCourses() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        List<Course> userCourses = courseRepository.findTop5ByMemberIdAndCourseTypeOrderByCreatedDateDesc(memberId, CourseType.DIY);
+
         int userCourseCount = userCourses.size();
-
-        // 3. 사용자 코스 부족 개수 계산
         int userCourseDeficit = Math.max(0, 5 - userCourseCount);
-
-        // 4. AI 코스 부족 개수 계산
         int aiCourseCount = 10 - userCourseCount - userCourseDeficit;
 
-        // 5. AI 코스 생성 및 최신 AI 코스 조회
         List<Course> aiCourses = new ArrayList<>();
         if (aiCourseCount > 0) {
             generateMultipleAICourses(aiCourseCount);
-
             aiCourses = courseRepository.findTopNByCourseType("AI_GENERATED", aiCourseCount);
         }
 
-        // 6. 사용자 코스와 AI 코스 병합
         List<CourseRecommendationResponse> recommendedCourses = new ArrayList<>();
         recommendedCourses.addAll(userCourses.stream()
                 .map(course -> CourseRecommendationResponse.fromEntity(course, "USER_CREATED"))
@@ -772,6 +802,22 @@ public class CourseService {
                 .collect(Collectors.toList()));
 
         return recommendedCourses;
+    }
+
+    private String serializeCourseRecommendations(List<CourseRecommendationResponse> courses) {
+        try {
+            return objectMapper.writeValueAsString(courses);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize course recommendations", e);
+        }
+    }
+
+    private List<CourseRecommendationResponse> deserializeCourseRecommendations(String cachedData) {
+        try {
+            return objectMapper.readValue(cachedData, new TypeReference<List<CourseRecommendationResponse>>() {});
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to deserialize course recommendations", e);
+        }
     }
 
     public void generateMultipleAICourses(int count) {

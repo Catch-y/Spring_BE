@@ -76,6 +76,9 @@ dependencies {
 	implementation group: 'io.jsonwebtoken', name: 'jjwt', version: '0.9.1'
 	implementation 'javax.xml.bind:jaxb-api:2.3.0'
 	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
+	//Redis 관련
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 }
 
 tasks.named('test') {
