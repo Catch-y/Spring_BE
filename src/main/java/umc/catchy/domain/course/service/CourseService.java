@@ -1,6 +1,7 @@
 package umc.catchy.domain.course.service;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collections;
 import java.util.Comparator;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -27,6 +29,7 @@ import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
+import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
@@ -419,7 +422,7 @@ public class CourseService {
 
     private void saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Long memberId) {
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND, "사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         Pair<LocalTime, LocalTime> recommendTime = parseRecommendTime(parsedResponse.getRecommendTime());
 
@@ -735,5 +738,45 @@ public class CourseService {
 
         // 생성된 이미지를 S3에 업로드
         return uploadImageToS3(dallEImageUrl);
+    }
+
+    public List<CourseRecommendationResponse> getHomeRecommendedCourses() {
+        // 1. 로그인한 사용자 ID 조회
+        Long userId = SecurityUtil.getCurrentMemberId();
+
+        // 2. 사용자 코스 최신 5개 가져오기 (USER_CREATED 타입만)
+        List<Course> userCourses = courseRepository.findTop5ByMemberIdAndCourseTypeOrderByCreatedDateDesc(userId, CourseType.DIY);
+        int userCourseCount = userCourses.size();
+
+        // 3. 사용자 코스 부족 개수 계산
+        int userCourseDeficit = Math.max(0, 5 - userCourseCount);
+
+        // 4. AI 코스 부족 개수 계산
+        int aiCourseCount = 10 - userCourseCount - userCourseDeficit;
+
+        // 5. AI 코스 생성 및 최신 AI 코스 조회
+        List<Course> aiCourses = new ArrayList<>();
+        if (aiCourseCount > 0) {
+            generateMultipleAICourses(aiCourseCount);
+
+            aiCourses = courseRepository.findTopNByCourseType("AI_GENERATED", aiCourseCount);
+        }
+
+        // 6. 사용자 코스와 AI 코스 병합
+        List<CourseRecommendationResponse> recommendedCourses = new ArrayList<>();
+        recommendedCourses.addAll(userCourses.stream()
+                .map(course -> CourseRecommendationResponse.fromEntity(course, "USER_CREATED"))
+                .collect(Collectors.toList()));
+        recommendedCourses.addAll(aiCourses.stream()
+                .map(course -> CourseRecommendationResponse.fromEntity(course, "AI_GENERATED"))
+                .collect(Collectors.toList()));
+
+        return recommendedCourses;
+    }
+
+    public void generateMultipleAICourses(int count) {
+        for (int i = 0; i < count; i++) {
+            generateCourseAutomatically();
+        }
     }
 }

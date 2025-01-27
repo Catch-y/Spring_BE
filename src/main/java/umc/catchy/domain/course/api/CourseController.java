@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
+import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
@@ -128,5 +129,12 @@ public class CourseController {
     ) {
         placeService.setCategories(placeId, request);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
+    }
+
+    @Operation(summary = "홈화면 추천 코스 API", description = "홈화면에서 사용자 맞춤 추천 코스를 조회합니다. 사용자 코스와 AI 코스를 조합하여 최대 10개를 반환합니다.")
+    @GetMapping("/home/personal-courses")
+    public ResponseEntity<BaseResponse<List<CourseRecommendationResponse>>> getHomeRecommendedCourses() {
+        List<CourseRecommendationResponse> recommendedCourses = courseService.getHomeRecommendedCourses();
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, recommendedCourses));
     }
 }
