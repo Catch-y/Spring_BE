@@ -6,6 +6,8 @@ import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.member.domain.Member;
 
+import java.time.LocalDate;
+
 @Entity
 @Getter
 @Builder
@@ -17,9 +19,10 @@ public class CourseReview extends BaseTimeEntity {
     @Column(name = "courseReview_id")
     private Long id;
 
-    // private Integer rating;
 
     private String comment;
+
+    private LocalDate visitedDate; // 리뷰 장소 방문 시간
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
