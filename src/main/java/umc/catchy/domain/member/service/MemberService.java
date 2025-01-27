@@ -327,7 +327,7 @@ public class MemberService {
         return ProfileResponse.of(member);
     }
 
-    public ProfileResponse updateNickname(NicknameRequest request) {
+    public NicknameResponse updateNickname(NicknameRequest request) {
         // 닉네임 중복 검사
         memberRepository.findByNickname(request.nickname())
                 .ifPresent(member -> {
@@ -342,10 +342,10 @@ public class MemberService {
         // 닉네임 변경
         member.setNickname(request.nickname());
 
-        return ProfileResponse.of(member);
+        return NicknameResponse.of(member);
     }
 
-    public ProfileResponse updateProfileImage(MultipartFile newProfileImage) {
+    public ProfileImageResponse updateProfileImage(MultipartFile newProfileImage) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId).orElseThrow(() ->
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -364,7 +364,7 @@ public class MemberService {
         // 이미지 변경
         member.setProfileImage(newProfileImageUrl);
 
-        return ProfileResponse.of(member);
+        return ProfileImageResponse.of(member);
     }
 
     public void validateNickname(NicknameRequest request) {
