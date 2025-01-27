@@ -45,7 +45,7 @@ public class PlaceConverter {
                 .build();
     }
 
-    public static PlaceInfoResponse toPlaceInfoResponse (Place place, Long reviewCount) {
+    public static PlaceInfoResponse toPlaceInfoResponse (Place place, Long reviewCount, Boolean isVisited) {
         String categoryName = "";
         Double rating = 0.0;
 
@@ -67,6 +67,7 @@ public class PlaceConverter {
                 .activeTime(place.getActiveTime())
                 .placeSite(place.getPlaceSite())
                 .rating(rating)
+                .isVisited(isVisited)
                 .reviewCount(reviewCount)
                 .build();
     }
