@@ -329,7 +329,6 @@ public class CourseService {
     }
 
     public List<Place> getRecommendedPlaces(List<String> regionList, List<Long> preferredCategoryIds, Long memberId, int maxPlaces) {
-        System.out.println("Region List: " + regionList);
 
         // 1. 필터링된 장소 리스트 가져오기
         List<Place> allPlaces = getFilteredPlaces(regionList, preferredCategoryIds);
@@ -344,11 +343,11 @@ public class CourseService {
 
         // 3. 가중치 계산 및 정렬
         List<Place> weightedPlaces = allPlaces.stream()
-                .sorted(Comparator.comparingDouble(place -> calculateWeight((Place) place, placeVisitMap)).reversed()) // 가중치 기반 정렬
+                .sorted(Comparator.comparingDouble(place -> calculateWeight((Place) place, placeVisitMap)).reversed())
                 .collect(Collectors.toList());
 
         // 4. 상위 n개에서 랜덤으로 섞기
-        int subsetSize = Math.min(2 * maxPlaces, weightedPlaces.size()); // 상위 n개(2배수) 선택
+        int subsetSize = Math.min(3 * maxPlaces, weightedPlaces.size());
         List<Place> topPlaces = weightedPlaces.subList(0, subsetSize);
         Collections.shuffle(topPlaces);
 
@@ -382,7 +381,6 @@ public class CourseService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        // QueryDSL로 필터링
         return placeRepository.findPlacesByDynamicFilters(preferredCategoryIds, upperRegions, lowerRegions);
     }
 
@@ -396,12 +394,6 @@ public class CourseService {
         List<String> userStyles = getUserStyles(memberId);
         List<String> activeTimes = getUserActiveTimes(memberId);
 
-        // 디버깅: 사용자 관심 지역 및 선호 정보 출력
-        System.out.println("Member Locations: " + memberLocations);
-        System.out.println("Preferred Categories: " + preferredCategories);
-        System.out.println("User Styles: " + userStyles);
-        System.out.println("Active Times: " + activeTimes);
-
         if (memberLocations.isEmpty()) {
             throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
         }
@@ -409,9 +401,9 @@ public class CourseService {
         // 관심 지역 리스트 생성
         List<String> regionList = memberLocations.stream()
                 .map(memberLocation -> {
-                    Location location = memberLocation.getLocation(); // location 테이블 데이터
-                    String upper = location.getUpperLocation(); // 상위 지역
-                    String lower = location.getLowerLocation(); // 하위 지역
+                    Location location = memberLocation.getLocation();
+                    String upper = location.getUpperLocation();
+                    String lower = location.getLowerLocation();
 
                     // "전체 지역"은 null로 변환
                     upper = (upper != null && !upper.equals("전체")) ? upper : null;
@@ -420,28 +412,16 @@ public class CourseService {
                     return upper + (lower != null ? " " + lower : " 전체");
                 })
                 .collect(Collectors.toList());
-        System.out.println("Region List: " + regionList);
 
         // 선호 카테고리 ID 가져오기
         List<Long> preferredCategoryIds = categoryRepository.findIdsByNames(preferredCategories);
-        System.out.println("Preferred Category IDs: " + preferredCategoryIds);
 
         // 필터링된 장소 리스트 가져오기 (최대 100개)
         List<Place> places = getRecommendedPlaces(regionList, preferredCategoryIds, memberId, 100);
 
-        System.out.println("Filtered Places: ");
-        for (Place place : places) {
-            System.out.println("- Place ID: " + place.getId() + ", Name: " + place.getPlaceName());
-        }
-
         // GPT 프롬프트 생성 및 호출
         String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles, activeTimes);
-        System.out.println("GPT Prompt: \n" + gptPrompt);
-
         String gptResponse = callOpenAiApi(gptPrompt);
-
-        // 디버깅: GPT 응답 출력
-        System.out.println("GPT Response: " + gptResponse);
 
         // 응답 파싱
         GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
