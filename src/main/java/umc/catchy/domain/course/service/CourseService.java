@@ -148,9 +148,9 @@ public class CourseService {
         CourseType courseType;
 
         if ("AI".equals(type)) {
-            courseType = CourseType.AI_GENERATED;
+            courseType = CourseType.AI;
         } else if ("DIY".equals(type)) {
-            courseType = CourseType.USER_CREATED;
+            courseType = CourseType.DIY;
         } else {
             throw new GeneralException(ErrorStatus.INVALID_COURSE_TYPE);
         }
@@ -280,7 +280,7 @@ public class CourseService {
 
         // 코스 생성
         Course course = CourseConverter.toCourse(request, courseImageUrl, member);
-        course.setCourseType(CourseType.USER_CREATED);
+        course.setCourseType(CourseType.DIY);
 
         // PlaceCourse 생성
         List<Long> placeIds = request.getPlaceIds();
@@ -382,7 +382,7 @@ public class CourseService {
         Course course = Course.builder()
                 .courseName(parsedResponse.getCourseName())
                 .courseDescription(parsedResponse.getCourseDescription())
-                .courseType(CourseType.AI_GENERATED)
+                .courseType(CourseType.AI)
                 .recommendTimeStart(recommendTime.getLeft())
                 .recommendTimeEnd(recommendTime.getRight())
                 .courseImage(parsedResponse.getCourseImage())

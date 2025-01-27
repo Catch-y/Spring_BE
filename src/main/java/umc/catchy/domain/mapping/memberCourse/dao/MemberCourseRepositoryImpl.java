@@ -57,7 +57,8 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
                     .where(placeCourse.course.id.eq(result.getCourseId()))
                     .fetch();
             List<BigCategory> bigCategories = new ArrayList<>(new HashSet<>(bigCategoriesDuplicates));
-            result.setCategories(bigCategories);
+            List<String> bigCategoryStrings = bigCategories.stream().map(BigCategory::getValue).toList();
+            result.setCategories(bigCategoryStrings);
         }
 
         return checkLastPage(pageSize,results);
@@ -94,7 +95,8 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
                     .where(placeCourse.course.id.eq(result.getCourseId()))
                     .fetch();
             List<BigCategory> bigCategories = new ArrayList<>(new HashSet<>(bigCategoriesDuplicates));
-            result.setCategories(bigCategories);
+            List<String> bigCategoryStrings = bigCategories.stream().map(BigCategory::getValue).toList();
+            result.setCategories(bigCategoryStrings);
         }
 
         return checkLastPage(10, results);

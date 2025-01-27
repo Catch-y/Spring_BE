@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.course.domain.CourseType;
 
 @Getter
@@ -18,7 +17,7 @@ public class MemberCourseResponse {
     String courseImage;
     String courseName;
     String courseDescription;
-    List<BigCategory> categories;
+    List<String> categories;
 
     public MemberCourseResponse(Long courseId, CourseType courseType, String courseImage, String courseName, String courseDescription) {
         this.courseId = courseId;
@@ -28,7 +27,7 @@ public class MemberCourseResponse {
         this.courseDescription = courseDescription;
     }
 
-    public void setCategories(List<BigCategory> categories) {
+    public void setCategories(List<String> categories) {
         this.categories = categories;
     }
 }
