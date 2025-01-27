@@ -6,8 +6,8 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public enum CourseType {
-    AI_GENERATED("AI_GENERATED"),
-    USER_CREATED("USER_CREATED");
+    AI("AI_GENERATED"),
+    DIY("USER_CREATED");
 
     private final String value;
 }

@@ -21,16 +21,23 @@ public enum ErrorStatus implements BaseErrorCode {
 
     // 소셜 로그인 관련 에러
     PLATFORM_BAD_REQUEST(HttpStatus.BAD_REQUEST, "SOCIAL400", "유효하지 않은 소셜 플랫폼입니다. (KAKAO 또는 APPLE만 허용)"),
-    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "SOCIAL404", "해당 소셜 플랫폼에 회원정보가 없습니다."),
+    SOCIAL_MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "SOCIAL404", "해당 소셜 플랫폼에 회원정보가 없습니다."),
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER404", "존재하지 않는 사용자 입니다."),
     PROVIDER_ID_DUPLICATE(HttpStatus.CONFLICT, "MEMBER409", "이미 회원가입된 providerId입니다."),
     EMAIL_DUPLICATE(HttpStatus.CONFLICT, "MEMBER409", "이미 사용 중인 이메일입니다."),
     NICKNAME_DUPLICATE(HttpStatus.CONFLICT, "MEMBER409", "이미 사용 중인 닉네임입니다."),
     APPLE_WITHDRAW_FAILED(HttpStatus.UNAUTHORIZED, "MEMBER401", "애플 회원탈퇴에 실패하였습니다."),
+    AUTHORIZATION_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "SOCIAL404", "애플 회원가입 시 인가코드 입력은 필수입니다."),
+    AUTHORIZATION_CODE_UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "SOCIAL401", "인가코드가 만료되었습니다."),
 
     //장소 관련 에러
     PLACE_REVIEW_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "PLACE_REVIEW_MEMBER400", "해당 멤버는 장소 리뷰를 달 수 있는 권한이 없습니다."),
     PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "PLACE404", "해당 장소를 찾을 수 없습니다."),
     SEARCH_PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "SEARCH_PLACE404", "찾는 장소가 없습니다."),
+
+    // 카테고리 관련 에러
+    INVALID_CATEGORY(HttpStatus.BAD_REQUEST, "CATEGORY400", "존재하지 않는 카테고리입니다."),
+    PLACE_CATEGORY_EXIST(HttpStatus.CONFLICT, "PLACE_CATEGORY409", "해당 장소에 이미 카테고리가 존재합니다."),
 
     //코스 관련 에러
     COURSE_REVIEW_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "COURSE_REVIEW_MEMBER400", "해당 멤버는 코스 리뷰를 달 수 있는 권한이 없습니다."),
@@ -59,6 +66,10 @@ public enum ErrorStatus implements BaseErrorCode {
     VOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "VOTE402", "해당 투표를 찾을 수 없습니다."),
     ALREADY_VOTED(HttpStatus.CONFLICT, "VOTE403", "이미 해당 장소에 투표했습니다."),
     PLACE_VOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "VOTE406", "해당 장소 투표 정보를 찾을 수 없습니다."),
+
+    // gpt 관련 에러
+    JSON_PARSING_ERROR(HttpStatus.NOT_FOUND, "GPT404", "json 파싱 에러"),
+    IMAGE_GENERATION_ERROR(HttpStatus.BAD_REQUEST, "GPT402", "이미지 생성에 실패하였습니다."),
     ;
 
     private final HttpStatus httpStatus;

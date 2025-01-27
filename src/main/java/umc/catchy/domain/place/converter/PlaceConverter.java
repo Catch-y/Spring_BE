@@ -1,9 +1,11 @@
 package umc.catchy.domain.place.converter;
 
+import java.util.List;
 import java.util.Map;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfo;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 import umc.catchy.domain.place.domain.Place;
 
 public class PlaceConverter {
@@ -19,7 +21,7 @@ public class PlaceConverter {
                 .build();
     }
 
-    public static PlaceInfo toPlaceInfo(Place place, Long reviewCount) {
+    public static PlaceInfoPreview toPlaceInfoPreview(Place place, Long reviewCount) {
         String categoryName = "";
         Double rating = 0.0;
 
@@ -31,10 +33,10 @@ public class PlaceConverter {
             rating = place.getRating();
         }
 
-        return PlaceInfo.builder()
+        return PlaceInfoPreview.builder()
                 .placeId(place.getId())
-                .poiId(place.getPoiId())
                 .placeName(place.getPlaceName())
+                .placeImage(place.getImageUrl())
                 .category(categoryName)
                 .roadAddress(place.getRoadAddress())
                 .activeTime(place.getActiveTime())
@@ -43,7 +45,7 @@ public class PlaceConverter {
                 .build();
     }
 
-    public static PlaceInfoDetail toPlaceInfoDetail(Place place, Long reviewCount) {
+    public static PlaceInfoResponse toPlaceInfoResponse (Place place, Long reviewCount) {
         String categoryName = "";
         Double rating = 0.0;
 
@@ -55,13 +57,12 @@ public class PlaceConverter {
             rating = place.getRating();
         }
 
-        return PlaceInfoDetail.builder()
+        return PlaceInfoResponse.builder()
                 .placeId(place.getId())
-                .poiId(place.getPoiId())
                 .imageUrl(place.getImageUrl())
                 .placeName(place.getPlaceName())
                 .placeDescription(place.getPlaceDescription())
-                .category(categoryName)
+                .categoryName(categoryName)
                 .roadAddress(place.getRoadAddress())
                 .activeTime(place.getActiveTime())
                 .placeSite(place.getPlaceSite())
@@ -83,6 +84,13 @@ public class PlaceConverter {
                 .activeTime(placeInfo.get("additionalInfo"))
                 .placeSite(placeInfo.get("homepageURL"))
                 .rating(0.0)
+                .build();
+    }
+
+    public static PlaceInfoPreviewResponse toPlaceInfoPreviewResponse(List<PlaceInfoPreview> placeInfoPreviews, Boolean isLast) {
+        return PlaceInfoPreviewResponse.builder()
+                .placeInfoPreviews(placeInfoPreviews)
+                .isLast(isLast)
                 .build();
     }
 }

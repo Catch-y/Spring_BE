@@ -5,20 +5,23 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
+import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
-import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReview.service.CourseReviewService;
+import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
+import umc.catchy.domain.place.dto.request.SetCategoryRequest;
+import umc.catchy.domain.place.service.PlaceService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
 
@@ -33,6 +36,7 @@ public class CourseController {
     private final CourseService courseService;
     private final CourseReviewService courseReviewService;
     private final MemberCourseService memberCourseService;
+    private final PlaceService placeService;
 
     @Operation(summary = "코스 상세정보 조회 API", description = "코스 상세 화면에서 코스에 대한 상세정보를 나타내기 위한 정보 조회 기능입니다.")
     @GetMapping("/detail/{courseId}")
@@ -46,7 +50,7 @@ public class CourseController {
 
     @Operation(summary = "내 코스 조회 API", description = "코스 탭에서 DIY/AI, 지역별로 사용자의 코스를 최신순으로 조회")
     @GetMapping("/search")
-    public ResponseEntity<BaseResponse<Slice<MemberCourseResponse>>> getMemberCourses(
+    public ResponseEntity<BaseResponse<MemberCourseSliceResponse>> getMemberCourses(
             @Parameter(description = "AI/DIY 선택", required = true)
             @RequestParam(value = "type") String type,
             @RequestParam(value = "upperLocation", defaultValue = "all") String upperLocation,
@@ -54,8 +58,8 @@ public class CourseController {
             @RequestParam(required = false) Long lastId
     ) {
 
-        Slice<MemberCourseResponse> responses = courseService.getMemberCourses(type.toUpperCase(), upperLocation, lowerLocation, lastId);
-        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, responses));
+        MemberCourseSliceResponse response = courseService.getMemberCourses(type.toUpperCase(), upperLocation, lowerLocation, lastId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
     @Operation(summary = "코스 생성(DIY) API", description = "사용자가 직접 생성하는 코스")
@@ -107,6 +111,23 @@ public class CourseController {
     public ResponseEntity<BaseResponse<CourseBookmarkResponse>> toggleBookmark(@PathVariable Long courseId) {
         CourseBookmarkResponse response = memberCourseService.toggleBookmark(courseId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "코스 생성(AI) API", description = "AI가 생성하는 코스")
+    @PostMapping("/generate-ai")
+    public ResponseEntity<BaseResponse<GptCourseInfoResponse>> generateCourseWithAI() {
+        GptCourseInfoResponse response = courseService.generateCourseAutomatically();
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "장소 카테고리 선택 API", description = "새로운 장소에 대한 1개 이상의 소카테고리를 선택합니다.")
+    @PostMapping("/{placeId}")
+    public ResponseEntity<BaseResponse<Void>> selectCategories(
+            @PathVariable("placeId") Long placeId,
+            @RequestBody @Valid SetCategoryRequest request
+    ) {
+        placeService.setCategories(placeId, request);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 
     @Operation(summary = "코스 리뷰 전체보기 API", description = "코스 리뷰 전체를 보여줍니다.")

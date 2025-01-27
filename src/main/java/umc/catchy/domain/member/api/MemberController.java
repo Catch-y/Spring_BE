@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,6 +33,7 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.common.response.status.SuccessStatus;
 
 import java.util.List;
+import umc.catchy.global.error.exception.GeneralException;
 
 @Tag(name = "Member", description = "사용자 관련 API")
 @RestController
@@ -80,7 +82,33 @@ public class MemberController {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.login(request, socialType));
     }
 
-    @DeleteMapping("/member/withdraw")
+    @PostMapping("/callback/apple")
+    @Operation(summary = "애플 로그인 redirect url", description = "회원가입 시 필요한 정보를 응답")
+    public BaseResponse<AppleLoginResponse> appleCallback(HttpServletRequest request) {
+
+        if (request.getParameter("code") == null || request.getParameter("id_token") == null) {
+            throw new GeneralException(ErrorStatus.SOCIAL_MEMBER_NOT_FOUND);
+        }
+
+        AppleLoginResponse response = AppleLoginResponse.of(request.getParameter("code"), request.getParameter("id_token"));
+
+        return BaseResponse.onSuccess(SuccessStatus._OK, response);
+    }
+
+    @GetMapping("/callback/kakao")
+    @Operation(summary = "카카오 로그인 redirect url", description = "회원가입 시 필요한 정보를 응답")
+    public BaseResponse<KakaoLoginResponse> kakaoCallback(HttpServletRequest request) {
+
+        if (request.getParameter("code") == null) {
+            throw new GeneralException(ErrorStatus.SOCIAL_MEMBER_NOT_FOUND);
+        }
+
+        KakaoLoginResponse response = KakaoLoginResponse.of(request.getParameter("code"));
+
+        return BaseResponse.onSuccess(SuccessStatus._OK, response);
+    }
+
+    @DeleteMapping("/withdraw")
     @Operation(summary = "회원 탈퇴 API ", description = "현재 로그인된 사용자 탈퇴")
     public BaseResponse<Void> withdrawMember() {
         memberService.withdraw();
