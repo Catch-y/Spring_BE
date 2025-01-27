@@ -282,7 +282,7 @@ public class CourseService {
         Course course = CourseConverter.toCourse(request, courseImageUrl, member);
         course.setCourseType(CourseType.DIY);
 
-        // PlaceCourse 생성
+        // PlaceCourse 및 PlaceVisit 생성
         List<Long> placeIds = request.getPlaceIds();
 
         IntStream.range(0, placeIds.size()).forEach(index -> {
@@ -290,7 +290,7 @@ public class CourseService {
             Place place = placeRepository.findById(placeId)
                     .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
-            // List의 Index를 기반으로 코스 순서 결정
+            // PlaceCourse 생성
             PlaceCourse newPlaceCourse = PlaceCourse.builder()
                     .course(course)
                     .place(place)
@@ -298,6 +298,16 @@ public class CourseService {
                     .build();
 
             placeCourseRepository.save(newPlaceCourse);
+
+            // PlaceVisit 생성
+            PlaceVisit newPlaceVisit = PlaceVisit.builder()
+                    .isVisited(false)
+                    .isLiked(false)
+                    .place(place)
+                    .member(member)
+                    .build();
+
+            placeVisitRepository.save(newPlaceVisit);
         });
 
         // MemberCourse 생성
