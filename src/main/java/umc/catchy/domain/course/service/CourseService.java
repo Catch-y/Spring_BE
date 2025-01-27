@@ -269,7 +269,7 @@ public class CourseService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         // 이미지 불러오기
-        String courseImageUrl = "";
+        String courseImageUrl = null;
 
         if (request.getCourseImage() != null) {
             MultipartFile courseImage = request.getCourseImage();
@@ -280,15 +280,26 @@ public class CourseService {
 
         // 코스 생성
         Course course = CourseConverter.toCourse(request, courseImageUrl, member);
-        course.setCourseType(CourseType.DIY);
 
         // PlaceCourse 생성
         List<Long> placeIds = request.getPlaceIds();
+
+        // 평점 계산
+        Double averageRating = placeIds.stream()
+                .map(placeId -> placeRepository.findById(placeId)
+                        .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND))
+                        .getRating())
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
+
+        course.setRating(Math.round(averageRating * 10) / 10.0);
 
         IntStream.range(0, placeIds.size()).forEach(index -> {
             Long placeId = placeIds.get(index);
             Place place = placeRepository.findById(placeId)
                     .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+
 
             // List의 Index를 기반으로 코스 순서 결정
             PlaceCourse newPlaceCourse = PlaceCourse.builder()
