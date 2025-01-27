@@ -15,9 +15,6 @@ import java.util.Optional;
 public interface PlaceVisitRepository extends JpaRepository<PlaceVisit, Long> {
     Optional<PlaceVisit> findByPlaceAndMember(Place place, Member member);
     Optional<PlaceVisit> findByPlaceIdAndMemberId(Long placeId, Long memberId);
-    @Query("SELECT pv FROM PlaceVisit pv WHERE pv.member.id = :memberId AND pv.place.id IN :placeIds")
-    List<PlaceVisit> findPlaceVisitsByMemberAndPlaces(
-            @Param("memberId") Long memberId,
-            @Param("placeIds") List<Long> placeIds
-    );
+    @Query("SELECT pv FROM PlaceVisit pv JOIN FETCH pv.place p WHERE pv.member.id = :memberId AND p.id IN :placeIds")
+    List<PlaceVisit> findPlaceVisitsByMemberAndPlaces(@Param("memberId") Long memberId, @Param("placeIds") List<Long> placeIds);
 }

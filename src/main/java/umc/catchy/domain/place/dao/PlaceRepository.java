@@ -15,6 +15,4 @@ public interface PlaceRepository extends JpaRepository<Place, Long>, PlaceCustom
     @Query("SELECT p FROM Place p WHERE p.category.bigCategory = :bigCategory AND p.roadAddress LIKE %:groupLocation%")
     List<Place> findByBigCategoryAndLocation(@Param("bigCategory") BigCategory bigCategory, @Param("groupLocation") String groupLocation);
     Optional<Place> findByPoiId(Long poiId);
-    @Query("SELECT p FROM Place p WHERE p.category.id IN :preferredCategoryIds")
-    List<Place> findByCategoryIds(@Param("preferredCategoryIds") List<Long> preferredCategoryIds);
 }
