@@ -1,7 +1,10 @@
 package umc.catchy.domain.mapping.placeVisit.domain;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.member.domain.Member;
@@ -12,6 +15,9 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
+@Builder
+@RequiredArgsConstructor
+@AllArgsConstructor
 public class PlaceVisit extends BaseTimeEntity {
 
     @Id
@@ -22,6 +28,7 @@ public class PlaceVisit extends BaseTimeEntity {
     @Setter
     private boolean isVisited;
 
+    @Setter
     private LocalDateTime visitedDate;
 
     private boolean isLiked = false;

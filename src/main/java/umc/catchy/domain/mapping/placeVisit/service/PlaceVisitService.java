@@ -1,5 +1,6 @@
 package umc.catchy.domain.mapping.placeVisit.service;
 
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,10 @@ public class PlaceVisitService {
             throw new GeneralException(ErrorStatus.PLACE_VISIT_ALREADY_CHECK);
         }
 
+        // 방문 체크
         placeVisit.setVisited(true);
+
+        // 방문 날짜 지정
+        placeVisit.setVisitedDate(LocalDateTime.now());
     }
 }
