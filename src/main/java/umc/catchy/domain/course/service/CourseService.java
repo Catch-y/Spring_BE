@@ -23,6 +23,7 @@ import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
+import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
 import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
@@ -690,5 +691,9 @@ public class CourseService {
 
         // 생성된 이미지를 S3에 업로드
         return uploadImageToS3(dallEImageUrl);
+    }
+
+    public List<PopularCourseInfoResponse> getPopularCourses(){
+        return CourseConverter.toPopularCourseInfoResponseList(courseRepository.findPopularCourses());
     }
 }
