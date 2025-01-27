@@ -11,7 +11,7 @@ import umc.catchy.domain.place.domain.Place;
 import java.util.List;
 
 @Repository
-public interface PlaceRepository extends JpaRepository<Place, Long> {
+public interface PlaceRepository extends JpaRepository<Place, Long>, PlaceCustomRepository {
     @Query("SELECT p FROM Place p WHERE p.category.bigCategory = :bigCategory AND p.roadAddress LIKE %:groupLocation%")
     List<Place> findByBigCategoryAndLocation(@Param("bigCategory") BigCategory bigCategory, @Param("groupLocation") String groupLocation);
     Optional<Place> findByPoiId(Long poiId);

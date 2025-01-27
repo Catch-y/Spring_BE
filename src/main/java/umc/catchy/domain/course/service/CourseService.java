@@ -3,6 +3,8 @@ package umc.catchy.domain.course.service;
 import java.io.IOException;
 import java.time.LocalTime;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
@@ -97,7 +99,6 @@ public class CourseService {
     private final MemberCategoryRepository memberCategoryRepository;
     private final MemberStyleRepository memberStyleRepository;
     private final CategoryRepository categoryRepository;
-
 
     private Course getCourse(Long courseId) {
         return courseRepository.findById(courseId)
@@ -327,49 +328,64 @@ public class CourseService {
                 .toList();
     }
 
-    public List<Place> getRecommendedPlaces(List<String> regionList, List<Long> preferredCategoryIds, int maxPlaces) {
+    public List<Place> getRecommendedPlaces(List<String> regionList, List<Long> preferredCategoryIds, Long memberId, int maxPlaces) {
         System.out.println("Region List: " + regionList);
 
-        // 필터링된 장소 리스트 가져오기
-        List<Place> places = getFilteredPlaces(regionList, preferredCategoryIds);
+        // 1. 필터링된 장소 리스트 가져오기
+        List<Place> allPlaces = getFilteredPlaces(regionList, preferredCategoryIds);
 
-        // 결과를 랜덤으로 섞음
-        Collections.shuffle(places);
+        // 2. 사용자 좋아요 및 방문 데이터 조회
+        List<Long> placeIds = allPlaces.stream().map(Place::getId).collect(Collectors.toList());
+        List<PlaceVisit> placeVisits = placeVisitRepository.findPlaceVisitsByMemberAndPlaces(memberId, placeIds);
 
-        // 최대 maxPlaces만큼 선택
-        places = places.stream().limit(maxPlaces).collect(Collectors.toList());
+        // PlaceVisit 데이터를 Map으로 변환 (placeId -> PlaceVisit)
+        Map<Long, PlaceVisit> placeVisitMap = placeVisits.stream()
+                .collect(Collectors.toMap(pv -> pv.getPlace().getId(), pv -> pv));
 
-        System.out.println("Filtered Places:");
-        for (Place place : places) {
-            System.out.println("- Place ID: " + place.getId() + ", Name: " + place.getPlaceName());
+        // 3. 가중치 계산 및 정렬
+        List<Place> weightedPlaces = allPlaces.stream()
+                .sorted(Comparator.comparingDouble(place -> calculateWeight((Place) place, placeVisitMap)).reversed()) // 가중치 기반 정렬
+                .collect(Collectors.toList());
+
+        // 4. 상위 n개에서 랜덤으로 섞기
+        int subsetSize = Math.min(2 * maxPlaces, weightedPlaces.size()); // 상위 n개(2배수) 선택
+        List<Place> topPlaces = weightedPlaces.subList(0, subsetSize);
+        Collections.shuffle(topPlaces);
+
+        // 5. 최대 maxPlaces만 반환
+        return topPlaces.stream().limit(maxPlaces).collect(Collectors.toList());
+    }
+
+    private double calculateWeight(Place place, Map<Long, PlaceVisit> placeVisitMap) {
+        double baseWeight = 1.0; // 기본 가중치
+
+        PlaceVisit visit = placeVisitMap.get(place.getId());
+        if (visit != null) {
+            if (visit.isLiked()) baseWeight += 0.5; // 좋아요 가중치
+            if (visit.isVisited()) baseWeight += 0.3; // 방문 여부 가중치
         }
 
-        return places;
+        return baseWeight;
     }
 
     public List<Place> getFilteredPlaces(List<String> regionList, List<Long> preferredCategoryIds) {
-        // 데이터베이스에서 카테고리 기준으로 모든 장소 조회
-        List<Place> allPlaces = placeRepository.findByCategoryIds(preferredCategoryIds);
-
-        // 메모리 내에서 지역별 필터링 수행
-        return allPlaces.stream()
-                .filter(place -> {
-                    String placeUpperRegion = LocationUtils.extractUpperLocation(place.getRoadAddress());
-                    String placeLowerRegion = LocationUtils.extractLowerLocation(place.getRoadAddress());
-
-                    // 지역 리스트에 매칭 여부 확인
-                    return regionList.stream().anyMatch(region -> {
-                        String upperRegion = LocationUtils.extractUpperLocation(region);
-                        String lowerRegion = LocationUtils.extractLowerLocation(region);
-
-                        boolean upperMatch = upperRegion == null || placeUpperRegion.equals(upperRegion);
-                        boolean lowerMatch = lowerRegion == null || placeLowerRegion.equals(lowerRegion);
-
-                        return upperMatch && lowerMatch;
-                    });
-                })
+        // 상위/하위 지역 리스트 추출
+        List<String> upperRegions = regionList.stream()
+                .map(LocationUtils::extractUpperLocation)
+                .filter(Objects::nonNull)
+                .distinct()
                 .collect(Collectors.toList());
+
+        List<String> lowerRegions = regionList.stream()
+                .map(LocationUtils::extractLowerLocation)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // QueryDSL로 필터링
+        return placeRepository.findPlacesByDynamicFilters(preferredCategoryIds, upperRegions, lowerRegions);
     }
+
 
     public GptCourseInfoResponse generateCourseAutomatically() {
         Long memberId = SecurityUtil.getCurrentMemberId();
@@ -408,10 +424,10 @@ public class CourseService {
 
         // 선호 카테고리 ID 가져오기
         List<Long> preferredCategoryIds = categoryRepository.findIdsByNames(preferredCategories);
-        System.out.println("Preferred Category IDs: " + preferredCategoryIds); // 디버깅: 카테고리 ID 출력
+        System.out.println("Preferred Category IDs: " + preferredCategoryIds);
 
         // 필터링된 장소 리스트 가져오기 (최대 100개)
-        List<Place> places = getRecommendedPlaces(regionList, preferredCategoryIds, 100);
+        List<Place> places = getRecommendedPlaces(regionList, preferredCategoryIds, memberId, 100);
 
         System.out.println("Filtered Places: ");
         for (Place place : places) {
@@ -420,7 +436,7 @@ public class CourseService {
 
         // GPT 프롬프트 생성 및 호출
         String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles, activeTimes);
-        System.out.println("GPT Prompt: \n" + gptPrompt); // 디버깅: 생성된 프롬프트 출력
+        System.out.println("GPT Prompt: \n" + gptPrompt);
 
         String gptResponse = callOpenAiApi(gptPrompt);
 
