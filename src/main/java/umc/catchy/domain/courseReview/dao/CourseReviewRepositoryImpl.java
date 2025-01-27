@@ -31,7 +31,7 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                 .select(Projections.fields(PostCourseReviewResponse.newCourseReviewResponseDTO.class,
                         courseReview.id.as("reviewId"),
                         courseReview.comment.as("comment"),
-                        courseReview.createdDate.as("visitedDate"),
+                        courseReview.visitedDate.as("visitedDate"),
                         courseReview.member.nickname.as("creatorNickname")))
                 .distinct()
                 .from(courseReview)
@@ -41,7 +41,7 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                         courseReview.course.id.eq(courseId),
                         lastReviewId(lastReviewId)
                 )
-                .orderBy(courseReview.createdDate.desc())
+                .orderBy(courseReview.visitedDate.desc())
                 .limit(pageSize + 1)
                 .fetch();
 
