@@ -20,6 +20,7 @@ import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReview.service.CourseReviewService;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
+import umc.catchy.domain.mapping.placeVisit.service.PlaceVisitService;
 import umc.catchy.domain.place.dto.request.SetCategoryRequest;
 import umc.catchy.domain.place.service.PlaceService;
 import umc.catchy.global.common.response.BaseResponse;
@@ -37,6 +38,7 @@ public class CourseController {
     private final CourseReviewService courseReviewService;
     private final MemberCourseService memberCourseService;
     private final PlaceService placeService;
+    private final PlaceVisitService placeVisitService;
 
     @Operation(summary = "코스 상세정보 조회 API", description = "코스 상세 화면에서 코스에 대한 상세정보를 나타내기 위한 정보 조회 기능입니다.")
     @GetMapping("/detail/{courseId}")
@@ -127,6 +129,14 @@ public class CourseController {
             @RequestBody @Valid SetCategoryRequest request
     ) {
         placeService.setCategories(placeId, request);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
+    }
+
+    @Operation(summary = "장소 방문체크 API", description = "프론트에서 체크 가능여부 판단 후 방문체크를 합니다.")
+    @PatchMapping("/visited/{placeId}")
+    public ResponseEntity<BaseResponse<Void>> visitCheck(@PathVariable("placeId") Long placeId) {
+        placeVisitService.check(placeId);
+
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 }

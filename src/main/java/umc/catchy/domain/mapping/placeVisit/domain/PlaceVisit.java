@@ -2,6 +2,7 @@ package umc.catchy.domain.mapping.placeVisit.domain;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.domain.Place;
@@ -18,6 +19,7 @@ public class PlaceVisit extends BaseTimeEntity {
     @Column(name = "placeVisit_id")
     private Long id;
 
+    @Setter
     private boolean isVisited;
 
     private LocalDateTime visitedDate;
