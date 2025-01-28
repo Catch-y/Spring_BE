@@ -27,6 +27,7 @@ import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
 
 import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
 
 @Tag(name = "Course", description = "코스 관련 API")
 @RestController
@@ -116,9 +117,9 @@ public class CourseController {
 
     @Operation(summary = "코스 생성(AI) API", description = "AI가 생성하는 코스")
     @PostMapping("/generate-ai")
-    public ResponseEntity<BaseResponse<GptCourseInfoResponse>> generateCourseWithAI() {
-        GptCourseInfoResponse response = courseService.generateCourseAutomatically();
-        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    public CompletableFuture<ResponseEntity<BaseResponse<GptCourseInfoResponse>>> generateCourseWithAI() {
+        return courseService.generateCourseAutomatically()
+                .thenApply(response -> ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response)));
     }
 
     @Operation(summary = "장소 카테고리 선택 API", description = "새로운 장소에 대한 1개 이상의 소카테고리를 선택합니다.")
