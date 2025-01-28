@@ -12,7 +12,4 @@ import java.util.List;
 @Repository
 public interface CourseRepository extends JpaRepository<Course, Long> {
     List<Course> findTop5ByMemberIdAndCourseTypeOrderByCreatedDateDesc(Long memberId, CourseType courseType);
-
-    @Query(value = "SELECT * FROM course c WHERE c.course_type = :courseType ORDER BY c.created_date DESC LIMIT :limit", nativeQuery = true)
-    List<Course> findTopNByCourseType(@Param("courseType") String courseType, @Param("limit") int limit);
 }
