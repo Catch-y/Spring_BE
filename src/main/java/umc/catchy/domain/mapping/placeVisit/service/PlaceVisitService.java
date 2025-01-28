@@ -43,7 +43,7 @@ public class PlaceVisitService {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
         Place place = placeRepository.findById(placeId).orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
-        List<PlaceVisit> placeVisitList = placeVisitRepository.findAllByMemberAndPlace(currentMember,place);
+        List<PlaceVisit> placeVisitList = placeVisitRepository.findAllByMemberAndPlaceAndIsVisitedTrue(currentMember,place);
         List<LocalDate> visitedDate = placeVisitList.stream().map(PlaceVisit::getVisitedDate).toList();
         return new PlaceVisitedDateResponse(visitedDate);
     }
