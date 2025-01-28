@@ -9,6 +9,7 @@ import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.member.domain.Member;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -25,7 +26,7 @@ public class MemberCourse extends BaseTimeEntity {
 
     private boolean isVisited;
 
-    private LocalDateTime visitedDate;
+    private LocalDate visitedDate;
 
     private boolean bookmark = false;
 

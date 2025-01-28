@@ -6,6 +6,7 @@ import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.member.domain.Member;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -14,7 +15,7 @@ public class CourseReviewConverter {
     public static PostCourseReviewResponse.newCourseReviewResponseDTO toNewCourseReviewResponseDTO(
             CourseReview courseReview,
             List<PostCourseReviewResponse.courseReviewImageResponseDTO> images,
-            LocalDateTime visitedDate
+            LocalDate visitedDate
     ){
         return PostCourseReviewResponse.newCourseReviewResponseDTO.builder()
                 .reviewId(courseReview.getId())

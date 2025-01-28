@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,7 +19,7 @@ public class PostCourseReviewResponse {
         Long reviewId;
         String comment;
         List<courseReviewImageResponseDTO> reviewImages;
-        LocalDateTime visitedDate;
+        LocalDate visitedDate;
         String creatorNickname;
 
         public void setReviewImages(List<courseReviewImageResponseDTO> reviewImages) {

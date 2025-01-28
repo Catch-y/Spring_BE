@@ -26,6 +26,7 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +61,7 @@ public class CourseReviewService {
         }
 
         //코스 참여일자 가져오기
-        LocalDateTime visitedDate = memberCourseRepository.findByCourseAndMember(course, member)
+        LocalDate visitedDate = memberCourseRepository.findByCourseAndMember(course, member)
                 .map(MemberCourse::getVisitedDate)
                 .orElse(null);
 
