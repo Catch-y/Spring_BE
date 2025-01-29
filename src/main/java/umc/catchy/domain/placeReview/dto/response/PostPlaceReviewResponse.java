@@ -31,4 +31,26 @@ public class PostPlaceReviewResponse {
         Long reviewImageId;
         String imageUrl;
     }
+
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class placeReviewRatingResponseDTO{
+        Integer score;
+        Long count;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class placeReviewAllResponseDTO{
+        Float totalRating;
+        List<placeReviewRatingResponseDTO> reviewCount;
+        Long totalCount;
+        List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> content;
+        Boolean last;
+    }
 }

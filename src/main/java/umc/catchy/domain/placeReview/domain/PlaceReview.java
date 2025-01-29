@@ -7,6 +7,7 @@ import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.placeReviewImage.domain.PlaceReviewImage;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +25,8 @@ public class PlaceReview extends BaseTimeEntity {
     private Integer rating;
 
     private String comment;
+
+    private LocalDate visitDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
