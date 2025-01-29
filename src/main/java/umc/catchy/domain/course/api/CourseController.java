@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +19,7 @@ import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReview.service.CourseReviewService;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
+import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedResponse;
 import umc.catchy.domain.mapping.placeVisit.service.PlaceVisitService;
 import umc.catchy.domain.place.dto.request.SetCategoryRequest;
 import umc.catchy.domain.place.service.PlaceService;
@@ -133,10 +133,10 @@ public class CourseController {
     }
 
     @Operation(summary = "장소 방문체크 API", description = "프론트에서 체크 가능여부 판단 후 방문체크를 합니다.")
-    @PatchMapping("/visited/{placeId}")
-    public ResponseEntity<BaseResponse<Void>> visitCheck(@PathVariable("placeId") Long placeId) {
-        placeVisitService.check(placeId);
+    @PostMapping("/visited/{placeId}")
+    public ResponseEntity<BaseResponse<PlaceVisitedResponse>> visitCheck(@PathVariable("placeId") Long placeId) {
+        PlaceVisitedResponse response = placeVisitService.check(placeId);
 
-        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

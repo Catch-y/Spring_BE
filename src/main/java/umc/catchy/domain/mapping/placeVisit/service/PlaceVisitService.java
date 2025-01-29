@@ -1,13 +1,14 @@
 package umc.catchy.domain.mapping.placeVisit.service;
 
-import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import umc.catchy.domain.mapping.placeVisit.converter.PlaceVisitConverter;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceLikedResponse;
+import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedResponse;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
@@ -36,7 +37,7 @@ public class PlaceVisitService {
                 .build();
     }
 
-    public void check(Long placeId) {
+    public PlaceVisitedResponse check(Long placeId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -44,19 +45,11 @@ public class PlaceVisitService {
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
-        // 올바르지 않은 사용자의 방문 체크라면 예외 처리
-        PlaceVisit placeVisit = placeVisitRepository.findByPlaceAndMember(place, member)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_VISIT_INVALID_MEMBER));
+        // placeVisit 생성
+        PlaceVisit placeVisit = PlaceVisitConverter.toPlaceVisit(place, member);
 
-        // 이미 방문 체크되어있다면 예외 처리
-        if (placeVisit.isVisited()) {
-            throw new GeneralException(ErrorStatus.PLACE_VISIT_ALREADY_CHECK);
-        }
+        placeVisitRepository.save(placeVisit);
 
-        // 방문 체크
-        placeVisit.setVisited(true);
-
-        // 방문 날짜 지정
-        placeVisit.setVisitedDate(LocalDateTime.now());
+        return PlaceVisitConverter.toPlaceVisitResponse(placeVisit);
     }
 }
