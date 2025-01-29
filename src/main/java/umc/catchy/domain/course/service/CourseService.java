@@ -75,18 +75,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CourseService {
 
-    @Value("${openai.model}")
-    private String openAiModel;
-
-    @Value("${openai.api.img-url}")
-    private String dallEApiUrl;
-
-    @Value("${openai.api.key}")
-    private String openAiApiKey;
-
-    @Value("${openai.api.url}")
-    private String openAiApiUrl;
-
     @Value("${cache.recommended-courses.key}")
     private String CACHE_KEY;
 

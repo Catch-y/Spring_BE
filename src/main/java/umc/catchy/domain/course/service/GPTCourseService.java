@@ -6,8 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
 import java.io.IOException;
@@ -88,7 +86,6 @@ public class GPTCourseService {
                 .toFuture();
     }
 
-
     // DALL-E 응답에서 URL 추출
     private String extractImageUrl(String response) {
         try {
@@ -105,5 +102,4 @@ public class GPTCourseService {
             throw new RuntimeException("Failed to parse DALL-E response", e);
         }
     }
-
 }
