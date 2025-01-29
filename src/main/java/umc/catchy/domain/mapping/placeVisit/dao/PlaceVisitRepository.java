@@ -1,5 +1,6 @@
 package umc.catchy.domain.mapping.placeVisit.dao;
 
+import java.time.LocalDate;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
@@ -12,4 +13,5 @@ import java.util.Optional;
 public interface PlaceVisitRepository extends JpaRepository<PlaceVisit, Long> {
     Optional<PlaceVisit> findByPlaceAndMember(Place place, Member member);
     Optional<PlaceVisit> findByPlaceIdAndMemberId(Long placeId, Long memberId);
+    Optional<PlaceVisit> findByPlaceAndMemberAndVisitedDate(Place place, Member member, LocalDate visitedDate);
 }

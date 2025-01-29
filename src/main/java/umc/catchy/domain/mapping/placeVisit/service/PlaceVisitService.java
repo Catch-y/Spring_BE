@@ -1,5 +1,7 @@
 package umc.catchy.domain.mapping.placeVisit.service;
 
+import java.time.LocalDate;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,12 @@ public class PlaceVisitService {
 
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+
+        // 이미 오늘 방문 체크를 하였다면 예외 처리
+        Optional<PlaceVisit> optionalPlaceVisit = placeVisitRepository.findByPlaceAndMemberAndVisitedDate(place, member, LocalDate.now());
+        if (optionalPlaceVisit.isPresent()) {
+            throw new GeneralException(ErrorStatus.PLACE_VISIT_ALREADY_CHECK);
+        }
 
         // placeVisit 생성
         PlaceVisit placeVisit = PlaceVisitConverter.toPlaceVisit(place, member);
