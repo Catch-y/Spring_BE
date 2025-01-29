@@ -2,6 +2,7 @@ package umc.catchy.domain.placeReview.dao;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -9,10 +10,11 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.placeReview.domain.PlaceReview;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
-import umc.catchy.domain.placeReviewImage.domain.QPlaceReviewImage;
 
 import java.util.List;
 
+import static com.querydsl.core.group.GroupBy.*;
+import static umc.catchy.domain.member.domain.QMember.*;
 import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
 import static umc.catchy.domain.placeReviewImage.domain.QPlaceReviewImage.*;
 
@@ -21,13 +23,53 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<PlaceReview> findAllReviewsByPlaceId(Long placeId) {
+    public List<PlaceReview> findAllReviewsByPlaceId(Long placeId, int pageSize, Long lastPlaceReviewId) {
         return queryFactory.selectFrom(placeReview)
                 .join(placeReview.images, placeReviewImage)
                 .fetchJoin()
                 .where(placeIdEq(placeId))
                 .orderBy(placeReview.visitDate.desc())
                 .fetch();
+    }
+
+    @Override
+    public List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> findRatingList(Long placeId) {
+        JPAQuery<PostPlaceReviewResponse.placeReviewRatingResponseDTO> query = queryFactory.select(Projections.constructor(PostPlaceReviewResponse.placeReviewRatingResponseDTO.class,
+                        placeReview.rating,
+                        placeReview.rating.count())
+                )
+                .from(placeReview)
+                .where(placeIdEq(placeId))
+                .groupBy(placeReview.rating)
+                .orderBy(placeReview.rating.asc());
+        return query.fetch();
+    }
+
+    @Override
+    public Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> findPlaceReviewSliceByPlaceId(Long placeId, int pageSize, Long lastPlaceReviewId) {
+        List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> result = queryFactory.selectFrom(placeReview)
+                .leftJoin(placeReview.member, member).on(placeReview.member.id.eq(member.id))
+                .leftJoin(placeReviewImage).on(placeReviewImage.placeReview.id.eq(placeReview.id))
+                .where(
+                        placeIdEq(placeId),
+                        lastPlaceReviewId(lastPlaceReviewId)
+                )
+                .orderBy(placeReview.visitDate.desc())
+                .limit(pageSize + 1)
+                .transform(groupBy(placeReview.id).list(
+                        Projections.fields(PostPlaceReviewResponse.newPlaceReviewResponseDTO.class,
+                                placeReview.id.as("reviewId"),
+                                placeReview.comment.as("comment"),
+                                placeReview.rating.as("rating"),
+                                list(
+                                        Projections.fields(PostPlaceReviewResponse.placeReviewImageResponseDTO.class,
+                                                placeReviewImage.id.as("imageId"),
+                                                placeReviewImage.imageUrl.as("imageUrl"))
+                                ).as("reviewImages"),
+                                placeReview.visitDate.as("visitedDate"),
+                                placeReview.member.nickname.as("creatorNickname"))
+                        ));
+        return checkLastPage(pageSize, result);
     }
 
     private BooleanExpression placeIdEq(Long placeId) {

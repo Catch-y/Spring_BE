@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 public class PostPlaceReviewResponse {
@@ -16,10 +16,10 @@ public class PostPlaceReviewResponse {
     @NoArgsConstructor
     public static class newPlaceReviewResponseDTO{
         Long reviewId;
-        Integer rating;
         String comment;
+        Integer rating;
         List<placeReviewImageResponseDTO> reviewImages;
-        LocalDateTime visitedDate;
+        LocalDate visitedDate;
         String creatorNickname;
     }
 
@@ -47,8 +47,8 @@ public class PostPlaceReviewResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class placeReviewAllResponseDTO{
-        Float totalRating;
-        List<placeReviewRatingResponseDTO> reviewCount;
+        Float averageRating;
+        List<placeReviewRatingResponseDTO> ratingList;
         Long totalCount;
         List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> content;
         Boolean last;

@@ -20,7 +20,7 @@ public class PlaceVisit extends BaseTimeEntity {
 
     private boolean isVisited;
 
-    private LocalDateTime visitedDate;
+    private LocalDate visitedDate;
 
     private boolean isLiked = false;
 

@@ -1,6 +1,7 @@
 package umc.catchy.domain.placeReview.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +27,7 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -88,7 +89,7 @@ public class PlaceReviewService {
         }
 
         //장소 방문일자 가져오기
-        LocalDateTime visitedDate = placeVisitRepository.findByPlaceAndMember(place, member)
+        LocalDate visitedDate = placeVisitRepository.findByPlaceAndMember(place, member)
                 .map(PlaceVisit::getVisitedDate)
                 .orElse(null);
 
@@ -110,5 +111,24 @@ public class PlaceReviewService {
             reviewImages.add(PlaceReviewImageConverter.toPlaceReviewImageResponseDTO(placeReviewImage));
         }
         return PlaceReviewConverter.toNewPlaceReviewResponseDTO(newPlaceReview, reviewImages, visitedDate);
+    }
+
+    public PostPlaceReviewResponse.placeReviewAllResponseDTO getAllPlaceReviews(Long placeId, int pageSize, Long lastPlaceReviewId) {
+        List<PlaceReview> placeReviewList = placeReviewRepository.findAllReviewsByPlaceId(placeId, pageSize, lastPlaceReviewId);
+
+        Float averageRating = placeReviewRepository.findAverageRatingByPlaceId(placeId);
+        List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> ratingList = placeReviewRepository.findRatingList(placeId);
+        Long totalCount = placeReviewRepository.countByPlaceId(placeId);
+        Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> contentList = placeReviewRepository.findPlaceReviewSliceByPlaceId(placeId, pageSize, lastPlaceReviewId);
+        List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> content = contentList.getContent();
+        Boolean last = contentList.isLast();
+
+        return PostPlaceReviewResponse.placeReviewAllResponseDTO.builder()
+                .averageRating(averageRating)
+                .ratingList(ratingList)
+                .totalCount(totalCount)
+                .content(content)
+                .last(last)
+                .build();
     }
 }
