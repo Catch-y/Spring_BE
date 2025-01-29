@@ -11,6 +11,12 @@ spring:
       ddl-auto: update # 배포 환경에서는 update
     show-sql: false
 
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      timeout: 6000
+
   servlet:
     multipart:
       max-file-size: 50MB
@@ -63,6 +69,11 @@ openai:
 
 osrm:
   base-url: ${OSRM_BASE_URL}
+
+cache:
+  recommended-courses:
+    key: ${REDIS_CACHE_KEY}
+    ttl: 604800  # 7일
 
 server:
   port: 8081
