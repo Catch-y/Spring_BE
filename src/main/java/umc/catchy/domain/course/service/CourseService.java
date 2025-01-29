@@ -282,15 +282,14 @@ public class CourseService {
         Course course = CourseConverter.toCourse(request, courseImageUrl, member);
         course.setCourseType(CourseType.DIY);
 
-        // PlaceCourse 및 PlaceVisit 생성
         List<Long> placeIds = request.getPlaceIds();
 
+        // PlaceCourse 생성
         IntStream.range(0, placeIds.size()).forEach(index -> {
             Long placeId = placeIds.get(index);
             Place place = placeRepository.findById(placeId)
                     .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
-            // PlaceCourse 생성
             PlaceCourse newPlaceCourse = PlaceCourse.builder()
                     .course(course)
                     .place(place)
@@ -298,16 +297,6 @@ public class CourseService {
                     .build();
 
             placeCourseRepository.save(newPlaceCourse);
-
-            // PlaceVisit 생성
-            PlaceVisit newPlaceVisit = PlaceVisit.builder()
-                    .isVisited(false)
-                    .isLiked(false)
-                    .place(place)
-                    .member(member)
-                    .build();
-
-            placeVisitRepository.save(newPlaceVisit);
         });
 
         // MemberCourse 생성
@@ -320,17 +309,6 @@ public class CourseService {
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
         return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
-    }
-
-    private List<BigCategory> getCategories(Course course) {
-        List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
-
-        return placeCourses.stream()
-                .map(PlaceCourse::getPlace)
-                .map(Place::getCategory)
-                .map(Category::getBigCategory)
-                .distinct()
-                .toList();
     }
 
     public GptCourseInfoResponse generateCourseAutomatically() {
