@@ -1,5 +1,6 @@
 package umc.catchy.domain.placeReview.converter;
 
+import java.time.LocalDate;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.placeReview.domain.PlaceReview;
@@ -11,7 +12,7 @@ import java.util.List;
 
 public class PlaceReviewConverter {
 
-    public static PostPlaceReviewResponse.newPlaceReviewResponseDTO toNewPlaceReviewResponseDTO(PlaceReview placeReview, List<PostPlaceReviewResponse.placeReviewImageResponseDTO> images, LocalDateTime visitedDate) {
+    public static PostPlaceReviewResponse.newPlaceReviewResponseDTO toNewPlaceReviewResponseDTO(PlaceReview placeReview, List<PostPlaceReviewResponse.placeReviewImageResponseDTO> images, LocalDate visitedDate) {
         return PostPlaceReviewResponse.newPlaceReviewResponseDTO.builder()
                 .reviewId(placeReview.getId())
                 .comment(placeReview.getComment())

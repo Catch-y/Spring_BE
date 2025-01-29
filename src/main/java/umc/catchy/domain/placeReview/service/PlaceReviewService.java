@@ -1,5 +1,6 @@
 package umc.catchy.domain.placeReview.service;
 
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -88,7 +89,7 @@ public class PlaceReviewService {
         }
 
         //장소 방문일자 가져오기
-        LocalDateTime visitedDate = placeVisitRepository.findByPlaceAndMember(place, member)
+        LocalDate visitedDate = placeVisitRepository.findByPlaceAndMember(place, member)
                 .map(PlaceVisit::getVisitedDate)
                 .orElse(null);
 

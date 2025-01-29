@@ -1,5 +1,6 @@
 package umc.catchy.domain.placeReview.dto.response;
 
+import java.time.LocalDate;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,7 +20,7 @@ public class PostPlaceReviewResponse {
         Integer rating;
         String comment;
         List<placeReviewImageResponseDTO> reviewImages;
-        LocalDateTime visitedDate;
+        LocalDate visitedDate;
         String creatorNickname;
     }
 
