@@ -358,6 +358,14 @@ public class CourseService {
     }
 
     public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically() {
+        return generateCourseInternal(false);
+    }
+
+    public CompletableFuture<GptCourseInfoResponse> generateCourseWithCount() {
+        return generateCourseInternal(true);
+    }
+
+    private CompletableFuture<GptCourseInfoResponse> generateCourseInternal(boolean shouldIncreaseCount) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -391,24 +399,27 @@ public class CourseService {
         String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles, activeTimes);
 
         // OpenAI GPT 호출
-        CompletableFuture<String> gptResponseFuture = CompletableFuture.supplyAsync(() -> {
-            return gptCourseService.callOpenAiApiAsync(gptPrompt).join();
-        });
+        CompletableFuture<String> gptResponseFuture = CompletableFuture.supplyAsync(() ->
+                gptCourseService.callOpenAiApiAsync(gptPrompt).join()
+        );
 
         // 이미지 생성 및 업로드
-        CompletableFuture<String> courseImageFuture = CompletableFuture.supplyAsync(() -> {
-            return gptCourseService.generateAndUploadCourseImageAsync("AI 추천 코스", "AI가 추천한 여행 코스입니다.").join();
-        });
+        CompletableFuture<String> courseImageFuture = CompletableFuture.supplyAsync(() ->
+                gptCourseService.generateAndUploadCourseImageAsync("AI 추천 코스", "AI가 추천한 여행 코스입니다.").join()
+        );
 
-        // 두 작업 완료 후 데이터 처리
         return gptResponseFuture.thenCombine(courseImageFuture, (gptResponse, courseImage) -> {
-            // GPT 응답 파싱
             GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
             parsedResponse.setCourseImage(courseImage);
 
-            // 저장 및 코스 ID 설정
             Long courseId = saveCourseAndPlaces(parsedResponse, member).join();
             parsedResponse.setCourseId(courseId);
+
+            // GPTCOUNT 증가 (shouldIncreaseCount가 true일 경우)
+            if (shouldIncreaseCount) {
+                member.increaseGptCount(); // Member 엔티티에서 증가 로직을 관리
+                memberRepository.save(member);
+            }
 
             return parsedResponse;
         }).exceptionally(e -> {
