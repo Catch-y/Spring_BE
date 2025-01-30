@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
-import umc.catchy.domain.placeReview.domain.PlaceReview;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
 
 import java.util.List;
@@ -21,16 +20,6 @@ import static umc.catchy.domain.placeReviewImage.domain.QPlaceReviewImage.*;
 @RequiredArgsConstructor
 public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
     private final JPAQueryFactory queryFactory;
-
-    @Override
-    public List<PlaceReview> findAllReviewsByPlaceId(Long placeId, int pageSize, Long lastPlaceReviewId) {
-        return queryFactory.selectFrom(placeReview)
-                .join(placeReview.images, placeReviewImage)
-                .fetchJoin()
-                .where(placeIdEq(placeId))
-                .orderBy(placeReview.visitDate.desc())
-                .fetch();
-    }
 
     @Override
     public List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> findRatingList(Long placeId) {
@@ -63,13 +52,22 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                                 placeReview.rating.as("rating"),
                                 list(
                                         Projections.fields(PostPlaceReviewResponse.placeReviewImageResponseDTO.class,
-                                                placeReviewImage.id.as("imageId"),
+                                                placeReviewImage.id.as("reviewImageId"),
                                                 placeReviewImage.imageUrl.as("imageUrl"))
                                 ).as("reviewImages"),
                                 placeReview.visitDate.as("visitedDate"),
                                 placeReview.member.nickname.as("creatorNickname"))
                         ));
         return checkLastPage(pageSize, result);
+    }
+
+    @Override
+    public Float findAverageRatingByPlaceId(Long placeId) {
+        Double averageRating = queryFactory.select(placeReview.rating.avg())
+                .from(placeReview)
+                .where(placeIdEq(placeId))
+                .fetchOne();
+        return (Float) (float) Math.round(averageRating*10) / 10.0f;
     }
 
     private BooleanExpression placeIdEq(Long placeId) {

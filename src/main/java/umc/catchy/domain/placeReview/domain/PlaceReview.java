@@ -36,6 +36,4 @@ public class PlaceReview extends BaseTimeEntity {
     @JoinColumn(name = "place_id")
     private Place place;
 
-    @OneToMany(mappedBy = "placeReview", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PlaceReviewImage> images = new ArrayList<>();
 }

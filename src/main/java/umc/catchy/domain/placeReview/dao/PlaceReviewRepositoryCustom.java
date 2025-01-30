@@ -7,8 +7,7 @@ import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
 import java.util.List;
 
 public interface PlaceReviewRepositoryCustom {
-    List<PlaceReview> findAllReviewsByPlaceId(Long placeId, int pageSize, Long lastPlaceReviewId);
     List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> findRatingList(Long placeId);
     Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> findPlaceReviewSliceByPlaceId(Long placeId, int pageSize, Long lastPlaceReviewId);
-
+    Float findAverageRatingByPlaceId(Long placeId);
 }

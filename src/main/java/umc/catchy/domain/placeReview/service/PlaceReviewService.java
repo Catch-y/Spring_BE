@@ -114,8 +114,6 @@ public class PlaceReviewService {
     }
 
     public PostPlaceReviewResponse.placeReviewAllResponseDTO getAllPlaceReviews(Long placeId, int pageSize, Long lastPlaceReviewId) {
-        List<PlaceReview> placeReviewList = placeReviewRepository.findAllReviewsByPlaceId(placeId, pageSize, lastPlaceReviewId);
-
         Float averageRating = placeReviewRepository.findAverageRatingByPlaceId(placeId);
         List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> ratingList = placeReviewRepository.findRatingList(placeId);
         Long totalCount = placeReviewRepository.countByPlaceId(placeId);
