@@ -114,7 +114,8 @@ public class PlaceReviewService {
     }
 
     public PostPlaceReviewResponse.placeReviewAllResponseDTO getAllPlaceReviews(Long placeId, int pageSize, Long lastPlaceReviewId) {
-        Float averageRating = placeReviewRepository.findAverageRatingByPlaceId(placeId);
+        Double averageRatingTypeDouble = placeReviewRepository.findAverageRatingByPlaceId(placeId).orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
+        Float averageRating = Math.round(averageRatingTypeDouble * 10) / 10.0f;
         List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> ratingList = placeReviewRepository.findRatingList(placeId);
         Long totalCount = placeReviewRepository.countByPlaceId(placeId);
         Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> contentList = placeReviewRepository.findPlaceReviewSliceByPlaceId(placeId, pageSize, lastPlaceReviewId);

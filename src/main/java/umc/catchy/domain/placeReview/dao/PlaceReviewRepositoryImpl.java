@@ -2,6 +2,7 @@ package umc.catchy.domain.placeReview.dao;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.querydsl.core.group.GroupBy.*;
 import static umc.catchy.domain.member.domain.QMember.*;
@@ -62,12 +64,17 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
     }
 
     @Override
-    public Float findAverageRatingByPlaceId(Long placeId) {
-        Double averageRating = queryFactory.select(placeReview.rating.avg())
+    public Optional<Double> findAverageRatingByPlaceId(Long placeId) {
+        Optional<Double> averageRating = Optional.ofNullable(queryFactory.select(placeReview.rating.avg())
                 .from(placeReview)
-                .where(placeIdEq(placeId))
-                .fetchOne();
-        return (Float) (float) Math.round(averageRating*10) / 10.0f;
+                .where(placeIdEq(placeId),
+                        JPAExpressions
+                                .select(placeReview.count())
+                                .from(placeReview)
+                                .where(placeReview.place.id.eq(placeId))
+                                .goe(1L))
+                .fetchOne());
+        return averageRating.map(Double::valueOf);
     }
 
     private BooleanExpression placeIdEq(Long placeId) {
