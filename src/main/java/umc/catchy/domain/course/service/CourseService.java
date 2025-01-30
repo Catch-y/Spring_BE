@@ -1,12 +1,16 @@
 package umc.catchy.domain.course.service;
 
-import java.io.IOException;
 import java.time.LocalTime;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Slice;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -14,19 +18,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
+import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
@@ -60,31 +63,23 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
-import java.io.InputStream;
-import java.net.URL;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@EnableAsync
 @Transactional
 @RequiredArgsConstructor
 public class CourseService {
 
-    @Value("${openai.model}")
-    private String openAiModel;
+    @Value("${cache.recommended-courses.key}")
+    private String CACHE_KEY;
 
-    @Value("${openai.api.img-url}")
-    private String dallEApiUrl;
-
-    @Value("${openai.api.key}")
-    private String openAiApiKey;
-
-    @Value("${openai.api.url}")
-    private String openAiApiUrl;
+    @Value("${cache.recommended-courses.ttl}")
+    private long CACHE_TTL;
 
     private final CourseRepository courseRepository;
     private final CourseReviewRepository courseReviewRepository;
@@ -99,6 +94,11 @@ public class CourseService {
     private final MemberCategoryRepository memberCategoryRepository;
     private final MemberStyleRepository memberStyleRepository;
     private final CategoryRepository categoryRepository;
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
+    private final GPTCourseService gptCourseService;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private Course getCourse(Long courseId) {
         return courseRepository.findById(courseId)
@@ -357,10 +357,11 @@ public class CourseService {
         return finalPlaces;
     }
 
-    public GptCourseInfoResponse generateCourseAutomatically() {
+    public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically() {
         Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        // 관심 지역 및 선호 카테고리 조회
         List<MemberLocation> memberLocations = memberLocationRepository.findAllByMemberId(memberId);
         List<String> preferredCategories = getPreferredCategories(memberId);
         List<String> userStyles = getUserStyles(memberId);
@@ -370,14 +371,12 @@ public class CourseService {
             throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
         }
 
-        // 관심 지역 리스트 생성
         List<String> regionList = memberLocations.stream()
                 .map(memberLocation -> {
                     Location location = memberLocation.getLocation();
                     String upper = location.getUpperLocation();
                     String lower = location.getLowerLocation();
 
-                    // "전체 지역"은 null로 변환
                     upper = (upper != null && !upper.equals("전체")) ? upper : null;
                     lower = (lower != null && !lower.equals("전체")) ? lower : null;
 
@@ -385,30 +384,37 @@ public class CourseService {
                 })
                 .collect(Collectors.toList());
 
-        // 선호 카테고리 ID 가져오기
         List<Long> preferredCategoryIds = categoryRepository.findIdsByNames(preferredCategories);
-
-        // 필터링된 장소 리스트 가져오기 (최대 100개)
         List<Place> places = getRecommendedPlaces(regionList, preferredCategoryIds, memberId, 100);
 
-        // GPT 프롬프트 생성 및 호출
+        // GPT 프롬프트 생성
         String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles, activeTimes);
-        String gptResponse = callOpenAiApi(gptPrompt);
 
-        // 응답 파싱
-        GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
+        // OpenAI GPT 호출
+        CompletableFuture<String> gptResponseFuture = CompletableFuture.supplyAsync(() -> {
+            return gptCourseService.callOpenAiApiAsync(gptPrompt).join();
+        });
 
         // 이미지 생성 및 업로드
-        String courseImage = generateAndUploadCourseImage(
-                parsedResponse.getCourseName(),
-                parsedResponse.getCourseDescription()
-        );
-        parsedResponse.setCourseImage(courseImage);
+        CompletableFuture<String> courseImageFuture = CompletableFuture.supplyAsync(() -> {
+            return gptCourseService.generateAndUploadCourseImageAsync("AI 추천 코스", "AI가 추천한 여행 코스입니다.").join();
+        });
 
-        // 데이터베이스 저장
-        saveCourseAndPlaces(parsedResponse, memberId);
+        // 두 작업 완료 후 데이터 처리
+        return gptResponseFuture.thenCombine(courseImageFuture, (gptResponse, courseImage) -> {
+            // GPT 응답 파싱
+            GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
+            parsedResponse.setCourseImage(courseImage);
 
-        return parsedResponse;
+            // 저장 및 코스 ID 설정
+            Long courseId = saveCourseAndPlaces(parsedResponse, member).join();
+            parsedResponse.setCourseId(courseId);
+
+            return parsedResponse;
+        }).exceptionally(e -> {
+            e.printStackTrace();
+            throw new GeneralException(ErrorStatus.GPT_API_CALL_FAILED);
+        });
     }
 
     public List<String> getUserStyles(Long memberId) {
@@ -417,10 +423,9 @@ public class CourseService {
                 .collect(Collectors.toList());
     }
 
-    private void saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND, "사용자를 찾을 수 없습니다."));
-
+    @Async
+    @Transactional
+    public CompletableFuture<Long> saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Member member) {
         Pair<LocalTime, LocalTime> recommendTime = parseRecommendTime(parsedResponse.getRecommendTime());
 
         Course course = Course.builder()
@@ -433,7 +438,10 @@ public class CourseService {
                 .participantsNumber(0L)
                 .member(member)
                 .build();
-        courseRepository.save(course);
+
+        // 코스 저장
+        Course savedCourse = courseRepository.save(course);
+        courseRepository.flush();
 
         int order = 1;
         double totalRating = 0.0;
@@ -444,27 +452,33 @@ public class CourseService {
                     .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
             PlaceCourse placeCourse = PlaceCourse.builder()
-                    .course(course)
+                    .course(savedCourse)
                     .place(place)
                     .placeOrder(order++)
                     .build();
+
             placeCourseRepository.save(placeCourse);
 
-            // 평점 계산 (리뷰가 없는 경우 제외)
+            // 평점 계산
             if (place.getRating() != null && place.getRating() > 0) {
                 totalRating += place.getRating();
                 placeCount++;
             }
         }
 
-        // 코스 평점 계산 (소수 둘째 자리 반올림)
+        // 코스 평점 계산
         double courseRating = placeCount > 0 ? totalRating / placeCount : 0.0;
         courseRating = Math.round(courseRating * 10) / 10.0;
 
-        course.setRating(courseRating);
-        courseRepository.save(course);
+        // 평점 저장
+        savedCourse.setRating(courseRating);
+        courseRepository.saveAndFlush(savedCourse);
 
-        parsedResponse.setCourseRating(courseRating);
+        // 영속성 컨텍스트 비우기
+        entityManager.clear();
+
+        // 코스 ID 반환
+        return CompletableFuture.completedFuture(savedCourse.getId());
     }
 
     // GPT 응답에서 recommendTime 파싱
@@ -623,117 +637,87 @@ public class CourseService {
         }
     }
 
-    private String callOpenAiApi(String prompt) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(openAiApiKey);
+    public List<CourseRecommendationResponse> getHomeRecommendedCourses() {
+        // 1. 로그인한 사용자 ID 조회
+        Long memberId = SecurityUtil.getCurrentMemberId();
 
-        Map<String, Object> requestBody = Map.of(
-                "model", openAiModel,
-                "messages", List.of(
-                        Map.of("role", "system", "content", "You are a travel itinerary assistant."),
-                        Map.of("role", "user", "content", prompt)
-                ),
-                "max_tokens", 1000
-        );
+        // 사용자별 Redis 캐시 키 생성
+        String userSpecificCacheKey = CACHE_KEY + ":" + memberId;
 
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+        // 2. Redis에서 사용자별 캐시 데이터 조회
+        String cachedData = redisTemplate.opsForValue().get(userSpecificCacheKey);
+        if (cachedData != null) {
+            return deserializeCourseRecommendations(cachedData);
+        }
 
+        // 3. 캐시 데이터가 없으면 새 데이터를 생성
+        List<CourseRecommendationResponse> recommendedCourses = generateRecommendedCourses();
+
+        // 4. 생성된 데이터를 Redis에 캐싱
+        String serializedData = serializeCourseRecommendations(recommendedCourses);
+        redisTemplate.opsForValue().set(userSpecificCacheKey, serializedData, CACHE_TTL, TimeUnit.SECONDS);
+
+        return recommendedCourses;
+    }
+
+    public CompletableFuture<List<GptCourseInfoResponse>> generateMultipleAICourses(int count) {
+        List<CompletableFuture<GptCourseInfoResponse>> futures = new ArrayList<>();
+
+        for (int i = 0; i < count; i++) {
+            futures.add(generateCourseAutomatically());
+        }
+
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenApply(v -> futures.stream()
+                        .map(CompletableFuture::join)
+                        .collect(Collectors.toList()));
+    }
+
+    private List<CourseRecommendationResponse> generateRecommendedCourses() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+
+        List<Course> userCourses = courseRepository.findTop5ByMemberIdAndCourseTypeOrderByCreatedDateDesc(memberId, CourseType.DIY);
+
+        int userCourseCount = userCourses.size();
+        int userCourseDeficit = Math.max(0, 5 - userCourseCount);
+        int aiCourseCount = 10 - userCourseCount - userCourseDeficit;
+
+        List<CourseRecommendationResponse> recommendedCourses = new ArrayList<>();
+        recommendedCourses.addAll(userCourses.stream()
+                .map(course -> CourseRecommendationResponse.fromEntity(course, "USER_CREATED"))
+                .collect(Collectors.toList()));
+
+        if (aiCourseCount > 0) {
+            // AI 코스 생성
+            List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(aiCourseCount).join();
+
+            recommendedCourses.addAll(aiCourses.stream()
+                    .map(response -> CourseRecommendationResponse.builder()
+                            .courseId(response.getCourseId())
+                            .courseName(response.getCourseName())
+                            .courseDescription(response.getCourseDescription())
+                            .courseImage(response.getCourseImage())
+                            .courseType("AI_GENERATED")
+                            .build())
+                    .collect(Collectors.toList()));
+        }
+
+        return recommendedCourses;
+    }
+
+    private String serializeCourseRecommendations(List<CourseRecommendationResponse> courses) {
         try {
-            ResponseEntity<String> response = new RestTemplate()
-                    .postForEntity(openAiApiUrl, request, String.class);
-
-            return response.getBody();
-        } catch (Exception e) {
-            System.err.println("Error while calling OpenAI API: " + e.getMessage());
-            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
+            return objectMapper.writeValueAsString(courses);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize course recommendations", e);
         }
     }
 
-    private String generateCourseImage(String courseName, String courseDescription) {
+    private List<CourseRecommendationResponse> deserializeCourseRecommendations(String cachedData) {
         try {
-            String prompt = String.format(
-                    "Create a visually appealing image for the course titled '%s' with the theme: '%s'. " +
-                            "Analyze the course title and description to determine the most relevant visual elements. " +
-                            "If the course involves food or restaurants, include items such as dishes, drinks, or a dining setup. " +
-                            "If the course involves activities or sightseeing, include elements like scenic views, fun attractions, or interactive spaces. " +
-                            "Use a soft and inviting pink color palette to align with the romantic and light-hearted theme of the app. " +
-                            "Do not include any text or logos in the image. " +
-                            "Ensure the composition is visually complete, well-balanced, and fully utilizes the 512x512 canvas without any cropped or incomplete elements.",
-                    courseName,
-                    courseDescription
-            );
-
-            // DALL-E API 요청 헤더 생성
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(openAiApiKey);
-
-            // 요청 바디 생성
-            Map<String, Object> requestBody = Map.of(
-                    "prompt", prompt,
-                    "n", 1,
-                    "size", "512x512"
-            );
-
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-
-            // DALL-E API 호출
-            ResponseEntity<String> response = new RestTemplate()
-                    .postForEntity(dallEApiUrl, request, String.class);
-
-            // 응답 파싱
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(response.getBody());
-            JsonNode imageUrlNode = rootNode.path("data").get(0).path("url");
-
-            if (imageUrlNode.isMissingNode()) {
-                throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
-            }
-
-            return imageUrlNode.asText();
-        } catch (Exception e) {
-            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
+            return objectMapper.readValue(cachedData, new TypeReference<List<CourseRecommendationResponse>>() {});
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to deserialize course recommendations", e);
         }
-    }
-
-    private String uploadImageToS3(String imageUrl) {
-        InputStream inputStream = null;
-        try {
-            // 이미지 다운로드
-            inputStream = new URL(imageUrl).openStream();
-
-            // 이미지 메타데이터 설정
-            String contentType = "image/png";
-            long contentLength = inputStream.available();
-
-            String keyName = "course-images/" + UUID.randomUUID() + ".png";
-
-            amazonS3Manager.uploadInputStream(keyName, inputStream, contentType, contentLength);
-
-            // S3에서 업로드된 파일 URL 가져오기
-            String s3Url = amazonS3Manager.getFileUrl(keyName);
-
-            return s3Url;
-
-        } catch (Exception e) {
-            throw new GeneralException(ErrorStatus.IMAGE_GENERATION_ERROR);
-        } finally {
-            if (inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-
-                }
-            }
-        }
-    }
-
-    public String generateAndUploadCourseImage(String courseName, String courseDescription) {
-        // DALL-E API로 이미지 생성
-        String dallEImageUrl = generateCourseImage(courseName, courseDescription);
-
-        // 생성된 이미지를 S3에 업로드
-        return uploadImageToS3(dallEImageUrl);
     }
 }

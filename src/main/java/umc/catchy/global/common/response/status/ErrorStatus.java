@@ -70,6 +70,7 @@ public enum ErrorStatus implements BaseErrorCode {
     // gpt 관련 에러
     JSON_PARSING_ERROR(HttpStatus.NOT_FOUND, "GPT404", "json 파싱 에러"),
     IMAGE_GENERATION_ERROR(HttpStatus.BAD_REQUEST, "GPT402", "이미지 생성에 실패하였습니다."),
+    GPT_API_CALL_FAILED(HttpStatus.NOT_FOUND, "GPT404", "GPT 호출에 실패했습니다."),
     ;
 
     private final HttpStatus httpStatus;
