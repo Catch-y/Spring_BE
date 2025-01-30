@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GptCourseInfoResponse {
+    private Long courseId;
     private String courseName;
     private String courseDescription;
     private String recommendTime; // "HH:mm~HH:mm" 형식
