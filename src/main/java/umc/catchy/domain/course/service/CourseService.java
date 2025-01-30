@@ -571,6 +571,7 @@ public class CourseService {
         prompt.append("The course description should be concise, no more than 80 characters.\n");
         prompt.append("Please generate a course name and description that fits the selected places and reflects the user's preferred styles.\n");
         prompt.append("The response should include a course name, course description, recommended visit time for each place, and the full list of recommended places in the region.\n");
+        prompt.append("Each itinerary must include at least 2 and at most 5 places from the provided list.\n");
         prompt.append("Please return only the JSON structure below without any additional text, comments, or markdown formatting (e.g., no ```json). Return only the raw JSON structure:\n");
         prompt.append("The response should include a field `courseImage` with a URL to the generated image.\n");
         prompt.append("{\n");
