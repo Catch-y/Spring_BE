@@ -1,20 +1,18 @@
 package umc.catchy.domain.courseReview.dao;
 
-import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
-import umc.catchy.domain.courseReview.domain.CourseReview;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 
 import java.util.List;
 
-import static umc.catchy.domain.course.domain.QCourse.*;
+import static com.querydsl.core.group.GroupBy.groupBy;
+import static com.querydsl.core.group.GroupBy.list;
 import static umc.catchy.domain.courseReview.domain.QCourseReview.*;
 import static umc.catchy.domain.courseReviewImage.domain.QCourseReviewImage.*;
 import static umc.catchy.domain.member.domain.QMember.*;
@@ -25,48 +23,43 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> searchAllReviewByCourseId(Long courseId, int pageSize, Long lastReviewId) {
+    public Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> getAllReviewByCourseId(Long courseId, int pageSize, Long lastReviewId) {
 
-        List<PostCourseReviewResponse.newCourseReviewResponseDTO> results = queryFactory
-                .select(Projections.fields(PostCourseReviewResponse.newCourseReviewResponseDTO.class,
-                        courseReview.id.as("reviewId"),
-                        courseReview.comment.as("comment"),
-                        courseReview.visitedDate.as("visitedDate"),
-                        courseReview.member.nickname.as("creatorNickname")))
-                .distinct()
-                .from(courseReview)
+        List<PostCourseReviewResponse.newCourseReviewResponseDTO> result = queryFactory.selectFrom(courseReview)
                 .leftJoin(courseReview.member, member).on(courseReview.member.id.eq(member.id))
                 .leftJoin(courseReviewImage).on(courseReviewImage.courseReview.id.eq(courseReview.id))
                 .where(
-                        courseReview.course.id.eq(courseId),
-                        lastReviewId(lastReviewId)
+                        courseIdEq(courseId),
+                        lastCourseReviewId(lastReviewId)
                 )
-                .orderBy(courseReview.visitedDate.desc())
+                .orderBy(courseReview.createdDate.desc())
                 .limit(pageSize + 1)
-                .fetch();
+                .transform(groupBy(courseReview.id).list(
+                        Projections.fields(PostCourseReviewResponse.newCourseReviewResponseDTO.class,
+                                courseReview.id.as("reviewId"),
+                                courseReview.comment.as("comment"),
+                                courseReview.course.rating.as("rating"),
+                                list(
+                                        Projections.fields(PostCourseReviewResponse.courseReviewImageResponseDTO.class,
+                                                courseReviewImage.id.as("reviewImageId"),
+                                                courseReviewImage.imageUrl.as("imageUrl"))
+                                ).as("reviewImages"),
+                                courseReview.createdDate.as("visitedDate"),
+                                courseReview.member.nickname.as("creatorNickname"))
+                ));
 
-        for (PostCourseReviewResponse.newCourseReviewResponseDTO result : results) {
-            List<PostCourseReviewResponse.courseReviewImageResponseDTO> imageResponse = queryFactory
-                    .select(Projections.fields(PostCourseReviewResponse.courseReviewImageResponseDTO.class,
-                            courseReviewImage.id.as("reviewImageId"),
-                            courseReviewImage.imageUrl.as("imageUrl")
-                    ))
-                    .from(courseReviewImage)
-                    .leftJoin(courseReviewImage.courseReview,courseReview).on(courseReviewImage.courseReview.id.eq(courseReview.id))
-                    .where(courseReviewImage.courseReview.id.eq(result.getReviewId()))
-                    .fetch();
-
-            result.setReviewImages(imageResponse);
-        }
-
-        return checkLastPage(pageSize,results);
+        return checkLastPage(pageSize,result);
     }
 
-    private BooleanExpression lastReviewId(Long reviewId) {
-        if (reviewId == null) {
+    private BooleanExpression courseIdEq(Long courseId) {
+        return courseId == null ? null : courseReview.course.id.eq(courseId);
+    }
+
+    private BooleanExpression lastCourseReviewId(Long lastReviewId) {
+        if (lastReviewId == null) {
             return null;
         }
-        return courseReview.id.lt(reviewId);
+        return courseReview.id.lt(lastReviewId);
     }
 
     private Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> checkLastPage(int pageSize, List<PostCourseReviewResponse.newCourseReviewResponseDTO> results) {

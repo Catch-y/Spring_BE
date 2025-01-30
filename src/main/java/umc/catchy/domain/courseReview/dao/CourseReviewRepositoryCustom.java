@@ -5,5 +5,5 @@ import org.springframework.data.domain.Slice;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 
 public interface CourseReviewRepositoryCustom {
-    Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> searchAllReviewByCourseId(Long courseId,int pageSize,Long lastReviewId);
+    Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> getAllReviewByCourseId(Long courseId,int pageSize,Long lastReviewId);
 }

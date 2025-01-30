@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public class PostCourseReviewResponse {
@@ -21,10 +20,6 @@ public class PostCourseReviewResponse {
         List<courseReviewImageResponseDTO> reviewImages;
         LocalDate visitedDate;
         String creatorNickname;
-
-        public void setReviewImages(List<courseReviewImageResponseDTO> reviewImages) {
-            this.reviewImages = reviewImages;
-        }
     }
 
     @Getter

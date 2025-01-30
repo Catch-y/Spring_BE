@@ -11,7 +11,6 @@ import umc.catchy.domain.courseReview.converter.CourseReviewConverter;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
 import umc.catchy.domain.courseReview.domain.CourseReview;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
-import umc.catchy.domain.courseReview.dto.response.CourseReviewSliceResponse;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReviewImage.converter.CourseReviewImageConverter;
 import umc.catchy.domain.courseReviewImage.dao.CourseReviewImageRepository;
@@ -20,14 +19,12 @@ import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
-import umc.catchy.domain.place.domain.Place;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -92,13 +89,12 @@ public class CourseReviewService {
     public PostCourseReviewResponse.courseReviewAllResponseDTO searchAllReview(Long courseId, int pageSize, Long lastReviewId ) {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
         Integer countReviews = courseReviewRepository.countAllByCourse(course);
-        Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> CourseReviewResponses = courseReviewRepository.searchAllReviewByCourseId(courseId, pageSize, lastReviewId);
-        CourseReviewSliceResponse CourseReviews = CourseReviewSliceResponse.from(CourseReviewResponses);
+        Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> CourseReviewResponses = courseReviewRepository.getAllReviewByCourseId(courseId, pageSize, lastReviewId);
         return PostCourseReviewResponse.courseReviewAllResponseDTO.builder()
                 .courseRating(course.getRating())
                 .totalCount(countReviews)
-                .content(CourseReviews.content())
-                .last(CourseReviews.last())
+                .content(CourseReviewResponses.getContent())
+                .last(CourseReviewResponses.isLast())
                 .build();
     }
 }
