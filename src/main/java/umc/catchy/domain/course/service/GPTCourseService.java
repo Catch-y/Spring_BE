@@ -54,7 +54,7 @@ public class GPTCourseService {
                 "messages", List.of(
                         Map.of("role", "user", "content", prompt)
                 ),
-                "max_tokens", 600,
+                "max_tokens", 500,
                 "temperature", 0.7
         );
 
