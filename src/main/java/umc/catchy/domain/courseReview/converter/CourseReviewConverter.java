@@ -13,14 +13,12 @@ public class CourseReviewConverter {
 
     public static PostCourseReviewResponse.newCourseReviewResponseDTO toNewCourseReviewResponseDTO(
             CourseReview courseReview,
-            List<PostCourseReviewResponse.courseReviewImageResponseDTO> images,
-            LocalDateTime visitedDate
+            List<PostCourseReviewResponse.courseReviewImageResponseDTO> images
     ){
         return PostCourseReviewResponse.newCourseReviewResponseDTO.builder()
                 .reviewId(courseReview.getId())
                 .comment(courseReview.getComment())
                 .reviewImages(images)
-                .visitedDate(visitedDate)
                 .creatorNickname(courseReview.getMember().getNickname())
                 .build();
     }
