@@ -26,6 +26,7 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -88,7 +89,7 @@ public class PlaceReviewService {
         }
 
         //장소 방문일자 가져오기
-        LocalDateTime visitedDate = placeVisitRepository.findByPlaceAndMember(place, member)
+        LocalDate visitedDate = placeVisitRepository.findByPlaceAndMember(place, member)
                 .map(PlaceVisit::getVisitedDate)
                 .orElse(null);
 
