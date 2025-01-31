@@ -150,6 +150,9 @@ public class VoteService {
 
     @Transactional(readOnly = true)
     public GroupVoteStatusResponse getGroupVoteStatus(Long groupId, Long voteId) {
+        Vote vote = voteRepository.findByIdAndGroupId(voteId, groupId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_BELONG_TO_GROUP));
+
         List<Member> groupMembers = memberGroupRepository.findMembersByGroupId(groupId);
 
         List<MemberVoteStatus> memberStatuses = groupMembers.stream()
@@ -196,6 +199,9 @@ public class VoteService {
 
     @Transactional(readOnly = true)
     public GroupVoteResultResponse getGroupVoteResults(Long groupId, Long voteId) {
+        Vote vote = voteRepository.findByIdAndGroupId(voteId, groupId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_BELONG_TO_GROUP));
+
         Groups group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         String groupLocation = group.getGroupLocation();

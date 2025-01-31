@@ -1,15 +1,12 @@
 package umc.catchy.domain.placeReview.dto.request;
 
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.http.MediaType;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -25,6 +22,9 @@ public class PostPlaceReviewRequest {
     @NotBlank
     @Size(max = 300, message = "최대 300자까지 입력 가능합니다.")
     String comment;
+
+    @NotNull(message = "방문날짜를 입력해주세요/YY-MM-DD")
+    LocalDate visitedDate;
 
     @Size(max = 5, message = "이미지는 최대 5개까지만 업로드 가능합니다.")
     List<MultipartFile> images;

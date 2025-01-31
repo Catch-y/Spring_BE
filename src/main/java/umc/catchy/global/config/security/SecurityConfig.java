@@ -41,7 +41,7 @@ public class SecurityConfig {
                                 , "/login/**", "/member/token/kakao"
                                 , "/h2-console/**", "/member/login/**"
                                 , "/member/signup/**","/group/invite/**"
-                                , "/member/reissue", "/member/callback/**").permitAll()
+                                , "/member/reissue", "/member/callback/**","/course/generate-ai").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

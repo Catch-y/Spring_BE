@@ -2,15 +2,13 @@ package umc.catchy.domain.member.dto.response;
 
 import umc.catchy.domain.member.domain.Member;
 
-public record ProfileResponse(
+public record NicknameResponse(
         Long id,
-        String profileImage,
         String nickname
 ) {
-    public static ProfileResponse of(Member member) {
-        return new ProfileResponse(
+    public static NicknameResponse of(Member member) {
+        return new NicknameResponse(
                 member.getId(),
-                member.getProfileImage(),
                 member.getNickname()
                 );
     }

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.DynamicInsert;
 import umc.catchy.domain.common.BaseTimeEntity;
+import umc.catchy.domain.course.converter.CourseTypeConverter;
 import umc.catchy.domain.member.domain.Member;
 
 import java.time.LocalTime;
@@ -42,7 +43,7 @@ public class Course extends BaseTimeEntity {
     private Long participantsNumber;
 
     @Setter
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = CourseTypeConverter.class)
     private CourseType courseType;
 
     @Setter

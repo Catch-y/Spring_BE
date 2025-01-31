@@ -58,10 +58,7 @@ public class CourseReviewService {
         }
 
         //코스 참여일자 가져오기
-        LocalDateTime visitedDate = memberCourseRepository.findByCourseAndMember(course, member)
-                .map(MemberCourse::getVisitedDate)
-                .orElse(null);
-
+        
         //CourseReview Entity 생성 및 저장
         CourseReview newCourseReview = CourseReviewConverter.toCourseReview(member, course, request);
         courseReviewRepository.save(newCourseReview);
@@ -82,6 +79,6 @@ public class CourseReviewService {
             courseReviewImageRepository.save(courseReviewImage);
             images.add(CourseReviewImageConverter.toCourseReviewImageResponseDTO(courseReviewImage));
         }
-        return CourseReviewConverter.toNewCourseReviewResponseDTO(newCourseReview, images, visitedDate);
+        return CourseReviewConverter.toNewCourseReviewResponseDTO(newCourseReview, images);
     }
 }

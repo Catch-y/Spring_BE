@@ -27,7 +27,6 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -110,6 +109,6 @@ public class PlaceReviewService {
             placeReviewImageRepository.save(placeReviewImage);
             reviewImages.add(PlaceReviewImageConverter.toPlaceReviewImageResponseDTO(placeReviewImage));
         }
-        return PlaceReviewConverter.toNewPlaceReviewResponseDTO(newPlaceReview, reviewImages, visitedDate);
+        return PlaceReviewConverter.toNewPlaceReviewResponseDTO(newPlaceReview, reviewImages);
     }
 }
