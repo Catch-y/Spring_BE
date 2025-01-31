@@ -32,19 +32,18 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                         courseIdEq(courseId),
                         lastCourseReviewId(lastReviewId)
                 )
-                .orderBy(courseReview.createdDate.desc())
+                .orderBy(courseReview.createdAt.desc())
                 .limit(pageSize + 1)
                 .transform(groupBy(courseReview.id).list(
                         Projections.fields(PostCourseReviewResponse.newCourseReviewResponseDTO.class,
                                 courseReview.id.as("reviewId"),
                                 courseReview.comment.as("comment"),
-                                courseReview.course.rating.as("rating"),
                                 list(
                                         Projections.fields(PostCourseReviewResponse.courseReviewImageResponseDTO.class,
                                                 courseReviewImage.id.as("reviewImageId"),
                                                 courseReviewImage.imageUrl.as("imageUrl"))
                                 ).as("reviewImages"),
-                                courseReview.createdDate.as("visitedDate"),
+                                courseReview.createdAt.as("createdAt"),
                                 courseReview.member.nickname.as("creatorNickname"))
                 ));
 

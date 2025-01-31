@@ -22,7 +22,7 @@ public class CourseReview extends BaseTimeEntity {
 
     private String comment;
 
-    private LocalDate visitedDate; // 리뷰 장소 방문 시간
+    private LocalDate createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")

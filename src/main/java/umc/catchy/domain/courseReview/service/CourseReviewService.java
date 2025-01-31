@@ -57,11 +57,6 @@ public class CourseReviewService {
             throw new GeneralException(ErrorStatus.COURSE_REVIEW_INVALID_MEMBER);
         }
 
-        //코스 참여일자 가져오기
-        LocalDate visitedDate = memberCourseRepository.findByCourseAndMember(course, member)
-                .map(MemberCourse::getVisitedDate)
-                .orElse(null);
-
         //CourseReview Entity 생성 및 저장
         CourseReview newCourseReview = CourseReviewConverter.toCourseReview(member, course, request);
         courseReviewRepository.save(newCourseReview);
@@ -82,19 +77,21 @@ public class CourseReviewService {
             courseReviewImageRepository.save(courseReviewImage);
             images.add(CourseReviewImageConverter.toCourseReviewImageResponseDTO(courseReviewImage));
         }
-        return CourseReviewConverter.toNewCourseReviewResponseDTO(newCourseReview, images, visitedDate);
+        return CourseReviewConverter.toNewCourseReviewResponseDTO(newCourseReview, images);
     }
 
     @Transactional(readOnly = true)
     public PostCourseReviewResponse.courseReviewAllResponseDTO searchAllReview(Long courseId, int pageSize, Long lastReviewId ) {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
         Integer countReviews = courseReviewRepository.countAllByCourse(course);
-        Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> CourseReviewResponses = courseReviewRepository.getAllReviewByCourseId(courseId, pageSize, lastReviewId);
+        Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> courseReviewResponses = courseReviewRepository.getAllReviewByCourseId(courseId, pageSize, lastReviewId);
+        List<PostCourseReviewResponse.newCourseReviewResponseDTO> content = courseReviewResponses.getContent();
+        boolean last = courseReviewResponses.isLast();
         return PostCourseReviewResponse.courseReviewAllResponseDTO.builder()
                 .courseRating(course.getRating())
                 .totalCount(countReviews)
-                .content(CourseReviewResponses.getContent())
-                .last(CourseReviewResponses.isLast())
+                .content(content)
+                .last(last)
                 .build();
     }
 }
