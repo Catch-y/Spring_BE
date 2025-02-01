@@ -57,7 +57,7 @@ public class PlaceController {
     }
 
     @Operation(summary = "장소리뷰 전체 조회 API", description = "해당 장소의 전체 리뷰를 보여줍니다.")
-    @PatchMapping("/{placeId}/review/all")
+    @GetMapping("/{placeId}/review/all")
     public ResponseEntity<BaseResponse<PostPlaceReviewResponse.placeReviewAllResponseDTO>> getAllPlaceReviews(
             @PathVariable("placeId") Long placeId,
             @RequestParam int pageSize,

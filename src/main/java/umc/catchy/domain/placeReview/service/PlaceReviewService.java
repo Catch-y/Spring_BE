@@ -24,6 +24,7 @@ import umc.catchy.domain.placeReviewImage.dao.PlaceReviewImageRepository;
 import umc.catchy.domain.placeReviewImage.domain.PlaceReviewImage;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
+import umc.catchy.global.error.exception.ResultEmptyListException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
@@ -108,21 +109,21 @@ public class PlaceReviewService {
         return PlaceReviewConverter.toNewPlaceReviewResponseDTO(newPlaceReview, reviewImages);
     }
 
+    @Transactional(readOnly = true)
     public PostPlaceReviewResponse.placeReviewAllResponseDTO getAllPlaceReviews(Long placeId, int pageSize, Long lastPlaceReviewId) {
-        Double averageRatingTypeDouble = placeReviewRepository.findAverageRatingByPlaceId(placeId).orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
+        Place place = placeRepository.findById(placeId).orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+        Double averageRatingTypeDouble = placeReviewRepository.findAverageRatingByPlaceId(placeId).orElseThrow(() -> new ResultEmptyListException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
         Float averageRating = Math.round(averageRatingTypeDouble * 10) / 10.0f;
         List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> ratingList = placeReviewRepository.findRatingList(placeId);
         Long totalCount = placeReviewRepository.countByPlaceId(placeId);
         Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> contentList = placeReviewRepository.findPlaceReviewSliceByPlaceId(placeId, pageSize, lastPlaceReviewId);
-        List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> content = contentList.getContent();
-        Boolean last = contentList.isLast();
 
         return PostPlaceReviewResponse.placeReviewAllResponseDTO.builder()
                 .averageRating(averageRating)
                 .ratingList(ratingList)
                 .totalCount(totalCount)
-                .content(content)
-                .last(last)
+                .content(contentList.getContent())
+                .last(contentList.isLast())
                 .build();
     }
 }
