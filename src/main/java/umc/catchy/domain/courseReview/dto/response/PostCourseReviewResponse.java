@@ -19,6 +19,7 @@ public class PostCourseReviewResponse {
         String comment;
         List<courseReviewImageResponseDTO> reviewImages;
         LocalDate createdAt;
+        //LocalDateTime visitedDate;
         String creatorNickname;
     }
 

@@ -144,13 +144,13 @@ public class MemberController {
 
     @PatchMapping("/mypage/nickname")
     @Operation(summary = "닉네임 변경 API", description = "현재 로그인된 사용자의 닉네임 변경")
-    public BaseResponse<ProfileResponse> updateNickname(@RequestBody @Valid NicknameRequest request) {
+    public BaseResponse<NicknameResponse> updateNickname(@RequestBody @Valid NicknameRequest request) {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateNickname(request));
     }
 
     @PatchMapping(value = "/mypage/profileImage", consumes = "multipart/form-data")
     @Operation(summary = "프로필 사진 변경 API", description = "현재 로그인된 사용자의 프로필 사진 변경")
-    public BaseResponse<ProfileResponse> updateProfileImage(@RequestPart @Valid MultipartFile profileImage) {
+    public BaseResponse<ProfileImageResponse> updateProfileImage(@RequestPart @Valid MultipartFile profileImage) {
         return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateProfileImage(profileImage));
     }
 

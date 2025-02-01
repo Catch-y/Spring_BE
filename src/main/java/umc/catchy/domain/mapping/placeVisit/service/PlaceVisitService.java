@@ -7,11 +7,17 @@ import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceLikedResponse;
+import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedDateResponse;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
+import umc.catchy.domain.place.dao.PlaceRepository;
+import umc.catchy.domain.place.domain.Place;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +26,7 @@ import umc.catchy.global.util.SecurityUtil;
 public class PlaceVisitService {
     private final PlaceVisitRepository placeVisitRepository;
     private final MemberRepository memberRepository;
+    private final PlaceRepository placeRepository;
 
     public PlaceLikedResponse togglePlaceLiked(Long placeId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
@@ -30,5 +37,14 @@ public class PlaceVisitService {
                 .placeVisitId(placeVisit.getId())
                 .liked(placeVisit.isLiked())
                 .build();
+    }
+
+    public PlaceVisitedDateResponse getPlaceVisitDate(Long placeId) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        Place place = placeRepository.findById(placeId).orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+        List<PlaceVisit> placeVisitList = placeVisitRepository.findAllByMemberAndPlaceAndIsVisitedTrue(currentMember,place);
+        List<LocalDate> visitedDate = placeVisitList.stream().map(PlaceVisit::getVisitedDate).toList();
+        return new PlaceVisitedDateResponse(visitedDate);
     }
 }
