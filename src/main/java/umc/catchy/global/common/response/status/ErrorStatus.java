@@ -32,6 +32,7 @@ public enum ErrorStatus implements BaseErrorCode {
 
     //장소 관련 에러
     PLACE_REVIEW_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "PLACE_REVIEW_MEMBER400", "해당 멤버는 장소 리뷰를 달 수 있는 권한이 없습니다."),
+    PLACE_REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "PLACE_REVIEW404","해당 장소리뷰를 찾을 수 없습니다."),
     PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "PLACE404", "해당 장소를 찾을 수 없습니다."),
     SEARCH_PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "SEARCH_PLACE404", "찾는 장소가 없습니다."),
 
@@ -41,6 +42,7 @@ public enum ErrorStatus implements BaseErrorCode {
 
     //코스 관련 에러
     COURSE_REVIEW_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "COURSE_REVIEW_MEMBER400", "해당 멤버는 코스 리뷰를 달 수 있는 권한이 없습니다."),
+    COURSE_REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND,"COURSE_REVIEW404", "해당 코스리뷰를 찾을 수 없습니다."),
     COURSE_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "COURSE_MEMBER400", "해당 멤버는 코스를 수정하거나 삭제할 수 있는 권한이 없습니다."),
     COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "COURSE404", "해당 코스를 찾을 수 없습니다."),
     INVALID_COURSE_TYPE(HttpStatus.BAD_REQUEST, "COURSE_TYPE400", "코스타입 입력이 잘못되었습니다."),
