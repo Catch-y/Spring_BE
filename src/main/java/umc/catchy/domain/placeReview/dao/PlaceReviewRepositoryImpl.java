@@ -38,15 +38,24 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
 
     @Override
     public Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> findPlaceReviewSliceByPlaceId(Long placeId, int pageSize, Long lastPlaceReviewId) {
-        List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> result = queryFactory.selectFrom(placeReview)
-                .leftJoin(placeReview.member, member).on(placeReview.member.id.eq(member.id))
-                .leftJoin(placeReviewImage).on(placeReviewImage.placeReview.id.eq(placeReview.id))
+        List<Long> reviewIds = queryFactory
+                .select(placeReview.id)
+                .from(placeReview)
                 .where(
                         placeIdEq(placeId),
                         lastPlaceReviewId(lastPlaceReviewId)
                 )
                 .orderBy(placeReview.visitDate.desc())
                 .limit(pageSize + 1)
+                .fetch();
+
+        List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> result = queryFactory.selectFrom(placeReview)
+                .leftJoin(placeReview.member, member).on(placeReview.member.id.eq(member.id))
+                .leftJoin(placeReviewImage).on(placeReviewImage.placeReview.id.eq(placeReview.id))
+                .where(
+                        placeReview.id.in(reviewIds)
+                )
+                .orderBy(placeReview.visitDate.desc())
                 .transform(groupBy(placeReview.id).list(
                         Projections.fields(PostPlaceReviewResponse.newPlaceReviewResponseDTO.class,
                                 placeReview.id.as("reviewId"),
