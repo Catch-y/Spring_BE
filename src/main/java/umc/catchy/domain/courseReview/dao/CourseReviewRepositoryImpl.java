@@ -23,17 +23,26 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> getAllReviewByCourseId(Long courseId, int pageSize, Long lastReviewId) {
+    public Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> getAllCourseReviewByCourseId(Long courseId, int pageSize, Long lastReviewId) {
+
+        List<Long> reviewIds = queryFactory
+                .select(courseReview.id)
+                .from(courseReview)
+                .where(
+                        courseIdEq(courseId),
+                        lastCourseReviewId(lastReviewId)
+                )
+                .orderBy(courseReview.createdDate.desc())
+                .limit(pageSize + 1)
+                .fetch();
 
         List<PostCourseReviewResponse.newCourseReviewResponseDTO> result = queryFactory.selectFrom(courseReview)
                 .leftJoin(courseReview.member, member).on(courseReview.member.id.eq(member.id))
                 .leftJoin(courseReviewImage).on(courseReviewImage.courseReview.id.eq(courseReview.id))
                 .where(
-                        courseIdEq(courseId),
-                        lastCourseReviewId(lastReviewId)
+                        courseReview.id.in(reviewIds)
                 )
-                .orderBy(courseReview.createdAt.desc())
-                .limit(pageSize + 1)
+                .orderBy(courseReview.createdDate.desc())
                 .transform(groupBy(courseReview.id).list(
                         Projections.fields(PostCourseReviewResponse.newCourseReviewResponseDTO.class,
                                 courseReview.id.as("reviewId"),

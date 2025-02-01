@@ -146,7 +146,7 @@ public class CourseController {
             @RequestParam int pageSize,
             @RequestParam(required = false) Long lastReviewId
     ){
-        PostCourseReviewResponse.courseReviewAllResponseDTO response = courseReviewService.searchAllReview(courseId, pageSize, lastReviewId);
+        PostCourseReviewResponse.courseReviewAllResponseDTO response = courseReviewService.getAllCourseReview(courseId, pageSize, lastReviewId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

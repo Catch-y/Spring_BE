@@ -21,6 +21,7 @@ import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
+import umc.catchy.global.error.exception.ResultEmptyListException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
@@ -80,10 +81,12 @@ public class CourseReviewService {
     }
 
     @Transactional(readOnly = true)
-    public PostCourseReviewResponse.courseReviewAllResponseDTO searchAllReview(Long courseId, int pageSize, Long lastReviewId ) {
+    public PostCourseReviewResponse.courseReviewAllResponseDTO getAllCourseReview(Long courseId, int pageSize, Long lastReviewId ) {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
         Integer countReviews = courseReviewRepository.countAllByCourse(course);
-        Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> courseReviewResponses = courseReviewRepository.getAllReviewByCourseId(courseId, pageSize, lastReviewId);
+        if (countReviews == 0) throw new ResultEmptyListException(ErrorStatus.COURSE_REVIEW_NOT_FOUND);
+
+        Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> courseReviewResponses = courseReviewRepository.getAllCourseReviewByCourseId(courseId, pageSize, lastReviewId);
         List<PostCourseReviewResponse.newCourseReviewResponseDTO> content = courseReviewResponses.getContent();
         boolean last = courseReviewResponses.isLast();
         return PostCourseReviewResponse.courseReviewAllResponseDTO.builder()
