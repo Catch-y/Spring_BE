@@ -1,4 +1,15 @@
+#Git 관련 파일 제외
 .git
-.idea/
 .gitignore
+
+#IDE 관련 파일 제외
+.idea/
+
+#Gradle 빌드 관련 파일 제외
 .gradle/
+.build/*
+!build/libs
+!build/generated
+
+#OS 관련 파일 제외
+.DS_Store
