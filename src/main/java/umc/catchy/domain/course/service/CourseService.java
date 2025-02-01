@@ -708,7 +708,7 @@ public class CourseService {
                             .courseName(response.getCourseName())
                             .courseDescription(response.getCourseDescription())
                             .courseImage(response.getCourseImage())
-                            .courseType("AI_GENERATED")
+                            .courseType("AI")
                             .build())
                     .collect(Collectors.toList()));
         }

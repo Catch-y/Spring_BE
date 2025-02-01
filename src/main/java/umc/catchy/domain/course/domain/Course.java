@@ -43,7 +43,7 @@ public class Course extends BaseTimeEntity {
     private Long participantsNumber;
 
     @Setter
-    @Convert(converter = CourseTypeConverter.class)
+    @Enumerated(EnumType.STRING)
     private CourseType courseType;
 
     @Setter
