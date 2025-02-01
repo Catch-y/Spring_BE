@@ -8,12 +8,10 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-import umc.catchy.domain.member.api.MemberController;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.code.ErrorReasonDTO;
 import umc.catchy.global.common.response.status.ErrorStatus;
@@ -24,7 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Slf4j
-@RestControllerAdvice(annotations = {RestController.class}, basePackageClasses = {MemberController.class})
+@RestControllerAdvice
 @RequiredArgsConstructor
 public class ExceptionAdvice extends ResponseEntityExceptionHandler {
 
@@ -73,5 +71,12 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
                 .forEach(fieldError -> errors.put(fieldError.getField(), fieldError.getDefaultMessage()));
         String errorMessage = String.join(", ", errors.values());
         return createErrorResponse(e, ErrorStatus._BAD_REQUEST, errorMessage, headers, request);
+    }
+
+    @ExceptionHandler(ResultEmptyListException.class)
+    public ResponseEntity<Object> handleResultEmptyListException(ResultEmptyListException e, WebRequest request) {
+        return ResponseEntity
+                .status(e.getErrorStatus().getHttpStatus())
+                .body(BaseResponse.onFailureWithEmptyList(e.getErrorStatus()));
     }
 }

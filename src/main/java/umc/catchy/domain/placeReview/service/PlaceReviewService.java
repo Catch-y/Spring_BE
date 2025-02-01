@@ -88,11 +88,6 @@ public class PlaceReviewService {
             throw new GeneralException(ErrorStatus.PLACE_REVIEW_INVALID_MEMBER);
         }
 
-        //장소 방문일자 가져오기
-        LocalDate visitedDate = placeVisitRepository.findByPlaceAndMember(place, member)
-                .map(PlaceVisit::getVisitedDate)
-                .orElse(null);
-
         //PlaceReview 엔티티 생성 및 저장
         PlaceReview newPlaceReview = PlaceReviewConverter.toPlaceReview(member, place, request);
         placeReviewRepository.save(newPlaceReview);
@@ -110,7 +105,7 @@ public class PlaceReviewService {
             placeReviewImageRepository.save(placeReviewImage);
             reviewImages.add(PlaceReviewImageConverter.toPlaceReviewImageResponseDTO(placeReviewImage));
         }
-        return PlaceReviewConverter.toNewPlaceReviewResponseDTO(newPlaceReview, reviewImages, visitedDate);
+        return PlaceReviewConverter.toNewPlaceReviewResponseDTO(newPlaceReview, reviewImages);
     }
 
     public PostPlaceReviewResponse.placeReviewAllResponseDTO getAllPlaceReviews(Long placeId, int pageSize, Long lastPlaceReviewId) {

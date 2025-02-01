@@ -45,7 +45,7 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                         placeIdEq(placeId),
                         lastPlaceReviewId(lastPlaceReviewId)
                 )
-                .orderBy(placeReview.visitDate.desc())
+                .orderBy(placeReview.visitedDate.desc())
                 .limit(pageSize + 1)
                 .fetch();
 
@@ -55,7 +55,7 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                 .where(
                         placeReview.id.in(reviewIds)
                 )
-                .orderBy(placeReview.visitDate.desc())
+                .orderBy(placeReview.visitedDate.desc())
                 .transform(groupBy(placeReview.id).list(
                         Projections.fields(PostPlaceReviewResponse.newPlaceReviewResponseDTO.class,
                                 placeReview.id.as("reviewId"),
@@ -66,7 +66,7 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                                                 placeReviewImage.id.as("reviewImageId"),
                                                 placeReviewImage.imageUrl.as("imageUrl"))
                                 ).as("reviewImages"),
-                                placeReview.visitDate.as("visitedDate"),
+                                placeReview.visitedDate.as("visitedDate"),
                                 placeReview.member.nickname.as("creatorNickname"))
                         ));
         return checkLastPage(pageSize, result);

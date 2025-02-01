@@ -5,11 +5,9 @@ import lombok.*;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.domain.Place;
-import umc.catchy.domain.placeReviewImage.domain.PlaceReviewImage;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+
 
 @Entity
 @Getter
@@ -26,7 +24,7 @@ public class PlaceReview extends BaseTimeEntity {
 
     private String comment;
 
-    private LocalDate visitDate;
+    private LocalDate visitedDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
