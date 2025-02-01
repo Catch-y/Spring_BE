@@ -2,5 +2,3 @@
 .idea/
 .gitignore
 .gradle/
-build/
-!build/generated/
