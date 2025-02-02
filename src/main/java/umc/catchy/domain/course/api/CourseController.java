@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
+import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
 import umc.catchy.domain.course.service.CourseService;
@@ -27,6 +28,7 @@ import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
 
 import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
 
 @Tag(name = "Course", description = "코스 관련 API")
 @RestController
@@ -116,9 +118,9 @@ public class CourseController {
 
     @Operation(summary = "코스 생성(AI) API", description = "AI가 생성하는 코스")
     @PostMapping("/generate-ai")
-    public ResponseEntity<BaseResponse<GptCourseInfoResponse>> generateCourseWithAI() {
-        GptCourseInfoResponse response = courseService.generateCourseAutomatically();
-        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    public CompletableFuture<ResponseEntity<BaseResponse<GptCourseInfoResponse>>> generateCourseWithAI() {
+        return courseService.generateCourseAutomatically()
+                .thenApply(response -> ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response)));
     }
 
     @Operation(summary = "장소 카테고리 선택 API", description = "새로운 장소에 대한 1개 이상의 소카테고리를 선택합니다.")
@@ -129,6 +131,13 @@ public class CourseController {
     ) {
         placeService.setCategories(placeId, request);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
+    }
+
+    @Operation(summary = "홈화면 추천 코스 API", description = "홈화면에서 사용자 맞춤 추천 코스를 조회합니다. 사용자 코스와 AI 코스를 조합하여 최대 10개를 반환합니다.")
+    @GetMapping("/home/personal-courses")
+    public ResponseEntity<BaseResponse<List<CourseRecommendationResponse>>> getHomeRecommendedCourses() {
+        List<CourseRecommendationResponse> recommendedCourses = courseService.getHomeRecommendedCourses();
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, recommendedCourses));
     }
 
     @Operation(summary = "인기 코스 조회 API", description = "전체 사용자 데이터를 기반으로 상위 10개의 인기 코스를 조회하는 API입니다.")

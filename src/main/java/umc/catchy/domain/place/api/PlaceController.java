@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceLikedResponse;
+import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedDateResponse;
 import umc.catchy.domain.mapping.placeVisit.service.PlaceVisitService;
 import umc.catchy.domain.placeReview.dto.request.PostPlaceReviewRequest;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
@@ -45,6 +46,13 @@ public class PlaceController {
     @PatchMapping("/{placeId}/like")
     public ResponseEntity<BaseResponse<PlaceLikedResponse>> toggleLike(@PathVariable("placeId") Long placeId) {
         PlaceLikedResponse response = placeVisitService.togglePlaceLiked(placeId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK,response));
+    }
+
+    @Operation(summary = "장소 방문 날짜 리스트 조회 API", description = "사용자가 해당 장소를 방문 한 날짜들을 보여줍니다.")
+    @GetMapping("/{placeId}/visit")
+    public ResponseEntity<BaseResponse<PlaceVisitedDateResponse>> getPlaceVisitDate(@PathVariable("placeId") Long placeId) {
+        PlaceVisitedDateResponse response = placeVisitService.getPlaceVisitDate(placeId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK,response));
     }
 }

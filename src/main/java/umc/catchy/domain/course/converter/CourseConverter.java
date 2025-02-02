@@ -3,6 +3,7 @@ package umc.catchy.domain.course.converter;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import umc.catchy.domain.course.domain.Course;
+import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 
@@ -43,12 +44,12 @@ public class CourseConverter {
                 .courseName(request.getCourseName())
                 .courseDescription(request.getCourseDescription())
                 .courseImage(courseImageUrl)
+                .courseType(CourseType.DIY)
                 .recommendTimeStart(recommendTimeStart)
                 .recommendTimeEnd(recommendTImeEnd)
                 .member(member)
                 .participantsNumber(0L)
                 .hasReview(false)
-                .rating(0.0)
                 .build();
     }
 

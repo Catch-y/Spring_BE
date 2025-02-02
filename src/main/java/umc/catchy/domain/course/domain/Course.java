@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.DynamicInsert;
 import umc.catchy.domain.common.BaseTimeEntity;
+import umc.catchy.domain.course.converter.CourseTypeConverter;
 import umc.catchy.domain.member.domain.Member;
 
 import java.time.LocalTime;

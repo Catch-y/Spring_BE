@@ -26,7 +26,7 @@ public class PlaceConverter {
         Double rating = 0.0;
 
         if (place.getCategory() != null) {
-            categoryName = place.getCategory().getName();
+            categoryName = place.getCategory().getBigCategory().getValue();
         }
 
         if (place.getRating() != null) {

@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -145,11 +146,11 @@ public class MemberService {
     public SignUpResponse signUp(SignUpRequest request, MultipartFile profileImage, SocialType socialType) {
         String accessToken = request.accessToken();
 
-        String profileImageUrl = "";
+        String profileImageUrl = null;
 
         // 프로필 이미지 url 생성
         if (profileImage != null) {
-            String keyName = "profile-images/" + profileImage.getOriginalFilename();
+            String keyName = "profile-images/" + UUID.randomUUID();
             profileImageUrl = s3Manager.uploadFile(keyName, profileImage);
         }
 
@@ -326,7 +327,7 @@ public class MemberService {
         return ProfileResponse.of(member);
     }
 
-    public ProfileResponse updateNickname(NicknameRequest request) {
+    public NicknameResponse updateNickname(NicknameRequest request) {
         // 닉네임 중복 검사
         memberRepository.findByNickname(request.nickname())
                 .ifPresent(member -> {
@@ -341,10 +342,10 @@ public class MemberService {
         // 닉네임 변경
         member.setNickname(request.nickname());
 
-        return ProfileResponse.of(member);
+        return NicknameResponse.of(member);
     }
 
-    public ProfileResponse updateProfileImage(MultipartFile newProfileImage) {
+    public ProfileImageResponse updateProfileImage(MultipartFile newProfileImage) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId).orElseThrow(() ->
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -352,18 +353,18 @@ public class MemberService {
         String originProfileImageUrl = member.getProfileImage();
 
         // 기존에 프로필 사진이 있었다면 제거
-        if (originProfileImageUrl.isEmpty()) {
+        if (originProfileImageUrl != null) {
             s3Manager.deleteImage(originProfileImageUrl);
         }
 
         // 프로필 사진 url 생성
-        String keyName = "profile-images/" + newProfileImage.getOriginalFilename();
+        String keyName = "profile-images/" + UUID.randomUUID();
         String newProfileImageUrl = s3Manager.uploadFile(keyName, newProfileImage);
 
         // 이미지 변경
         member.setProfileImage(newProfileImageUrl);
 
-        return ProfileResponse.of(member);
+        return ProfileImageResponse.of(member);
     }
 
     public void validateNickname(NicknameRequest request) {
