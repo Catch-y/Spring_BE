@@ -1,6 +1,7 @@
 package umc.catchy.domain.placeReview.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,9 +24,11 @@ import umc.catchy.domain.placeReviewImage.dao.PlaceReviewImageRepository;
 import umc.catchy.domain.placeReviewImage.domain.PlaceReviewImage;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
+import umc.catchy.global.error.exception.ResultEmptyListException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -104,5 +107,23 @@ public class PlaceReviewService {
             reviewImages.add(PlaceReviewImageConverter.toPlaceReviewImageResponseDTO(placeReviewImage));
         }
         return PlaceReviewConverter.toNewPlaceReviewResponseDTO(newPlaceReview, reviewImages);
+    }
+
+    @Transactional(readOnly = true)
+    public PostPlaceReviewResponse.placeReviewAllResponseDTO getAllPlaceReviews(Long placeId, int pageSize, Long lastPlaceReviewId) {
+        Place place = placeRepository.findById(placeId).orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+        Double averageRatingTypeDouble = placeReviewRepository.findAverageRatingByPlaceId(placeId).orElseThrow(() -> new ResultEmptyListException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
+        Float averageRating = Math.round(averageRatingTypeDouble * 10) / 10.0f;
+        List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> ratingList = placeReviewRepository.findRatingList(placeId);
+        Long totalCount = placeReviewRepository.countByPlaceId(placeId);
+        Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> contentList = placeReviewRepository.findPlaceReviewSliceByPlaceId(placeId, pageSize, lastPlaceReviewId);
+
+        return PostPlaceReviewResponse.placeReviewAllResponseDTO.builder()
+                .averageRating(averageRating)
+                .ratingList(ratingList)
+                .totalCount(totalCount)
+                .content(contentList.getContent())
+                .last(contentList.isLast())
+                .build();
     }
 }

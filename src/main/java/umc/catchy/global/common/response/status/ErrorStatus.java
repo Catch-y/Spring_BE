@@ -32,6 +32,7 @@ public enum ErrorStatus implements BaseErrorCode {
 
     //장소 관련 에러
     PLACE_REVIEW_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "PLACE_REVIEW_MEMBER400", "해당 멤버는 장소 리뷰를 달 수 있는 권한이 없습니다."),
+    PLACE_REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND,"PLACE_REVIEW404","작성된 리뷰가 없습니다."),
     PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "PLACE404", "해당 장소를 찾을 수 없습니다."),
     SEARCH_PLACE_NOT_FOUND(HttpStatus.NOT_FOUND, "SEARCH_PLACE404", "찾는 장소가 없습니다."),
 

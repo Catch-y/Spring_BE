@@ -16,8 +16,8 @@ public class PostPlaceReviewResponse {
     @NoArgsConstructor
     public static class newPlaceReviewResponseDTO{
         Long reviewId;
-        Integer rating;
         String comment;
+        Integer rating;
         List<placeReviewImageResponseDTO> reviewImages;
         LocalDate visitedDate;
         String creatorNickname;
@@ -30,5 +30,27 @@ public class PostPlaceReviewResponse {
     public static class placeReviewImageResponseDTO{
         Long reviewImageId;
         String imageUrl;
+    }
+
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class placeReviewRatingResponseDTO{
+        Integer score;
+        Long count;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class placeReviewAllResponseDTO{
+        Float averageRating;
+        List<placeReviewRatingResponseDTO> ratingList;
+        Long totalCount;
+        List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> content;
+        Boolean last;
     }
 }

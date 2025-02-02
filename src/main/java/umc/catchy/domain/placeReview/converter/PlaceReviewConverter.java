@@ -6,7 +6,6 @@ import umc.catchy.domain.placeReview.domain.PlaceReview;
 import umc.catchy.domain.placeReview.dto.request.PostPlaceReviewRequest;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
 
-import java.time.LocalDate;
 import java.util.List;
 
 public class PlaceReviewConverter {
