@@ -340,21 +340,21 @@ public class CourseService {
     }
 
     public List<Place> getRecommendedPlaces(List<String> regionList, List<Long> preferredCategoryIds, Long memberId, int maxPlaces) {
-
-        // 1. 관심 지역에서 상위/하위 지역 정보 추출
         List<String> upperRegions = regionList.stream()
                 .map(LocationUtils::extractUpperLocation)
+                .map(LocationUtils::normalizeLocation)
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
 
         List<String> lowerRegions = regionList.stream()
                 .map(LocationUtils::extractLowerLocation)
+                .map(LocationUtils::normalizeLocation)
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
 
-        // 2. QueryDSL로 필터링, 가중치 계산, 정렬된 장소 가져오기
+        // QueryDSL 실행
         List<Place> recommendedPlaces = placeRepository.findRecommendedPlaces(preferredCategoryIds, upperRegions, lowerRegions, memberId, maxPlaces);
 
         // 3. 상위 n개의 데이터에서 랜덤으로 섞기
@@ -402,14 +402,14 @@ public class CourseService {
         String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles, activeTimes);
 
         // OpenAI GPT 호출
-        CompletableFuture<String> gptResponseFuture = CompletableFuture.supplyAsync(() -> {
-            return gptCourseService.callOpenAiApiAsync(gptPrompt).join();
-        });
+        CompletableFuture<String> gptResponseFuture = CompletableFuture.supplyAsync(() ->
+                gptCourseService.callOpenAiApiAsync(gptPrompt).join()
+        );
 
         // 이미지 생성 및 업로드
-        CompletableFuture<String> courseImageFuture = CompletableFuture.supplyAsync(() -> {
-            return gptCourseService.generateAndUploadCourseImageAsync("AI 추천 코스", "AI가 추천한 여행 코스입니다.").join();
-        });
+        CompletableFuture<String> courseImageFuture = CompletableFuture.supplyAsync(() ->
+                gptCourseService.generateAndUploadCourseImageAsync("AI 추천 코스", "AI가 추천한 여행 코스입니다.").join()
+        );
 
         // 두 작업 완료 후 데이터 처리
         return gptResponseFuture.thenCombine(courseImageFuture, (gptResponse, courseImage) -> {

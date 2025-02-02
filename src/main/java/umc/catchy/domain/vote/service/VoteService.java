@@ -7,6 +7,7 @@ import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.categoryVote.dao.CategoryVoteRepository;
 import umc.catchy.domain.categoryVote.domain.CategoryVote;
+import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.group.dao.GroupRepository;
 import umc.catchy.domain.group.domain.Groups;
 import umc.catchy.domain.mapping.memberCategoryVote.dao.MemberCategoryVoteRepository;
@@ -205,6 +206,7 @@ public class VoteService {
         Groups group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         String groupLocation = group.getGroupLocation();
+        String alternativeLocation = LocationUtils.normalizeLocation(groupLocation);
 
         // 그룹 인원 수 계산
         int totalMembers = memberGroupRepository.countByGroupId(groupId);
@@ -216,7 +218,7 @@ public class VoteService {
                     int votesForCategory = memberCategoryVoteRepository.countByVoteIdAndCategoryVoteId(voteId, categoryVote.getId());
 
                     if (votesForCategory >= majorityThreshold) {
-                        List<Place> places = placeRepository.findByBigCategoryAndLocation(categoryVote.getBigCategory(), groupLocation);
+                        List<Place> places = placeRepository.findByBigCategoryAndLocation(categoryVote.getBigCategory(), groupLocation, alternativeLocation);
                         return new CategoryResult(categoryVote.getBigCategory().toString(), places.size());
                     }
                     return null;
@@ -233,8 +235,14 @@ public class VoteService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         String groupLocation = group.getGroupLocation();
 
-        // 해당 카테고리의 장소 조회
-        List<Place> places = placeRepository.findByBigCategoryAndLocation(BigCategory.valueOf(category), groupLocation);
+        String normalizedGroupLocation = LocationUtils.normalizeLocation(groupLocation);
+        String normalizedAlternativeLocation = LocationUtils.normalizeLocation(normalizedGroupLocation);
+
+        List<Place> places = placeRepository.findByBigCategoryAndLocation(
+                BigCategory.valueOf(category),
+                normalizedGroupLocation,
+                normalizedAlternativeLocation
+        );
 
         List<PlaceResponse> placeResponses = places.stream()
                 .map(place -> {
@@ -275,7 +283,6 @@ public class VoteService {
 
         return new GroupPlaceResponse(groupLocation, placeResponses);
     }
-
 
     @Transactional
     public String togglePlaceVote(Long voteId, Long groupId, PlaceVoteRequest request) {
