@@ -30,6 +30,7 @@ import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
 import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
+import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
 import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
@@ -730,5 +731,9 @@ public class CourseService {
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to deserialize course recommendations", e);
         }
+    }
+
+    public List<PopularCourseInfoResponse> getPopularCourses(){
+        return CourseConverter.toPopularCourseInfoResponseList(courseRepository.findPopularCourses());
     }
 }
