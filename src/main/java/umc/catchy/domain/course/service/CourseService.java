@@ -26,8 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
-import umc.catchy.domain.category.domain.BigCategory;
-import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
 import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
@@ -357,7 +355,7 @@ public class CourseService {
         return finalPlaces;
     }
 
-    public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically() {
+    public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically(boolean saveToDb) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -400,15 +398,15 @@ public class CourseService {
                 gptCourseService.generateAndUploadCourseImageAsync("AI 추천 코스", "AI가 추천한 여행 코스입니다.").join()
         );
 
-        // 두 작업 완료 후 데이터 처리
         return gptResponseFuture.thenCombine(courseImageFuture, (gptResponse, courseImage) -> {
-            // GPT 응답 파싱
             GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
             parsedResponse.setCourseImage(courseImage);
 
-            // 저장 및 코스 ID 설정
-            Long courseId = saveCourseAndPlaces(parsedResponse, member).join();
-            parsedResponse.setCourseId(courseId);
+            if (saveToDb) {
+                // DB 저장 O
+                Long courseId = saveCourseAndPlaces(parsedResponse, member).join();
+                parsedResponse.setCourseId(courseId);
+            }
 
             return parsedResponse;
         }).exceptionally(e -> {
@@ -655,7 +653,7 @@ public class CourseService {
         }
 
         // 3. 캐시 데이터가 없으면 새 데이터를 생성
-        List<CourseRecommendationResponse> recommendedCourses = generateRecommendedCourses();
+        List<CourseRecommendationResponse> recommendedCourses = generateRecommendedCourses(false); // false = DB 저장 안 함
 
         // 4. 생성된 데이터를 Redis에 캐싱
         String serializedData = serializeCourseRecommendations(recommendedCourses);
@@ -664,11 +662,16 @@ public class CourseService {
         return recommendedCourses;
     }
 
-    public CompletableFuture<List<GptCourseInfoResponse>> generateMultipleAICourses(int count) {
+    // AI 추천 코스 생성 API (DB 저장 O)
+    public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically() {
+        return generateCourseAutomatically(true); // true = DB 저장
+    }
+
+    public CompletableFuture<List<GptCourseInfoResponse>> generateMultipleAICourses(int count, boolean saveToDb) {
         List<CompletableFuture<GptCourseInfoResponse>> futures = new ArrayList<>();
 
         for (int i = 0; i < count; i++) {
-            futures.add(generateCourseAutomatically());
+            futures.add(generateCourseAutomatically(saveToDb));
         }
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -677,9 +680,10 @@ public class CourseService {
                         .collect(Collectors.toList()));
     }
 
-    private List<CourseRecommendationResponse> generateRecommendedCourses() {
+    private List<CourseRecommendationResponse> generateRecommendedCourses(boolean saveToDb) {
         Long memberId = SecurityUtil.getCurrentMemberId();
 
+        // 유저가 만든 코스 조회
         List<Course> userCourses = courseRepository.findTop5ByMemberIdAndCourseTypeOrderByCreatedDateDesc(memberId, CourseType.DIY);
 
         int userCourseCount = userCourses.size();
@@ -693,11 +697,11 @@ public class CourseService {
 
         if (aiCourseCount > 0) {
             // AI 코스 생성
-            List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(aiCourseCount).join();
+            List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(aiCourseCount, saveToDb).join();
 
             recommendedCourses.addAll(aiCourses.stream()
                     .map(response -> CourseRecommendationResponse.builder()
-                            .courseId(response.getCourseId())
+                            .courseId(saveToDb ? response.getCourseId() : null)
                             .courseName(response.getCourseName())
                             .courseDescription(response.getCourseDescription())
                             .courseImage(response.getCourseImage())
