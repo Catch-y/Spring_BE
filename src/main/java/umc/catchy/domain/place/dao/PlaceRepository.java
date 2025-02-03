@@ -12,7 +12,12 @@ import java.util.List;
 
 @Repository
 public interface PlaceRepository extends JpaRepository<Place, Long>, PlaceCustomRepository {
-    @Query("SELECT p FROM Place p WHERE p.category.bigCategory = :bigCategory AND p.roadAddress LIKE %:groupLocation%")
-    List<Place> findByBigCategoryAndLocation(@Param("bigCategory") BigCategory bigCategory, @Param("groupLocation") String groupLocation);
+    @Query("SELECT p FROM Place p WHERE p.category.bigCategory = :bigCategory " +
+            "AND (p.roadAddress LIKE %:groupLocation% OR p.roadAddress LIKE %:alternativeLocation%)")
+    List<Place> findByBigCategoryAndLocation(
+            @Param("bigCategory") BigCategory bigCategory,
+            @Param("groupLocation") String groupLocation,
+            @Param("alternativeLocation") String alternativeLocation
+    );
     Optional<Place> findByPoiId(Long poiId);
 }
