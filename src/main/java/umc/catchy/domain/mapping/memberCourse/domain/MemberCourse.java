@@ -23,7 +23,7 @@ public class MemberCourse extends BaseTimeEntity {
     @Column(name = "member_course_id")
     private Long id;
 
-    private boolean isVisited;
+    private boolean isVisited = false;
 
     private LocalDateTime visitedDate;
 
@@ -33,7 +33,7 @@ public class MemberCourse extends BaseTimeEntity {
     @JoinColumn(name = "member_id")
     private Member member;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id")
     private Course course;
 
