@@ -316,4 +316,38 @@ public class VoteService {
             return "Vote added successfully.";
         }
     }
+
+    @Transactional
+    public void revoteCategory(Long voteId, List<Long> categoryIds) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+
+        Vote vote = voteRepository.findById(voteId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_FOUND));
+
+        // 투표가 완료 상태면 재투표 불가능
+        if (vote.getStatus() == VoteStatus.COMPLETED) {
+            throw new GeneralException(ErrorStatus.VOTE_ALREADY_COMPLETED);
+        }
+
+        // 기존 투표 삭제
+        memberCategoryVoteRepository.deleteByVoteIdAndMemberId(voteId, memberId);
+
+        // 새로 투표 등록
+        for (Long categoryId : categoryIds) {
+            CategoryVote categoryVote = categoryVoteRepository.findById(categoryId)
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.CATEGORY_NOT_FOUND));
+
+            if (!categoryVote.getVote().getId().equals(voteId)) {
+                throw new GeneralException(ErrorStatus.INVALID_CATEGORY_SELECTION);
+            }
+
+            Member member = memberRepository.findById(memberId)
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+            MemberCategoryVote memberCategoryVote = new MemberCategoryVote(member, categoryVote, voteId);
+            memberCategoryVoteRepository.save(memberCategoryVote);
+        }
+
+        checkAndUpdateVoteCompletion(voteId);
+    }
 }
