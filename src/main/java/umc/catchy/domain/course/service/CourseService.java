@@ -440,8 +440,7 @@ public class CourseService {
                 .build();
 
         // 코스 저장
-        Course savedCourse = courseRepository.save(course);
-        courseRepository.flush();
+        Course savedCourse = courseRepository.saveAndFlush(course);
 
         int order = 1;
         double totalRating = 0.0;
@@ -474,8 +473,13 @@ public class CourseService {
         savedCourse.setRating(courseRating);
         courseRepository.saveAndFlush(savedCourse);
 
-        // 영속성 컨텍스트 비우기
-        entityManager.clear();
+        // MemberCourse 생성 및 저장
+        MemberCourse memberCourse = MemberCourse.builder()
+                .course(savedCourse)
+                .member(member)
+                .build();
+
+        memberCourseRepository.save(memberCourse);
 
         // 코스 ID 반환
         return CompletableFuture.completedFuture(savedCourse.getId());
