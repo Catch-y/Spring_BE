@@ -14,6 +14,7 @@ import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
+import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
 import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
@@ -148,5 +149,12 @@ public class CourseController {
     public ResponseEntity<BaseResponse<List<CourseRecommendationResponse>>> getHomeRecommendedCourses() {
         List<CourseRecommendationResponse> recommendedCourses = courseService.getHomeRecommendedCourses();
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, recommendedCourses));
+    }
+
+    @Operation(summary = "인기 코스 조회 API", description = "전체 사용자 데이터를 기반으로 상위 10개의 인기 코스를 조회하는 API입니다.")
+    @GetMapping("/top10")
+    public ResponseEntity<BaseResponse<List<PopularCourseInfoResponse>>> getPopularCourse(){
+        List<PopularCourseInfoResponse> response = courseService.getPopularCourses();
+        return  ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

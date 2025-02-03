@@ -8,6 +8,7 @@ import umc.catchy.domain.place.domain.Place;
 
 import java.time.LocalDate;
 
+
 @Entity
 @Getter
 @Builder
