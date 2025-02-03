@@ -321,6 +321,10 @@ public class VoteService {
     public void revoteCategory(Long voteId, List<Long> categoryIds) {
         Long memberId = SecurityUtil.getCurrentMemberId();
 
+        if (categoryIds == null || categoryIds.size() < 2) {
+            throw new GeneralException(ErrorStatus.INVALID_CATEGORY_SELECTION);
+        }
+
         Vote vote = voteRepository.findById(voteId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_FOUND));
 
