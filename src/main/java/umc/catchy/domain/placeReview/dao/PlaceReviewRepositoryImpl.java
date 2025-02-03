@@ -43,7 +43,8 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                 .from(placeReview)
                 .where(
                         placeIdEq(placeId),
-                        lastPlaceReviewId(lastPlaceReviewId)
+                        lastPlaceReviewId(lastPlaceReviewId),
+                        placeReview.isReported.eq(false)
                 )
                 .orderBy(placeReview.visitedDate.desc())
                 .limit(pageSize + 1)
