@@ -55,4 +55,17 @@ public class PlaceController {
         PlaceVisitedDateResponse response = placeVisitService.getPlaceVisitDate(placeId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK,response));
     }
+
+    @Operation(summary = "장소리뷰 전체 조회 API", description = "해당 장소의 전체 리뷰를 보여줍니다.")
+    @GetMapping("/{placeId}/review/all")
+    public ResponseEntity<BaseResponse<PostPlaceReviewResponse.placeReviewAllResponseDTO>> getAllPlaceReviews(
+            @PathVariable("placeId") Long placeId,
+            @RequestParam int pageSize,
+            @RequestParam(required = false) Long lastPlaceReviewId
+    ) {
+        PostPlaceReviewResponse.placeReviewAllResponseDTO response = placeReviewService.getAllPlaceReviews(placeId, pageSize, lastPlaceReviewId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK,response));
+    }
+
+
 }

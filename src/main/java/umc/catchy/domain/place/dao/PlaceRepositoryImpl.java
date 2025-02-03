@@ -5,12 +5,15 @@ import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.place.domain.QPlace;
 
 import java.util.List;
 
+@Slf4j
 @RequiredArgsConstructor
 public class PlaceRepositoryImpl implements PlaceCustomRepository {
     private final JPAQueryFactory queryFactory;
@@ -34,9 +37,11 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         if (upperRegions == null || upperRegions.isEmpty()) {
             return null;
         }
+
         BooleanExpression condition = null;
         for (String region : upperRegions) {
-            BooleanExpression regionCondition = place.roadAddress.like(region + "%"); // "서울시%"
+            String normalizedRegion = LocationUtils.normalizeLocation(region);
+            BooleanExpression regionCondition = place.roadAddress.like("%" + normalizedRegion + "%");
             condition = (condition == null) ? regionCondition : condition.or(regionCondition);
         }
         return condition;
@@ -46,9 +51,11 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         if (lowerRegions == null || lowerRegions.isEmpty()) {
             return null;
         }
+
         BooleanExpression condition = null;
         for (String region : lowerRegions) {
-            BooleanExpression regionCondition = place.roadAddress.like("%" + region + "%"); // "%성북구%"
+            String normalizedRegion = LocationUtils.normalizeLocation(region);
+            BooleanExpression regionCondition = place.roadAddress.like("%" + normalizedRegion + "%");
             condition = (condition == null) ? regionCondition : condition.or(regionCondition);
         }
         return condition;
