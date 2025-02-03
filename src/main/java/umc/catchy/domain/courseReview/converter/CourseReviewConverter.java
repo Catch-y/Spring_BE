@@ -6,7 +6,7 @@ import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.member.domain.Member;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 public class CourseReviewConverter {
@@ -19,6 +19,7 @@ public class CourseReviewConverter {
                 .reviewId(courseReview.getId())
                 .comment(courseReview.getComment())
                 .reviewImages(images)
+                .createdAt(courseReview.getCreatedAt())
                 .creatorNickname(courseReview.getMember().getNickname())
                 .build();
     }
@@ -28,6 +29,7 @@ public class CourseReviewConverter {
                 .comment(request.getComment())
                 .member(member)
                 .course(course)
+                .createdAt(LocalDate.now())
                 .build();
     }
 }

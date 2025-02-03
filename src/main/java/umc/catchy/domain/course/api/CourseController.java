@@ -143,7 +143,7 @@ public class CourseController {
 
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
-  
+
     @Operation(summary = "홈화면 추천 코스 API", description = "홈화면에서 사용자 맞춤 추천 코스를 조회합니다. 사용자 코스와 AI 코스를 조합하여 최대 10개를 반환합니다.")
     @GetMapping("/home/personal-courses")
     public ResponseEntity<BaseResponse<List<CourseRecommendationResponse>>> getHomeRecommendedCourses() {
@@ -156,5 +156,16 @@ public class CourseController {
     public ResponseEntity<BaseResponse<List<PopularCourseInfoResponse>>> getPopularCourse(){
         List<PopularCourseInfoResponse> response = courseService.getPopularCourses();
         return  ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "코스 리뷰 전체보기 API", description = "코스 리뷰 전체를 보여줍니다.")
+    @GetMapping("/{courseId}/review/all")
+    public ResponseEntity<BaseResponse<PostCourseReviewResponse.courseReviewAllResponseDTO>> searchAllReview(
+            @PathVariable Long courseId,
+            @RequestParam int pageSize,
+            @RequestParam(required = false) Long lastReviewId
+    ){
+        PostCourseReviewResponse.courseReviewAllResponseDTO response = courseReviewService.getAllCourseReview(courseId, pageSize, lastReviewId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }
