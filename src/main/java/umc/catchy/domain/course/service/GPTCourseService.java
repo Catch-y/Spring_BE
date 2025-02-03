@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
@@ -23,6 +24,9 @@ public class GPTCourseService {
     private final WebClient gptWebClient;
     private final WebClient dalleWebClient;
     private final AmazonS3Manager amazonS3Manager;
+
+    @Value("${openai.model}")
+    private String openAiModel;
 
     public CompletableFuture<String> generateAndUploadCourseImageAsync(String courseName, String courseDescription) {
         return generateCourseImageAsync(courseName, courseDescription)
@@ -46,11 +50,12 @@ public class GPTCourseService {
     // 비동기 OpenAI 텍스트 API 호출
     public CompletableFuture<String> callOpenAiApiAsync(String prompt) {
         Map<String, Object> requestBody = Map.of(
-                "model", "gpt-3.5-turbo",
+                "model", openAiModel,
                 "messages", List.of(
                         Map.of("role", "user", "content", prompt)
                 ),
-                "max_tokens", 1000
+                "max_tokens", 500,
+                "temperature", 0.7
         );
 
         return gptWebClient.post()
@@ -71,7 +76,7 @@ public class GPTCourseService {
         Map<String, Object> requestBody = Map.of(
                 "prompt", prompt,
                 "n", 1,
-                "size", "512x512"
+                "size", "256x256"
         );
 
         return dalleWebClient.post()

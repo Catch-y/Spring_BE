@@ -14,6 +14,7 @@ import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
+import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
 import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
@@ -21,6 +22,8 @@ import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReview.service.CourseReviewService;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
+import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedResponse;
+import umc.catchy.domain.mapping.placeVisit.service.PlaceVisitService;
 import umc.catchy.domain.place.dto.request.SetCategoryRequest;
 import umc.catchy.domain.place.service.PlaceService;
 import umc.catchy.global.common.response.BaseResponse;
@@ -39,6 +42,7 @@ public class CourseController {
     private final CourseReviewService courseReviewService;
     private final MemberCourseService memberCourseService;
     private final PlaceService placeService;
+    private final PlaceVisitService placeVisitService;
 
     @Operation(summary = "코스 상세정보 조회 API", description = "코스 상세 화면에서 코스에 대한 상세정보를 나타내기 위한 정보 조회 기능입니다.")
     @GetMapping("/detail/{courseId}")
@@ -132,10 +136,25 @@ public class CourseController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 
+    @Operation(summary = "장소 방문체크 API", description = "프론트에서 체크 가능여부 판단 후 방문체크를 합니다.")
+    @PostMapping("/visited/{placeId}")
+    public ResponseEntity<BaseResponse<PlaceVisitedResponse>> visitCheck(@PathVariable("placeId") Long placeId) {
+        PlaceVisitedResponse response = placeVisitService.check(placeId);
+
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+  
     @Operation(summary = "홈화면 추천 코스 API", description = "홈화면에서 사용자 맞춤 추천 코스를 조회합니다. 사용자 코스와 AI 코스를 조합하여 최대 10개를 반환합니다.")
     @GetMapping("/home/personal-courses")
     public ResponseEntity<BaseResponse<List<CourseRecommendationResponse>>> getHomeRecommendedCourses() {
         List<CourseRecommendationResponse> recommendedCourses = courseService.getHomeRecommendedCourses();
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, recommendedCourses));
+    }
+
+    @Operation(summary = "인기 코스 조회 API", description = "전체 사용자 데이터를 기반으로 상위 10개의 인기 코스를 조회하는 API입니다.")
+    @GetMapping("/top10")
+    public ResponseEntity<BaseResponse<List<PopularCourseInfoResponse>>> getPopularCourse(){
+        List<PopularCourseInfoResponse> response = courseService.getPopularCourses();
+        return  ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

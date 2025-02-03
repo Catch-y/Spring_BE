@@ -10,6 +10,6 @@ import umc.catchy.domain.course.domain.CourseType;
 import java.util.List;
 
 @Repository
-public interface CourseRepository extends JpaRepository<Course, Long> {
+public interface CourseRepository extends JpaRepository<Course, Long>, CourseRepositoryCustom {
     List<Course> findTop5ByMemberIdAndCourseTypeOrderByCreatedDateDesc(Long memberId, CourseType courseType);
 }

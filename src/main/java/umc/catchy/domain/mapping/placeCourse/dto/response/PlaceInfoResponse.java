@@ -15,6 +15,7 @@ public class PlaceInfoResponse {
     private String roadAddress;
     private String activeTime;
     private Double rating;
+    private Boolean isVisited;
     private Long reviewCount;
     private String placeSite;
 
