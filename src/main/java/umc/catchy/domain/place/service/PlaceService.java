@@ -33,13 +33,8 @@ public class PlaceService {
         // 대카테고리 검증
         BigCategory bigCategory = BigCategory.findByName(request.getBigCategory());
 
-        // 카테고리 생성
-        Category category = Category.builder()
-                .bigCategory(bigCategory)
-                .name(request.getSmallCategory())
-                .build();
-
-        categoryRepository.save(category);
+        Category category = categoryRepository.findByBigCategoryAndName(bigCategory, request.getSmallCategory())
+                .orElseThrow(() -> new GeneralException(ErrorStatus.INVALID_CATEGORY));
 
         // 장소에 카테고리 설정
         place.setCategory(category);
