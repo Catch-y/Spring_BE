@@ -44,6 +44,7 @@ public enum ErrorStatus implements BaseErrorCode {
 
     //코스 관련 에러
     COURSE_REVIEW_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "COURSE_REVIEW_MEMBER400", "해당 멤버는 코스 리뷰를 달 수 있는 권한이 없습니다."),
+    COURSE_REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND,"COURSE_REVIEW404", "해당 코스리뷰를 찾을 수 없습니다."),
     COURSE_INVALID_MEMBER(HttpStatus.BAD_REQUEST, "COURSE_MEMBER400", "해당 멤버는 코스를 수정하거나 삭제할 수 있는 권한이 없습니다."),
     COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "COURSE404", "해당 코스를 찾을 수 없습니다."),
     INVALID_COURSE_TYPE(HttpStatus.BAD_REQUEST, "COURSE_TYPE400", "코스타입 입력이 잘못되었습니다."),
@@ -75,6 +76,9 @@ public enum ErrorStatus implements BaseErrorCode {
     JSON_PARSING_ERROR(HttpStatus.NOT_FOUND, "GPT404", "json 파싱 에러"),
     IMAGE_GENERATION_ERROR(HttpStatus.BAD_REQUEST, "GPT402", "이미지 생성에 실패하였습니다."),
     GPT_API_CALL_FAILED(HttpStatus.NOT_FOUND, "GPT404", "GPT 호출에 실패했습니다."),
+
+    //리뷰 관련 에러
+    REVIEW_DELETE_INVALID(HttpStatus.BAD_REQUEST, "REVIEW400", "해당 멤버는 리뷰 삭제 권한이 없습니다."),
     ;
 
     private final HttpStatus httpStatus;
