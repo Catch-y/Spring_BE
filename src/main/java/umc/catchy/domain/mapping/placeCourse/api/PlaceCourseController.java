@@ -46,7 +46,7 @@ public class PlaceCourseController {
     }
 
     @GetMapping("/{placeId}")
-    @Operation(summary = "지역 상세 화면 API", description = "지도에서 장소 검색 후 클릭하면 나오는 상세 화면")
+    @Operation(summary = "장소 상세 화면 API", description = "지도에서 장소 검색 후 클릭하면 나오는 상세 화면")
     public ResponseEntity<BaseResponse<PlaceInfoResponse>> getPlaceInfoDetail(@RequestParam Long placeId){
         PlaceInfoResponse response = placeCourseService.getPlaceResponseByPlaceId(placeId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));

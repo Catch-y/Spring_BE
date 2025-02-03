@@ -286,8 +286,8 @@ public class CourseService {
 
         // 코스 생성
         Course course = CourseConverter.toCourse(request, courseImageUrl, member);
+        course.setCourseType(CourseType.DIY);
 
-        // PlaceCourse 생성
         List<Long> placeIds = request.getPlaceIds();
 
         // 평점 계산
@@ -305,7 +305,6 @@ public class CourseService {
             Long placeId = placeIds.get(index);
             Place place = placeRepository.findById(placeId)
                     .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
-
 
             // List의 Index를 기반으로 코스 순서 결정
             PlaceCourse newPlaceCourse = PlaceCourse.builder()
@@ -327,17 +326,6 @@ public class CourseService {
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
         return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
-    }
-
-    private List<BigCategory> getCategories(Course course) {
-        List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
-
-        return placeCourses.stream()
-                .map(PlaceCourse::getPlace)
-                .map(Place::getCategory)
-                .map(Category::getBigCategory)
-                .distinct()
-                .toList();
     }
 
     public List<Place> getRecommendedPlaces(List<String> regionList, List<Long> preferredCategoryIds, Long memberId, int maxPlaces) {

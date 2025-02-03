@@ -1,5 +1,6 @@
 package umc.catchy.domain.placeReview.service;
 
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -88,6 +89,11 @@ public class PlaceReviewService {
         if(!isVisited){
             throw new GeneralException(ErrorStatus.PLACE_REVIEW_INVALID_MEMBER);
         }
+
+        //장소 방문일자 가져오기
+        LocalDate visitedDate = placeVisitRepository.findByPlaceAndMember(place, member)
+                .map(PlaceVisit::getVisitedDate)
+                .orElse(null);
 
         //PlaceReview 엔티티 생성 및 저장
         PlaceReview newPlaceReview = PlaceReviewConverter.toPlaceReview(member, place, request);

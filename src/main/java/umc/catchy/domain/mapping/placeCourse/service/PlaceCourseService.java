@@ -25,6 +25,10 @@ import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoSliceResponse;
+import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
+import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
+import umc.catchy.domain.member.dao.MemberRepository;
+import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.converter.PlaceConverter;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
@@ -40,6 +44,8 @@ import umc.catchy.global.util.SecurityUtil;
 public class PlaceCourseService {
     private static final String TMAP_API_URL = "https://apis.openapi.sk.com/tmap/pois";
     private static final String GOOGLE_API_URL = "https://maps.googleapis.com/maps/api/place/";
+    private final MemberRepository memberRepository;
+    private final PlaceVisitRepository placeVisitRepository;
 
     @Value("${map.tmap.app-key}")
     private String TMAP_APP_KEY;
@@ -81,12 +87,19 @@ public class PlaceCourseService {
     }
 
     public PlaceInfoResponse getPlaceResponseByPlaceId(Long placeId) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
         Long reviewCount = placeReviewRepository.countByPlaceId(placeId);
 
-        return PlaceConverter.toPlaceInfoResponse(place, reviewCount);
+        Optional<PlaceVisit> placeVisit = placeVisitRepository.findByPlaceAndMember(place, member);
+        Boolean isVisited = placeVisit.map(PlaceVisit::isVisited).orElse(false);
+
+        return PlaceConverter.toPlaceInfoResponse(place, reviewCount, isVisited);
     }
 
     private StringBuilder getSearchResponse(String keyword, Double latitude, Double longitude, Integer page) {
