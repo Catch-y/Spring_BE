@@ -88,7 +88,6 @@ public class ReviewReportService {
     }
 
     //리뷰 삭제하기
-    //TODO : REVIEW_REPORT 삭제
     public DeleteReviewResponse deleteReview(Long reviewId, String reviewType){
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
@@ -104,6 +103,7 @@ public class ReviewReportService {
                 throw new GeneralException(ErrorStatus.REVIEW_DELETE_INVALID);
             }
             DeletePlaceReviewImages(placeReview);
+            reviewReportRepository.deleteAllByPlaceReview(placeReview);
             placeReviewRepository.delete(placeReview);
         }
         else {
@@ -114,6 +114,7 @@ public class ReviewReportService {
                 throw new GeneralException(ErrorStatus.REVIEW_DELETE_INVALID);
             }
             DeleteCourseReviewImages(courseReview);
+            reviewReportRepository.deleteAllByCourseReview(courseReview);
             courseReviewRepository.delete(courseReview);
         }
         return ReviewReportConverter.toDeleteReviewResponse(reviewId, type);

@@ -28,7 +28,6 @@ public class ReviewReportController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
-    //TODO 리뷰 삭제하기
     @Operation(summary = "리뷰 삭제 API", description = "코스리뷰, 장소리뷰 통합 리뷰 삭제 API입니다.")
     @DeleteMapping("/mypage/reviews/{reviewId}")
     public ResponseEntity<BaseResponse<DeleteReviewResponse>> deleteReview(
