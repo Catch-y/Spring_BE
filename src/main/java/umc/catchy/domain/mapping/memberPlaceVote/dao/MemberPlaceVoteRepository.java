@@ -19,4 +19,6 @@ public interface MemberPlaceVoteRepository extends JpaRepository<MemberPlaceVote
     MemberPlaceVote findByMemberIdAndPlaceIdAndVoteId(Long memberId, Long placeId, Long voteId);
     @Query("SELECT COUNT(mpv) FROM MemberPlaceVote mpv WHERE mpv.place.id = :placeId")
     int countByPlaceId(@Param("placeId") Long placeId);
+
+    Integer deleteAllByMember(Member member);
 }
