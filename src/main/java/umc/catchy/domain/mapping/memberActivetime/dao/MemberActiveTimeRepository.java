@@ -8,6 +8,7 @@ import umc.catchy.domain.mapping.memberActivetime.domain.MemberActiveTime;
 
 import java.time.DayOfWeek;
 import java.util.List;
+import umc.catchy.domain.member.domain.Member;
 
 @Repository
 public interface MemberActiveTimeRepository extends JpaRepository<MemberActiveTime, Long> {
@@ -16,4 +17,5 @@ public interface MemberActiveTimeRepository extends JpaRepository<MemberActiveTi
     @Query("SELECT mat FROM MemberActiveTime mat JOIN FETCH mat.activeTime at " +
             "WHERE mat.member.id = :memberId AND at.dayOfWeek = :today")
     List<MemberActiveTime> findActiveTimeByMemberIdAndDayOfWeek(@Param("memberId") Long memberId, @Param("today") DayOfWeek today);
+    Integer deleteAllByMember(Member member);
 }
