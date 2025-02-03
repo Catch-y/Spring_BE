@@ -15,6 +15,7 @@ import umc.catchy.domain.placeReview.service.PlaceReviewService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
 
+import java.time.LocalDate;
 import java.util.Collections;
 
 @Tag(name = "Place", description = "장소 관련 API")
@@ -61,9 +62,10 @@ public class PlaceController {
     public ResponseEntity<BaseResponse<PostPlaceReviewResponse.placeReviewAllResponseDTO>> getAllPlaceReviews(
             @PathVariable("placeId") Long placeId,
             @RequestParam int pageSize,
+            @RequestParam(required = false) LocalDate lastPlaceReviewDate,
             @RequestParam(required = false) Long lastPlaceReviewId
     ) {
-        PostPlaceReviewResponse.placeReviewAllResponseDTO response = placeReviewService.getAllPlaceReviews(placeId, pageSize, lastPlaceReviewId);
+        PostPlaceReviewResponse.placeReviewAllResponseDTO response = placeReviewService.getAllPlaceReviews(placeId, pageSize, lastPlaceReviewDate, lastPlaceReviewId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK,response));
     }
 

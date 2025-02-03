@@ -11,6 +11,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,16 +38,16 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
     }
 
     @Override
-    public Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> findPlaceReviewSliceByPlaceId(Long placeId, int pageSize, Long lastPlaceReviewId) {
+    public Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> findPlaceReviewSliceByPlaceId(Long placeId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId) {
         List<Long> reviewIds = queryFactory
                 .select(placeReview.id)
                 .from(placeReview)
                 .where(
                         placeIdEq(placeId),
-                        lastPlaceReviewId(lastPlaceReviewId),
+                        lastPlaceReviewCondition(lastPlaceReviewDate, lastPlaceReviewId),
                         placeReview.isReported.eq(false)
                 )
-                .orderBy(placeReview.visitedDate.desc())
+                .orderBy(placeReview.visitedDate.desc(), placeReview.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
 
@@ -56,7 +57,7 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                 .where(
                         placeReview.id.in(reviewIds)
                 )
-                .orderBy(placeReview.visitedDate.desc())
+                .orderBy(placeReview.visitedDate.desc(), placeReview.id.desc())
                 .transform(groupBy(placeReview.id).list(
                         Projections.fields(PostPlaceReviewResponse.newPlaceReviewResponseDTO.class,
                                 placeReview.id.as("reviewId"),
@@ -91,11 +92,27 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
         return placeId == null ? null : placeReview.place.id.eq(placeId);
     }
 
-    private BooleanExpression lastPlaceReviewId(Long placeReviewId) {
-        if (placeReviewId == null) {
+    private BooleanExpression lastPlaceReviewDate(LocalDate lastPlaceReviewDate) {
+        if (lastPlaceReviewDate == null) {
             return null;
         }
-        return placeReview.id.lt(placeReviewId);
+        return placeReview.visitedDate.lt(lastPlaceReviewDate);
+    }
+
+    private BooleanExpression lastPlaceReviewCondition(LocalDate lastVisitedDate, Long lastReviewId) {
+        if (lastVisitedDate == null || lastReviewId == null) {
+            return null;  // 첫 페이지 요청 시에는 조건 없이 모든 데이터를 조회
+        }
+
+        // 방문 날짜가 마지막 방문 날짜보다 이전인 경우
+        BooleanExpression beforeVisitedDate = placeReview.visitedDate.lt(lastVisitedDate);
+
+        // 방문 날짜가 같고, 리뷰 ID가 마지막 리뷰 ID보다 작은 경우
+        BooleanExpression sameDateBeforeId = placeReview.visitedDate.eq(lastVisitedDate)
+                .and(placeReview.id.lt(lastReviewId));
+
+        // 두 조건 중 하나라도 만족하면 해당 데이터를 가져옴
+        return beforeVisitedDate.or(sameDateBeforeId);
     }
 
     private Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> checkLastPage(int pageSize, List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> results) {
