@@ -31,4 +31,6 @@ public class CourseReview extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id")
     private Course course;
+
+    private Boolean isReported = false;
 }

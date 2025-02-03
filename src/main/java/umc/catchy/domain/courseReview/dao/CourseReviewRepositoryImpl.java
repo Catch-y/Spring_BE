@@ -30,7 +30,8 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                 .from(courseReview)
                 .where(
                         courseIdEq(courseId),
-                        lastCourseReviewId(lastReviewId)
+                        lastCourseReviewId(lastReviewId),
+                        courseReview.isReported.eq(false)
                 )
                 .orderBy(courseReview.createdDate.desc())
                 .limit(pageSize + 1)
