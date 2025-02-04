@@ -362,6 +362,11 @@ public class CourseService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
+        if (!isForHome) {
+            member.increaseGptCount();
+            memberRepository.save(member);
+        }
+
         List<MemberLocation> memberLocations = memberLocationRepository.findAllByMemberId(memberId);
         List<String> preferredCategories = getPreferredCategories(memberId);
         List<String> userStyles = getUserStyles(memberId);
@@ -473,7 +478,7 @@ public class CourseService {
         savedCourse.setRating(courseRating);
         courseRepository.saveAndFlush(savedCourse);
 
-        // 🔥 홈 추천 AI 코스가 아니라면 MemberCourse에 저장
+        // 홈 추천 AI 코스가 아니라면 MemberCourse에 저장
         if (!isForHome) {
             MemberCourse memberCourse = MemberCourse.builder()
                     .course(savedCourse)
