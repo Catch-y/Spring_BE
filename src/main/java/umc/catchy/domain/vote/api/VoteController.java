@@ -104,4 +104,13 @@ public class VoteController {
         String message = voteService.togglePlaceVote(voteId, groupId, request);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, message));
     }
+
+    @Operation(summary = "카테고리 재투표", description = "기존 투표를 취소하고 다시 투표합니다.")
+    @PostMapping("/{voteId}/category/revote")
+    public ResponseEntity<BaseResponse<Void>> revoteCategory(
+            @PathVariable Long voteId,
+            @RequestBody SubmitVoteRequest request) {
+        voteService.revoteCategory(voteId, request.getCategoryIds());
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
+    }
 }
