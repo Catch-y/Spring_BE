@@ -26,8 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
-import umc.catchy.domain.category.domain.BigCategory;
-import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
 import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
@@ -400,22 +398,23 @@ public class CourseService {
                 gptCourseService.callOpenAiApiAsync(gptPrompt).join()
         );
 
-        // 이미지 생성 및 업로드
-        CompletableFuture<String> courseImageFuture = CompletableFuture.supplyAsync(() ->
-                gptCourseService.generateAndUploadCourseImageAsync("AI 추천 코스", "AI가 추천한 여행 코스입니다.").join()
-        );
-
-        // 두 작업 완료 후 데이터 처리
-        return gptResponseFuture.thenCombine(courseImageFuture, (gptResponse, courseImage) -> {
-            // GPT 응답 파싱
+        // GPT 응답 및 이미지 생성 비동기 처리
+        return gptResponseFuture.thenCompose(gptResponse -> {
             GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
-            parsedResponse.setCourseImage(courseImage);
+            String courseName = parsedResponse.getCourseName();
+            String courseDescription = parsedResponse.getCourseDescription();
 
-            // AI 코스 저장 (홈 추천인지 여부 전달)
-            Long courseId = saveCourseAndPlaces(parsedResponse, member, isForHome).join();
-            parsedResponse.setCourseId(courseId);
-
-            return parsedResponse;
+            return gptCourseService.generateAndUploadCourseImageAsync(courseName, courseDescription)
+                    .thenApply(courseImage -> {
+                        parsedResponse.setCourseImage(courseImage);
+                        return parsedResponse;
+                    });
+        }).thenCompose(parsedResponse -> {
+            return saveCourseAndPlaces(parsedResponse, member, isForHome)
+                    .thenApply(courseId -> {
+                        parsedResponse.setCourseId(courseId);
+                        return parsedResponse;
+                    });
         }).exceptionally(e -> {
             e.printStackTrace();
             throw new GeneralException(ErrorStatus.GPT_API_CALL_FAILED);
@@ -568,6 +567,7 @@ public class CourseService {
         prompt.append("\nThe course name and description must be written in Korean.\n");
         prompt.append("The course description should be concise, no more than 80 characters.\n");
         prompt.append("Please generate a course name and description that fits the selected places and reflects the user's preferred styles.\n");
+        prompt.append("Each course must contain at least 2 and at most 5 places.\n");
         prompt.append("The response should include a course name, course description, recommended visit time for each place, and the full list of recommended places in the region.\n");
         prompt.append("Please return only the JSON structure below without any additional text, comments, or markdown formatting (e.g., no ```json). Return only the raw JSON structure:\n");
         prompt.append("The response should include a field `courseImage` with a URL to the generated image.\n");
@@ -590,6 +590,7 @@ public class CourseService {
         prompt.append("Return only this JSON structure, with no additional text.");
         return prompt.toString();
     }
+
     private GptCourseInfoResponse parseGptResponseToDto(String gptResponse) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
