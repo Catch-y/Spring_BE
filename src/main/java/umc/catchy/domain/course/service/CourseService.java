@@ -357,7 +357,7 @@ public class CourseService {
         return finalPlaces;
     }
 
-    public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically() {
+    public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically(boolean isForHome) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -406,8 +406,8 @@ public class CourseService {
             GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
             parsedResponse.setCourseImage(courseImage);
 
-            // 저장 및 코스 ID 설정
-            Long courseId = saveCourseAndPlaces(parsedResponse, member).join();
+            // AI 코스 저장 (홈 추천인지 여부 전달)
+            Long courseId = saveCourseAndPlaces(parsedResponse, member, isForHome).join();
             parsedResponse.setCourseId(courseId);
 
             return parsedResponse;
@@ -425,7 +425,7 @@ public class CourseService {
 
     @Async
     @Transactional
-    public CompletableFuture<Long> saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Member member) {
+    public CompletableFuture<Long> saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Member member, boolean isForHome) {
         Pair<LocalTime, LocalTime> recommendTime = parseRecommendTime(parsedResponse.getRecommendTime());
 
         Course course = Course.builder()
@@ -473,15 +473,15 @@ public class CourseService {
         savedCourse.setRating(courseRating);
         courseRepository.saveAndFlush(savedCourse);
 
-        // MemberCourse 생성 및 저장
-        MemberCourse memberCourse = MemberCourse.builder()
-                .course(savedCourse)
-                .member(member)
-                .build();
+        // 🔥 홈 추천 AI 코스가 아니라면 MemberCourse에 저장
+        if (!isForHome) {
+            MemberCourse memberCourse = MemberCourse.builder()
+                    .course(savedCourse)
+                    .member(member)
+                    .build();
+            memberCourseRepository.save(memberCourse);
+        }
 
-        memberCourseRepository.save(memberCourse);
-
-        // 코스 ID 반환
         return CompletableFuture.completedFuture(savedCourse.getId());
     }
 
@@ -664,11 +664,11 @@ public class CourseService {
         return recommendedCourses;
     }
 
-    public CompletableFuture<List<GptCourseInfoResponse>> generateMultipleAICourses(int count) {
+    public CompletableFuture<List<GptCourseInfoResponse>> generateMultipleAICourses(int count, boolean isForHome) {
         List<CompletableFuture<GptCourseInfoResponse>> futures = new ArrayList<>();
 
         for (int i = 0; i < count; i++) {
-            futures.add(generateCourseAutomatically());
+            futures.add(generateCourseAutomatically(isForHome));
         }
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -680,6 +680,7 @@ public class CourseService {
     private List<CourseRecommendationResponse> generateRecommendedCourses() {
         Long memberId = SecurityUtil.getCurrentMemberId();
 
+        // 사용자가 직접 만든 코스 조회
         List<Course> userCourses = courseRepository.findTop5ByMemberIdAndCourseTypeOrderByCreatedDateDesc(memberId, CourseType.DIY);
 
         int userCourseCount = userCourses.size();
@@ -692,8 +693,8 @@ public class CourseService {
                 .collect(Collectors.toList()));
 
         if (aiCourseCount > 0) {
-            // AI 코스 생성
-            List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(aiCourseCount).join();
+            // AI 코스 생성 (isForHome = true)
+            List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(aiCourseCount, true).join();
 
             recommendedCourses.addAll(aiCourses.stream()
                     .map(response -> CourseRecommendationResponse.builder()

@@ -122,7 +122,7 @@ public class CourseController {
     @Operation(summary = "코스 생성(AI) API", description = "AI가 생성하는 코스")
     @PostMapping("/generate-ai")
     public CompletableFuture<ResponseEntity<BaseResponse<GptCourseInfoResponse>>> generateCourseWithAI() {
-        return courseService.generateCourseAutomatically()
+        return courseService.generateCourseAutomatically(false)
                 .thenApply(response -> ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response)));
     }
 
