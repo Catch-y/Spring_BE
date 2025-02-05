@@ -18,4 +18,5 @@ public class PlaceInfoDetail {
     private String placeSite;
     private Double rating;
     private Long reviewCount;
+    private boolean isVisited;
 }
