@@ -1,6 +1,7 @@
 package umc.catchy.domain.reviewReport.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
@@ -51,9 +52,36 @@ public class ReviewReportService {
                 .orElseThrow(()-> new GeneralException(ErrorStatus._BAD_REQUEST, "리뷰 타입은 COURSE 또는 PLACE 입니다."));
     }
 
+    private MyPageReviewsResponse.ReviewsDTO toReviewsDTO(
+            ReviewType type,
+            Integer totalCount,
+            List<? extends MyPageReviewsResponse.BaseReviewDTO> content,
+            Boolean last
+    ){
+        return MyPageReviewsResponse.ReviewsDTO.builder()
+                .reviewType(type)
+                .reviewCount(totalCount)
+                .content(content)
+                .last(last)
+                .build();
+    }
+
     //마이페이지 : 내 리뷰 조회
     public MyPageReviewsResponse.ReviewsDTO getMyReviews(String reviewType, int pageSize, Long lastReviewId){
-        return null;
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        ReviewType type = parseReviewType(reviewType);
+
+        if(type==ReviewType.PLACE){
+            return null;
+        }
+        else{
+            Integer totalCount = courseReviewRepository.countAllByMemberId(memberId);
+            Slice<MyPageReviewsResponse.CourseReviewDTO> courseReviewResponse
+                    = courseReviewRepository.getAllCourseReviewByMemberId(memberId, pageSize, lastReviewId);
+            List<MyPageReviewsResponse.CourseReviewDTO> content = courseReviewResponse.getContent();
+            Boolean last = courseReviewResponse.isLast();
+            return toReviewsDTO(type, totalCount, content, last);
+        }
     }
 
     //리뷰 신고하기

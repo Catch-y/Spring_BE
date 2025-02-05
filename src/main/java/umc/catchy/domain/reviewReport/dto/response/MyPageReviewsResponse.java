@@ -16,9 +16,9 @@ public class MyPageReviewsResponse {
     @Builder
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class reviewImagesDTO{
+    public static class ReviewImagesDTO{
         Long reviewImageId;
-        String reviewImageUrl;
+        String imageUrl;
     }
 
     @Getter
@@ -28,8 +28,7 @@ public class MyPageReviewsResponse {
         Long reviewId;
         String name;    //장소이름 또는 코스이름
         String comment;
-        List<reviewImagesDTO> images;
-        String creatorNickname;
+        List<ReviewImagesDTO> reviewImages;
     }
 
     @Getter
@@ -56,8 +55,8 @@ public class MyPageReviewsResponse {
     @NoArgsConstructor
     public static class ReviewsDTO{
         ReviewType reviewType;
-        Long reviewCount;
-        List<BaseReviewDTO> content;
+        Integer reviewCount;
+        List<? extends BaseReviewDTO> content;
         Boolean last;
     }
 }
