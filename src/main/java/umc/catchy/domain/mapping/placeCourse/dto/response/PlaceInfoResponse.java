@@ -10,13 +10,9 @@ public class PlaceInfoResponse {
     private Long placeId;
     private String imageUrl;
     private String placeName;
-    private String placeDescription;
     private String categoryName;
     private String roadAddress;
     private String activeTime;
     private Double rating;
-    private Boolean isVisited;
     private Long reviewCount;
-    private String placeSite;
-
 }

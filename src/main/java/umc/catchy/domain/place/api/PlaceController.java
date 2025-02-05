@@ -6,9 +6,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceLikedResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewSliceResponse;
+import umc.catchy.domain.mapping.placeLike.dto.response.PlaceLikedResponse;
+import umc.catchy.domain.mapping.placeLike.service.PlaceLikeService;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedDateResponse;
 import umc.catchy.domain.mapping.placeVisit.service.PlaceVisitService;
+import umc.catchy.domain.place.service.PlaceService;
 import umc.catchy.domain.placeReview.dto.request.PostPlaceReviewRequest;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
 import umc.catchy.domain.placeReview.service.PlaceReviewService;
@@ -25,6 +28,8 @@ public class PlaceController {
 
     private final PlaceReviewService placeReviewService;
     private final PlaceVisitService placeVisitService;
+    private final PlaceService placeService;
+    private final PlaceLikeService placeLikeService;
 
     @Operation(summary = "장소 평점/리뷰 달기 API", description = "장소에 대해 평점/리뷰를 달기 위한 API입니다. 멤버가 해당 장소에 방문체크한 이후 평점/리뷰를 남길 수 있습니다.")
     @PostMapping(value = "/{placeId}/review", consumes = "multipart/form-data")
@@ -45,7 +50,7 @@ public class PlaceController {
     @Operation(summary = "장소 좋아요 API", description = "사용자가 해당 장소를 좋아요로 설정합니다.")
     @PatchMapping("/{placeId}/like")
     public ResponseEntity<BaseResponse<PlaceLikedResponse>> toggleLike(@PathVariable("placeId") Long placeId) {
-        PlaceLikedResponse response = placeVisitService.togglePlaceLiked(placeId);
+        PlaceLikedResponse response = placeLikeService.togglePlaceLiked(placeId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK,response));
     }
 
@@ -67,5 +72,15 @@ public class PlaceController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK,response));
     }
 
-
+    @Operation(summary = "사용자 장소 추천 API", description = "사용자의 행동데이터 기반으로 장소를 추천")
+    @GetMapping("/home/recommend-places")
+    public ResponseEntity<BaseResponse<PlaceInfoPreviewSliceResponse>> getRecommendPlaces(
+            @RequestParam Double latitude,
+            @RequestParam Double longitude,
+            @RequestParam int pageSize,
+            @RequestParam int page
+    ) {
+        PlaceInfoPreviewSliceResponse response = placeService.recommendPlaces(latitude, longitude, pageSize, page);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
 }
