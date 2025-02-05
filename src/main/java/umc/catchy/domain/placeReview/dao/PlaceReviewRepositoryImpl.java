@@ -12,8 +12,11 @@ import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
 import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.querydsl.core.group.GroupBy.*;
 import static umc.catchy.domain.member.domain.QMember.*;
@@ -142,7 +145,15 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                                 ).as("reviewImages"),
                                 placeReview.rating.as("rating"),
                                 placeReview.visitedDate.as("visitedDate"))
-                ));
+                ))
+                .stream()
+                .peek(dto -> {
+                    // 리뷰 이미지가 null일 경우 빈 리스트로 대체
+                    if (dto.getReviewImages().get(0).getReviewImageId() == null) {
+                        dto.setReviewImages(Collections.emptyList());
+                    }
+                })
+                .collect(Collectors.toList());
 
         return checkLastPageOfMyReviews(pageSize, results);
     }

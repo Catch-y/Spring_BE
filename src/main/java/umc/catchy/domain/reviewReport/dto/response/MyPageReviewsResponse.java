@@ -1,9 +1,6 @@
 package umc.catchy.domain.reviewReport.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.reviewReport.domain.ReviewType;
 
@@ -22,6 +19,7 @@ public class MyPageReviewsResponse {
     }
 
     @Getter
+    @Setter
     @AllArgsConstructor
     @NoArgsConstructor
     public static class BaseReviewDTO{

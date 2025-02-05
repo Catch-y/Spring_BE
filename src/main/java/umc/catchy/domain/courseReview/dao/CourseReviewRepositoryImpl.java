@@ -10,7 +10,9 @@ import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.querydsl.core.group.GroupBy.groupBy;
 import static com.querydsl.core.group.GroupBy.list;
@@ -117,7 +119,15 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                                 ).as("reviewImages"),
                                 courseReview.course.courseType.as("courseType")
                         )
-                ));
+                ))
+                .stream()
+                .peek(dto -> {
+                    // 리뷰 이미지가 null일 경우 빈 리스트로 대체
+                    if (dto.getReviewImages().get(0).getReviewImageId() == null) {
+                        dto.setReviewImages(Collections.emptyList());
+                    }
+                })
+                .collect(Collectors.toList());
 
         return checkLastPageOfMyReviews(pageSize, result);
     }
