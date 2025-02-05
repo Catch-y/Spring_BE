@@ -72,7 +72,12 @@ public class ReviewReportService {
         ReviewType type = parseReviewType(reviewType);
 
         if(type==ReviewType.PLACE){
-            return null;
+            Integer totalCount = placeReviewRepository.countAllByMemberId(memberId);
+            Slice<MyPageReviewsResponse.PlaceReviewDTO> placeReviewResponse
+                    = placeReviewRepository.getAllPlaceReviewByMemberId(memberId, pageSize, lastReviewId);
+            List<MyPageReviewsResponse.PlaceReviewDTO> content = placeReviewResponse.getContent();
+            Boolean last = placeReviewResponse.isLast();
+            return toReviewsDTO(type, totalCount, content, last);
         }
         else{
             Integer totalCount = courseReviewRepository.countAllByMemberId(memberId);
