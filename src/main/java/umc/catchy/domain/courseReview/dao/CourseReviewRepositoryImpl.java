@@ -98,7 +98,7 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                 .fetch();
 
         List<MyPageReviewsResponse.CourseReviewDTO> result = queryFactory.selectFrom(courseReview)
-                .leftJoin(courseReview.course, course).on(courseReview.course.id.eq(courseReview.id))
+                .leftJoin(courseReview.course, course).on(courseReview.course.id.eq(course.id))
                 .leftJoin(courseReviewImage).on(courseReviewImage.courseReview.id.eq(courseReview.id))
                 .where(
                         courseReview.id.in(reviewIds)
