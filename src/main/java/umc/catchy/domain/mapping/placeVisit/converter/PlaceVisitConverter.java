@@ -22,7 +22,6 @@ public class PlaceVisitConverter {
                 .member(member)
                 .visitedDate(LocalDate.now())
                 .isVisited(true)
-                .isLiked(false)
                 .build();
     }
 }

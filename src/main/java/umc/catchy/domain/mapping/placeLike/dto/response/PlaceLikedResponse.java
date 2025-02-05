@@ -1,4 +1,4 @@
-package umc.catchy.domain.mapping.placeVisit.dto.response;
+package umc.catchy.domain.mapping.placeLike.dto.response;
 
 import lombok.*;
 
@@ -7,6 +7,6 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class PlaceLikedResponse {
-    private Long placeVisitId;
-    private boolean liked;
+    private Long placeLikeId;
+    private boolean isLiked;
 }

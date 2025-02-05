@@ -21,6 +21,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
@@ -86,7 +87,7 @@ public class PlaceCourseService {
         return PlaceConverter.toPlaceInfoPreviewResponse(placeInfoPreviews, isLast);
     }
 
-    public PlaceInfoResponse getPlaceResponseByPlaceId(Long placeId) {
+    public PlaceInfoDetail getPlaceDetailByPlaceId(Long placeId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -99,7 +100,7 @@ public class PlaceCourseService {
         Optional<PlaceVisit> placeVisit = placeVisitRepository.findByPlaceAndMember(place, member);
         Boolean isVisited = placeVisit.map(PlaceVisit::isVisited).orElse(false);
 
-        return PlaceConverter.toPlaceInfoResponse(place, reviewCount, isVisited);
+        return PlaceConverter.toPlaceInfoDetail(place, reviewCount, isVisited);
     }
 
     private StringBuilder getSearchResponse(String keyword, Double latitude, Double longitude, Integer page) {

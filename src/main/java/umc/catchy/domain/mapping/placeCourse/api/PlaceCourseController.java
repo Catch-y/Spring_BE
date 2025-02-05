@@ -5,11 +5,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewResponse;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoSliceResponse;
 import umc.catchy.domain.mapping.placeCourse.service.PlaceCourseService;
 import umc.catchy.global.common.response.BaseResponse;
@@ -47,8 +48,8 @@ public class PlaceCourseController {
 
     @GetMapping("/{placeId}")
     @Operation(summary = "장소 상세 화면 API", description = "지도에서 장소 검색 후 클릭하면 나오는 상세 화면")
-    public ResponseEntity<BaseResponse<PlaceInfoResponse>> getPlaceInfoDetail(@RequestParam Long placeId){
-        PlaceInfoResponse response = placeCourseService.getPlaceResponseByPlaceId(placeId);
+    public ResponseEntity<BaseResponse<PlaceInfoDetail>> getPlaceDetail(@PathVariable Long placeId){
+        PlaceInfoDetail response = placeCourseService.getPlaceDetailByPlaceId(placeId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
