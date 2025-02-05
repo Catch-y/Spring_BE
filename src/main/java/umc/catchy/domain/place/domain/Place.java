@@ -1,6 +1,7 @@
 package umc.catchy.domain.place.domain;
 
 import jakarta.persistence.*;
+import java.time.LocalTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -36,6 +37,10 @@ public class Place extends BaseTimeEntity {
     private Double longitude; // 경도
 
     private String activeTime; // 영업시간
+
+    private LocalTime startTime;
+
+    private LocalTime endTime;
 
     private String placeSite; // 장소 사이트
 
