@@ -19,6 +19,7 @@ import umc.catchy.domain.reviewReport.domain.ReviewReport;
 import umc.catchy.domain.reviewReport.domain.ReviewType;
 import umc.catchy.domain.reviewReport.dto.request.PostReviewReportRequest;
 import umc.catchy.domain.reviewReport.dto.response.DeleteReviewResponse;
+import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 import umc.catchy.domain.reviewReport.dto.response.PostReviewReportResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
@@ -48,6 +49,11 @@ public class ReviewReportService {
                 .filter(t -> t.name().equalsIgnoreCase(reviewType))
                 .findFirst()
                 .orElseThrow(()-> new GeneralException(ErrorStatus._BAD_REQUEST, "리뷰 타입은 COURSE 또는 PLACE 입니다."));
+    }
+
+    //마이페이지 : 내 리뷰 조회
+    public MyPageReviewsResponse.ReviewsDTO getMyReviews(String reviewType, int pageSize, Long lastReviewId){
+        return null;
     }
 
     //리뷰 신고하기
