@@ -11,8 +11,10 @@ public record SignUpResponse(
         String email,
         String nickname,
         String profileImage,
-        FcmInfo fcmInfo,
-        LocalDateTime createdDate
+        LocalDateTime createdDate,
+        String accessToken,
+        String refreshToken,
+        FcmInfo fcmInfo
 ) {
     public static SignUpResponse of(Member member) {
         return new SignUpResponse(
@@ -21,8 +23,10 @@ public record SignUpResponse(
                 member.getEmail(),
                 member.getNickname(),
                 member.getProfileImage(),
-                member.getFcmInfo(),
-                member.getCreatedDate()
+                member.getCreatedDate(),
+                member.getAccessToken(),
+                member.getRefreshToken(),
+                member.getFcmInfo()
         );
     }
 

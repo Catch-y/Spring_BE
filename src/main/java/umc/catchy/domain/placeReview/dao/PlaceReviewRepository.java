@@ -8,6 +8,7 @@ import umc.catchy.domain.placeReview.domain.PlaceReview;
 import java.util.List;
 
 @Repository
-public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long> {
+public interface PlaceReviewRepository extends JpaRepository<PlaceReview, Long>, PlaceReviewRepositoryCustom {
     List<PlaceReview> findAllByPlace(Place place);
+    Long countByPlaceId(Long placeId);
 }

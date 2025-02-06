@@ -10,7 +10,9 @@ import umc.catchy.domain.member.domain.Member;
 import java.util.Optional;
 
 @Repository
-public interface MemberCourseRepository extends JpaRepository<MemberCourse, Long> {
+public interface MemberCourseRepository extends JpaRepository<MemberCourse, Long>, MemberCourseRepositoryCustom {
     Optional<MemberCourse> findByCourseAndMember(Course course, Member member);
     List<MemberCourse> findAllByMember(Member member);
+    Optional<MemberCourse> findByCourseIdAndMemberId(Long courseId, Long memberId);
+    Integer deleteAllByMember(Member member);
 }

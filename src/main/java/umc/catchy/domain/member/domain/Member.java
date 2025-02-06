@@ -46,7 +46,15 @@ public class Member extends BaseTimeEntity {
     @Setter
     private String authorizationCode;
 
-    private Integer gpt_count;
+    @Column(nullable = false)
+    private Integer gpt_count = 0;
+
+    public void increaseGptCount() {
+        if (this.gpt_count == null) {
+            this.gpt_count = 0;
+        }
+        this.gpt_count += 1;
+    }
 
     @Embedded
     private FcmInfo fcmInfo;

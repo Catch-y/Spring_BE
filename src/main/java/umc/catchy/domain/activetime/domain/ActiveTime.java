@@ -25,4 +25,8 @@ public class ActiveTime extends BaseTimeEntity {
     private LocalTime startTime;
 
     private LocalTime endTime;
+
+    public static ActiveTime createActiveTime(DayOfWeek dayOfWeek, LocalTime startTime, LocalTime endTime) {
+        return ActiveTime.builder().dayOfWeek(dayOfWeek).startTime(startTime).endTime(endTime).build();
+    }
 }

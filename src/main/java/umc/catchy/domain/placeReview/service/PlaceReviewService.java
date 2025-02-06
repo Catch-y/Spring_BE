@@ -1,9 +1,14 @@
 package umc.catchy.domain.placeReview.service;
 
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import umc.catchy.domain.course.dao.CourseRepository;
+import umc.catchy.domain.course.domain.Course;
+import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -20,10 +25,11 @@ import umc.catchy.domain.placeReviewImage.dao.PlaceReviewImageRepository;
 import umc.catchy.domain.placeReviewImage.domain.PlaceReviewImage;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
+import umc.catchy.global.error.exception.ResultEmptyListException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -34,11 +40,21 @@ import java.util.UUID;
 public class PlaceReviewService {
 
     private final PlaceRepository placeRepository;
+    private final PlaceCourseRepository placeCourseRepository;
     private final PlaceVisitRepository placeVisitRepository;
     private final PlaceReviewRepository placeReviewRepository;
     private final PlaceReviewImageRepository placeReviewImageRepository;
+    private final CourseRepository courseRepository;
     private final MemberRepository memberRepository;
     private final AmazonS3Manager amazonS3Manager;
+
+    //코스 평점 계산
+    private void refreshCourseRating(Course course){
+        Double rating = placeCourseRepository.calculateAverageRatingByCourse(course);
+        rating = (rating != null) ? rating : 0.0;
+        course.setRating(rating);
+        courseRepository.save(course);
+    }
 
     //장소 rating refresh
     private void refreshPlaceRating(Place place){
@@ -51,6 +67,11 @@ public class PlaceReviewService {
             place.setRating(averageRating);
             placeRepository.save(place);
         }
+        //장소를 포함하는 코스에 대한 평점 refresh
+        placeCourseRepository.findAllByPlace(place)
+                .forEach(placeCourse -> {
+                    refreshCourseRating(placeCourse.getCourse());
+                });
     }
 
     public PostPlaceReviewResponse.newPlaceReviewResponseDTO postNewPlaceReview(PostPlaceReviewRequest request, Long placeId){
@@ -70,7 +91,7 @@ public class PlaceReviewService {
         }
 
         //장소 방문일자 가져오기
-        LocalDateTime visitedDate = placeVisitRepository.findByPlaceAndMember(place, member)
+        LocalDate visitedDate = placeVisitRepository.findByPlaceAndMember(place, member)
                 .map(PlaceVisit::getVisitedDate)
                 .orElse(null);
 
@@ -91,6 +112,24 @@ public class PlaceReviewService {
             placeReviewImageRepository.save(placeReviewImage);
             reviewImages.add(PlaceReviewImageConverter.toPlaceReviewImageResponseDTO(placeReviewImage));
         }
-        return PlaceReviewConverter.toNewPlaceReviewResponseDTO(newPlaceReview, reviewImages, visitedDate);
+        return PlaceReviewConverter.toNewPlaceReviewResponseDTO(newPlaceReview, reviewImages);
+    }
+
+    @Transactional(readOnly = true)
+    public PostPlaceReviewResponse.placeReviewAllResponseDTO getAllPlaceReviews(Long placeId, int pageSize, Long lastPlaceReviewId) {
+        Place place = placeRepository.findById(placeId).orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+        Double averageRatingTypeDouble = placeReviewRepository.findAverageRatingByPlaceId(placeId).orElseThrow(() -> new ResultEmptyListException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
+        Float averageRating = Math.round(averageRatingTypeDouble * 10) / 10.0f;
+        List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> ratingList = placeReviewRepository.findRatingList(placeId);
+        Long totalCount = placeReviewRepository.countByPlaceId(placeId);
+        Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> contentList = placeReviewRepository.findPlaceReviewSliceByPlaceId(placeId, pageSize, lastPlaceReviewId);
+
+        return PostPlaceReviewResponse.placeReviewAllResponseDTO.builder()
+                .averageRating(averageRating)
+                .ratingList(ratingList)
+                .totalCount(totalCount)
+                .content(contentList.getContent())
+                .last(contentList.isLast())
+                .build();
     }
 }

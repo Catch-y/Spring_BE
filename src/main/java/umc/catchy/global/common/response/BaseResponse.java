@@ -11,6 +11,8 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.common.response.status.SuccessStatus;
 import umc.catchy.global.common.response.code.BaseCode;
 
+import java.util.Collections;
+
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @JsonPropertyOrder({"isSuccess", "code", "message", "result"})
@@ -47,5 +49,9 @@ public class BaseResponse<T> {
 
     public static <T> BaseResponse<T> onFailure(ErrorReasonDTO reason, T data) {
         return new BaseResponse<>(false, reason.getCode(), reason.getMessage(), data);
+    }
+
+    public static BaseResponse<Object> onFailureWithEmptyList(ErrorStatus errorStatus) {
+        return new BaseResponse<>(false, errorStatus.getCode(), errorStatus.getMessage(), Collections.emptyList());
     }
 }

@@ -13,6 +13,7 @@ import umc.catchy.domain.group.dto.response.CreateGroupResponse;
 import umc.catchy.domain.group.dto.response.GroupCalendarResponse;
 import umc.catchy.domain.group.dto.response.GroupInfoResponse;
 import umc.catchy.domain.group.dto.response.GroupJoinResponse;
+import umc.catchy.domain.group.dto.response.GroupMemberResponse;
 import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
 import umc.catchy.domain.mapping.memberGroup.domain.MemberGroup;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -22,6 +23,7 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -83,12 +85,18 @@ public class GroupService {
             groupImageUrl = amazonS3Manager.uploadFile(keyName, groupImageFile);
         }
 
+        // promiseTime 처리
+        LocalDateTime promiseTime = request.getPromiseTime()
+                .withSecond(0)
+                .withNano(0);
+
+
         Groups group = Groups.builder()
                 .groupName(request.getGroupName())
                 .groupImage(groupImageUrl)
                 .groupLocation(request.getGroupLocation())
                 .inviteCode(request.getInviteCode())
-                .promiseTime(request.getPromiseTime())
+                .promiseTime(promiseTime)
                 .build();
 
         Groups savedGroup = groupRepository.save(group);
@@ -137,5 +145,14 @@ public class GroupService {
                     .promiseTime(group.getPromiseTime())
                     .build();
         });
+    }
+
+    @Transactional(readOnly = true)
+    public List<GroupMemberResponse> getGroupMembers(Long groupId) {
+        List<Member> members = memberGroupRepository.findMembersByGroupId(groupId);
+
+        return members.stream()
+                .map(GroupMemberResponse::fromEntity)
+                .collect(Collectors.toList());
     }
 }
