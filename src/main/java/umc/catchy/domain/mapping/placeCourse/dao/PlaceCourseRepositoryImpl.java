@@ -13,6 +13,7 @@ import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 
 import java.util.List;
 
+import static umc.catchy.domain.mapping.placeLike.domain.QPlaceLike.placeLike;
 import static umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit.placeVisit;
 import static umc.catchy.domain.member.domain.QMember.member;
 import static umc.catchy.domain.place.domain.QPlace.*;
@@ -29,31 +30,30 @@ public class PlaceCourseRepositoryImpl implements PlaceCourseRepositoryCustom{
                         place.id.as("placeId"),
                         place.imageUrl.as("imageUrl"),
                         place.placeName.as("placeName"),
-                        place.placeDescription.as("placeDescription"),
                         place.category.name.as("categoryName"),
                         place.roadAddress.as("roadAddress"),
                         place.activeTime.as("activeTime"),
-                        placeReview.rating.avg().as("rating"),
+                        placeReview.rating.avg().coalesce(0.0).as("rating"),
                         placeReview.count().as("reviewCount")
                         ))
-                .from(placeVisit)
-                .leftJoin(placeVisit.place, place).on(placeVisit.place.id.eq(place.id))
-                .leftJoin(placeVisit.member, member).on(placeVisit.member.id.eq(member.id))
+                .from(place)
+                .leftJoin(placeLike).on(place.id.eq(placeLike.place.id))
+                .leftJoin(placeLike.member, member).on(placeLike.member.id.eq(member.id))
                 .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
                 .where(
-                        placeVisit.member.id.eq(memberId),
+                        placeLike.member.id.eq(memberId),
                         lastPlaceId(lastPlaceId),
                         likedCondition
                 )
                 .groupBy(place.id)
-                .orderBy(placeVisit.place.createdDate.desc())
+                .orderBy(placeLike.place.createdDate.desc())
                 .limit(pageSize + 1)
                 .fetch();
 
         return checkLastPage(pageSize,results);
     }
 
-    private BooleanExpression likedCondition = placeVisit.isLiked.eq(true);
+    private BooleanExpression likedCondition = placeLike.isLiked.eq(true);
 
     private BooleanExpression lastPlaceId(Long placeId) {
         if (placeId == null) {

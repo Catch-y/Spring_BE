@@ -70,9 +70,13 @@ import umc.catchy.domain.mapping.memberActivetime.domain.MemberActiveTime;
 import umc.catchy.domain.mapping.memberCategory.dao.MemberCategoryRepository;
 import umc.catchy.domain.mapping.memberCategory.domain.MemberCategory;
 import umc.catchy.domain.mapping.memberCategory.dto.response.MemberCategoryCreatedResponse;
+import umc.catchy.domain.mapping.memberCategoryVote.dao.MemberCategoryVoteRepository;
+import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
+import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
 import umc.catchy.domain.mapping.memberLocation.dao.MemberLocationRepository;
 import umc.catchy.domain.mapping.memberLocation.domain.MemberLocation;
 import umc.catchy.domain.mapping.memberLocation.dto.response.MemberLocationCreatedResponse;
+import umc.catchy.domain.mapping.memberPlaceVote.dao.MemberPlaceVoteRepository;
 import umc.catchy.domain.mapping.memberStyle.dao.MemberStyleRepository;
 import umc.catchy.domain.mapping.memberStyle.domain.MemberStyle;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -109,6 +113,10 @@ public class MemberService {
 
     private final AmazonS3Manager s3Manager;
     private final JwtUtil jwtUtil;
+    private final MemberPlaceVoteRepository memberPlaceVoteRepository;
+    private final MemberGroupRepository memberGroupRepository;
+    private final MemberCourseRepository memberCourseRepository;
+    private final MemberCategoryVoteRepository memberCategoryVoteRepository;
 
     @Value("${security.kakao.client-id}")
     private String KAKAO_CLIENT_ID;
@@ -377,13 +385,16 @@ public class MemberService {
                 });
     }
 
-    public void withdraw() {
+    public void withdraw(String authorizationCode) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId).orElseThrow(() ->
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         if (member.getSocialType() == SocialType.APPLE) {
-            String authorizationCode = member.getAuthorizationCode();
+
+            if (authorizationCode == null) {
+                throw new GeneralException(ErrorStatus.AUTHORIZATION_CODE_NOT_FOUND);
+            }
 
             try {
                 appleWithdraw(authorizationCode);
@@ -394,6 +405,16 @@ public class MemberService {
                 throw new RuntimeException(e);
             }
         }
+
+        // 연관 엔티티 삭제
+        memberStyleRepository.deleteAllByMember(member);
+        memberPlaceVoteRepository.deleteAllByMember(member);
+        memberCategoryVoteRepository.deleteAllByMember(member);
+        memberActiveTimeRepository.deleteAllByMember(member);
+        memberLocationRepository.deleteAllByMember(member);
+        memberGroupRepository.deleteAllByMember(member);
+        memberCourseRepository.deleteAllByMember(member);
+        memberCategoryRepository.deleteAllByMember(member);
 
         memberRepository.delete(member);
     }

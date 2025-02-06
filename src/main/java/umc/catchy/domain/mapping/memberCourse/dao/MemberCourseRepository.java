@@ -14,4 +14,5 @@ public interface MemberCourseRepository extends JpaRepository<MemberCourse, Long
     Optional<MemberCourse> findByCourseAndMember(Course course, Member member);
     List<MemberCourse> findAllByMember(Member member);
     Optional<MemberCourse> findByCourseIdAndMemberId(Long courseId, Long memberId);
+    Integer deleteAllByMember(Member member);
 }

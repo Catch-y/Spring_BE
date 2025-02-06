@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @RequiredArgsConstructor
@@ -24,13 +26,18 @@ public class GPTCourseService {
     private final WebClient gptWebClient;
     private final WebClient dalleWebClient;
     private final AmazonS3Manager amazonS3Manager;
+    private static final Map<String, CompletableFuture<String>> imageRequestCache = new ConcurrentHashMap<>();
 
     @Value("${openai.model}")
     private String openAiModel;
 
     public CompletableFuture<String> generateAndUploadCourseImageAsync(String courseName, String courseDescription) {
-        return generateCourseImageAsync(courseName, courseDescription)
-                .thenApplyAsync(this::uploadImageToS3);
+        String cacheKey = courseName + ":" + courseDescription;
+        return imageRequestCache.computeIfAbsent(cacheKey, key ->
+                generateCourseImageAsync(courseName, courseDescription)
+                        .thenApplyAsync(this::uploadImageToS3)
+                        .whenComplete((res, ex) -> imageRequestCache.remove(cacheKey))
+        );
     }
 
     private String uploadImageToS3(String imageUrl) {
@@ -69,7 +76,9 @@ public class GPTCourseService {
     // 비동기로 텍스트 생성
     public CompletableFuture<String> generateCourseImageAsync(String courseName, String courseDescription) {
         String prompt = String.format(
-                "Create a visually appealing image for the course titled '%s' with the theme: '%s'.",
+                "Generate a high-quality, visually appealing image representing the course '%s'. " +
+                        "Emphasize a vibrant and inviting atmosphere with scenic cafes, lively city streets, and traditional Korean aesthetics. " +
+                        "Ensure a warm color palette and an immersive visual experience. Theme: '%s'.",
                 courseName, courseDescription
         );
 

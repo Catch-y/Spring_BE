@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -109,9 +110,9 @@ public class MemberController {
     }
 
     @DeleteMapping("/withdraw")
-    @Operation(summary = "회원 탈퇴 API ", description = "현재 로그인된 사용자 탈퇴")
-    public BaseResponse<Void> withdrawMember() {
-        memberService.withdraw();
+    @Operation(summary = "회원 탈퇴 API ", description = "현재 로그인된 사용자 탈퇴 / 애플 탈퇴 시 인가 코드를 입력")
+    public BaseResponse<Void> withdrawMember(@RequestParam(required = false) String authorizationCode) {
+        memberService.withdraw(authorizationCode);
 
         return BaseResponse.onSuccess(SuccessStatus._OK, null);
     }
