@@ -10,12 +10,17 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
+import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.querydsl.core.group.GroupBy.*;
 import static umc.catchy.domain.member.domain.QMember.*;
+import static umc.catchy.domain.place.domain.QPlace.place;
 import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
 import static umc.catchy.domain.placeReviewImage.domain.QPlaceReviewImage.*;
 
@@ -106,5 +111,65 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
         }
 
         return new SliceImpl<>(results, PageRequest.of(0,pageSize), hasNext);
+    }
+
+    @Override
+    public Slice<MyPageReviewsResponse.PlaceReviewDTO> getAllPlaceReviewByMemberId(Long memberId, int pageSize, Long lastPlaceReviewId){
+        List<Long> reviewIds = queryFactory
+                .select(placeReview.id)
+                .from(placeReview)
+                .where(
+                        memberIdEq(memberId),
+                        lastPlaceReviewId(lastPlaceReviewId)
+                )
+                .orderBy(placeReview.visitedDate.desc())
+                .limit(pageSize + 1)
+                .fetch();
+
+        List<MyPageReviewsResponse.PlaceReviewDTO> results = queryFactory.selectFrom(placeReview)
+                .leftJoin(placeReview.place, place).on(placeReview.place.id.eq(place.id))
+                .leftJoin(placeReviewImage).on(placeReviewImage.placeReview.id.eq(placeReview.id))
+                .where(
+                        placeReview.id.in(reviewIds)
+                )
+                .orderBy(placeReview.visitedDate.desc())
+                .transform(groupBy(placeReview.id).list(
+                        Projections.fields(MyPageReviewsResponse.PlaceReviewDTO.class,
+                                placeReview.id.as("reviewId"),
+                                placeReview.place.placeName.as("name"),
+                                placeReview.comment.as("comment"),
+                                list(
+                                        Projections.fields(MyPageReviewsResponse.ReviewImagesDTO.class,
+                                                placeReviewImage.id.as("reviewImageId"),
+                                                placeReviewImage.imageUrl.as("imageUrl"))
+                                ).as("reviewImages"),
+                                placeReview.rating.as("rating"),
+                                placeReview.visitedDate.as("visitedDate"))
+                ))
+                .stream()
+                .peek(dto -> {
+                    // 리뷰 이미지가 null일 경우 빈 리스트로 대체
+                    if (dto.getReviewImages().get(0).getReviewImageId() == null) {
+                        dto.setReviewImages(Collections.emptyList());
+                    }
+                })
+                .collect(Collectors.toList());
+
+        return checkLastPageOfMyReviews(pageSize, results);
+    }
+
+    private BooleanExpression memberIdEq(Long memberId) {
+        return memberId == null ? null : placeReview.member.id.eq(memberId);
+    }
+
+    private Slice<MyPageReviewsResponse.PlaceReviewDTO> checkLastPageOfMyReviews(int pageSize, List<MyPageReviewsResponse.PlaceReviewDTO> results) {
+        boolean hasNext = false;
+
+        if (results.size() > pageSize) {
+            hasNext = true;
+            results.remove(pageSize);
+        }
+
+        return new SliceImpl<>(results, PageRequest.of(0, pageSize), hasNext);
     }
 }
