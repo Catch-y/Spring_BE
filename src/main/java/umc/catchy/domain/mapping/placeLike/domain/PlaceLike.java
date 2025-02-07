@@ -1,34 +1,34 @@
-package umc.catchy.domain.mapping.placeVisit.domain;
+package umc.catchy.domain.mapping.placeLike.domain;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.domain.Place;
-
-import java.time.LocalDate;
 
 @Entity
 @Getter
 @Builder
 @RequiredArgsConstructor
 @AllArgsConstructor
-public class PlaceVisit extends BaseTimeEntity {
+public class PlaceLike extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "placeVisit_id")
+    @Column(name = "placeLike_id")
     private Long id;
 
-    @Setter
-    private boolean isVisited;
-
-    @Setter
-    private LocalDate visitedDate;
+    private boolean isLiked = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
@@ -37,4 +37,8 @@ public class PlaceVisit extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_id")
     private Place place;
+
+    public static void toggleLiked(PlaceLike placeLike) {
+        placeLike.isLiked = !placeLike.isLiked;
+    }
 }

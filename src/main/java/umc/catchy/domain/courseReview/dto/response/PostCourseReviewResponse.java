@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 public class PostCourseReviewResponse {
@@ -18,6 +18,7 @@ public class PostCourseReviewResponse {
         Long reviewId;
         String comment;
         List<courseReviewImageResponseDTO> reviewImages;
+        LocalDate createdAt;
         //LocalDateTime visitedDate;
         String creatorNickname;
     }
@@ -29,5 +30,16 @@ public class PostCourseReviewResponse {
     public static class courseReviewImageResponseDTO{
         Long reviewImageId;
         String imageUrl;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class courseReviewAllResponseDTO{
+        Double courseRating;
+        Integer totalCount;
+        List<PostCourseReviewResponse.newCourseReviewResponseDTO> content;
+        Boolean last;
     }
 }

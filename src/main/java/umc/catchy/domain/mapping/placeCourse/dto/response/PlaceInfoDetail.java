@@ -12,10 +12,11 @@ public class PlaceInfoDetail {
     private String imageUrl;
     private String placeName;
     private String placeDescription;
-    private String category;
+    private String categoryName;
     private String roadAddress;
     private String activeTime;
     private String placeSite;
     private Double rating;
     private Long reviewCount;
+    private boolean isVisited;
 }

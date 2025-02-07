@@ -1,6 +1,7 @@
 package umc.catchy.domain.reviewReport.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
@@ -19,6 +20,7 @@ import umc.catchy.domain.reviewReport.domain.ReviewReport;
 import umc.catchy.domain.reviewReport.domain.ReviewType;
 import umc.catchy.domain.reviewReport.dto.request.PostReviewReportRequest;
 import umc.catchy.domain.reviewReport.dto.response.DeleteReviewResponse;
+import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 import umc.catchy.domain.reviewReport.dto.response.PostReviewReportResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
@@ -48,6 +50,43 @@ public class ReviewReportService {
                 .filter(t -> t.name().equalsIgnoreCase(reviewType))
                 .findFirst()
                 .orElseThrow(()-> new GeneralException(ErrorStatus._BAD_REQUEST, "리뷰 타입은 COURSE 또는 PLACE 입니다."));
+    }
+
+    private MyPageReviewsResponse.ReviewsDTO toReviewsDTO(
+            ReviewType type,
+            Integer totalCount,
+            List<? extends MyPageReviewsResponse.BaseReviewDTO> content,
+            Boolean last
+    ){
+        return MyPageReviewsResponse.ReviewsDTO.builder()
+                .reviewType(type)
+                .reviewCount(totalCount)
+                .content(content)
+                .last(last)
+                .build();
+    }
+
+    //마이페이지 : 내 리뷰 조회
+    public MyPageReviewsResponse.ReviewsDTO getMyReviews(String reviewType, int pageSize, Long lastReviewId){
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        ReviewType type = parseReviewType(reviewType);
+
+        if(type==ReviewType.PLACE){
+            Integer totalCount = placeReviewRepository.countAllByMemberId(memberId);
+            Slice<MyPageReviewsResponse.PlaceReviewDTO> placeReviewResponse
+                    = placeReviewRepository.getAllPlaceReviewByMemberId(memberId, pageSize, lastReviewId);
+            List<MyPageReviewsResponse.PlaceReviewDTO> content = placeReviewResponse.getContent();
+            Boolean last = placeReviewResponse.isLast();
+            return toReviewsDTO(type, totalCount, content, last);
+        }
+        else{
+            Integer totalCount = courseReviewRepository.countAllByMemberId(memberId);
+            Slice<MyPageReviewsResponse.CourseReviewDTO> courseReviewResponse
+                    = courseReviewRepository.getAllCourseReviewByMemberId(memberId, pageSize, lastReviewId);
+            List<MyPageReviewsResponse.CourseReviewDTO> content = courseReviewResponse.getContent();
+            Boolean last = courseReviewResponse.isLast();
+            return toReviewsDTO(type, totalCount, content, last);
+        }
     }
 
     //리뷰 신고하기

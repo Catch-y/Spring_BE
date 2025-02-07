@@ -21,4 +21,5 @@ public interface MemberGroupRepository extends JpaRepository<MemberGroup, Long> 
     int countByGroupId(Long groupId);
     @Query("SELECT mg.member FROM MemberGroup mg WHERE mg.group.id = :groupId")
     List<Member> findMembersByGroupId(@Param("groupId") Long groupId);
+    Integer deleteAllByMember(Member member);
 }

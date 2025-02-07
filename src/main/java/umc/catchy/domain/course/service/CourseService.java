@@ -26,8 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
-import umc.catchy.domain.category.domain.BigCategory;
-import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.course.converter.CourseConverter;
 import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
@@ -179,8 +177,9 @@ public class CourseService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         // 사용자가 가지고 있는 코스인지 검증
-        memberCourseRepository.findByCourseAndMember(course, member)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER));
+        if (!course.getMember().equals(member)) {
+            throw new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER);
+        }
 
         // 코스 이름 수정
         if (!request.getCourseName().isEmpty()) {
@@ -323,6 +322,7 @@ public class CourseService {
                 .build();
 
         memberCourseRepository.save(memberCourse);
+        courseRepository.save(course);
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
         return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
@@ -357,10 +357,15 @@ public class CourseService {
         return finalPlaces;
     }
 
-    public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically() {
+    public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically(boolean isForHome) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        if (!isForHome) {
+            member.increaseGptCount();
+            memberRepository.save(member);
+        }
 
         List<MemberLocation> memberLocations = memberLocationRepository.findAllByMemberId(memberId);
         List<String> preferredCategories = getPreferredCategories(memberId);
@@ -395,22 +400,23 @@ public class CourseService {
                 gptCourseService.callOpenAiApiAsync(gptPrompt).join()
         );
 
-        // 이미지 생성 및 업로드
-        CompletableFuture<String> courseImageFuture = CompletableFuture.supplyAsync(() ->
-                gptCourseService.generateAndUploadCourseImageAsync("AI 추천 코스", "AI가 추천한 여행 코스입니다.").join()
-        );
-
-        // 두 작업 완료 후 데이터 처리
-        return gptResponseFuture.thenCombine(courseImageFuture, (gptResponse, courseImage) -> {
-            // GPT 응답 파싱
+        // GPT 응답 및 이미지 생성 비동기 처리
+        return gptResponseFuture.thenCompose(gptResponse -> {
             GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
-            parsedResponse.setCourseImage(courseImage);
+            String courseName = parsedResponse.getCourseName();
+            String courseDescription = parsedResponse.getCourseDescription();
 
-            // 저장 및 코스 ID 설정
-            Long courseId = saveCourseAndPlaces(parsedResponse, member).join();
-            parsedResponse.setCourseId(courseId);
-
-            return parsedResponse;
+            return gptCourseService.generateAndUploadCourseImageAsync(courseName, courseDescription)
+                    .thenApply(courseImage -> {
+                        parsedResponse.setCourseImage(courseImage);
+                        return parsedResponse;
+                    });
+        }).thenCompose(parsedResponse -> {
+            return saveCourseAndPlaces(parsedResponse, member, isForHome)
+                    .thenApply(courseId -> {
+                        parsedResponse.setCourseId(courseId);
+                        return parsedResponse;
+                    });
         }).exceptionally(e -> {
             e.printStackTrace();
             throw new GeneralException(ErrorStatus.GPT_API_CALL_FAILED);
@@ -425,7 +431,7 @@ public class CourseService {
 
     @Async
     @Transactional
-    public CompletableFuture<Long> saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Member member) {
+    public CompletableFuture<Long> saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Member member, boolean isForHome) {
         Pair<LocalTime, LocalTime> recommendTime = parseRecommendTime(parsedResponse.getRecommendTime());
 
         Course course = Course.builder()
@@ -473,15 +479,15 @@ public class CourseService {
         savedCourse.setRating(courseRating);
         courseRepository.saveAndFlush(savedCourse);
 
-        // MemberCourse 생성 및 저장
-        MemberCourse memberCourse = MemberCourse.builder()
-                .course(savedCourse)
-                .member(member)
-                .build();
+        // 홈 추천 AI 코스가 아니라면 MemberCourse에 저장
+        if (!isForHome) {
+            MemberCourse memberCourse = MemberCourse.builder()
+                    .course(savedCourse)
+                    .member(member)
+                    .build();
+            memberCourseRepository.save(memberCourse);
+        }
 
-        memberCourseRepository.save(memberCourse);
-
-        // 코스 ID 반환
         return CompletableFuture.completedFuture(savedCourse.getId());
     }
 
@@ -563,6 +569,7 @@ public class CourseService {
         prompt.append("\nThe course name and description must be written in Korean.\n");
         prompt.append("The course description should be concise, no more than 80 characters.\n");
         prompt.append("Please generate a course name and description that fits the selected places and reflects the user's preferred styles.\n");
+        prompt.append("Each course must contain at least 2 and at most 5 places.\n");
         prompt.append("The response should include a course name, course description, recommended visit time for each place, and the full list of recommended places in the region.\n");
         prompt.append("Please return only the JSON structure below without any additional text, comments, or markdown formatting (e.g., no ```json). Return only the raw JSON structure:\n");
         prompt.append("The response should include a field `courseImage` with a URL to the generated image.\n");
@@ -585,6 +592,7 @@ public class CourseService {
         prompt.append("Return only this JSON structure, with no additional text.");
         return prompt.toString();
     }
+
     private GptCourseInfoResponse parseGptResponseToDto(String gptResponse) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
@@ -664,11 +672,11 @@ public class CourseService {
         return recommendedCourses;
     }
 
-    public CompletableFuture<List<GptCourseInfoResponse>> generateMultipleAICourses(int count) {
+    public CompletableFuture<List<GptCourseInfoResponse>> generateMultipleAICourses(int count, boolean isForHome) {
         List<CompletableFuture<GptCourseInfoResponse>> futures = new ArrayList<>();
 
         for (int i = 0; i < count; i++) {
-            futures.add(generateCourseAutomatically());
+            futures.add(generateCourseAutomatically(isForHome));
         }
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -680,6 +688,7 @@ public class CourseService {
     private List<CourseRecommendationResponse> generateRecommendedCourses() {
         Long memberId = SecurityUtil.getCurrentMemberId();
 
+        // 사용자가 직접 만든 코스 조회
         List<Course> userCourses = courseRepository.findTop5ByMemberIdAndCourseTypeOrderByCreatedDateDesc(memberId, CourseType.DIY);
 
         int userCourseCount = userCourses.size();
@@ -692,8 +701,8 @@ public class CourseService {
                 .collect(Collectors.toList()));
 
         if (aiCourseCount > 0) {
-            // AI 코스 생성
-            List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(aiCourseCount).join();
+            // AI 코스 생성 (isForHome = true)
+            List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(aiCourseCount, true).join();
 
             recommendedCourses.addAll(aiCourses.stream()
                     .map(response -> CourseRecommendationResponse.builder()

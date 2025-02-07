@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.reviewReport.dto.request.PostReviewReportRequest;
 import umc.catchy.domain.reviewReport.dto.response.DeleteReviewResponse;
+import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 import umc.catchy.domain.reviewReport.dto.response.PostReviewReportResponse;
 import umc.catchy.domain.reviewReport.service.ReviewReportService;
 import umc.catchy.global.common.response.BaseResponse;
@@ -35,6 +36,17 @@ public class ReviewReportController {
             @RequestParam String reviewType
     ){
         DeleteReviewResponse response = reviewReportService.deleteReview(reviewId, reviewType);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "마이페이지/내 리뷰 조회 API", description = "내가 작성한 리뷰를 조회하는 API입니다.")
+    @GetMapping("mypage/reviews")
+    public ResponseEntity<BaseResponse<MyPageReviewsResponse.ReviewsDTO>> getMyReviews(
+            @RequestParam String reviewType,
+            @RequestParam int pageSize,
+            @RequestParam(required = false) Long lastReviewId
+    ){
+        MyPageReviewsResponse.ReviewsDTO response = reviewReportService.getMyReviews(reviewType, pageSize, lastReviewId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

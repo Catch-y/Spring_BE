@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.mapping.placeVisit.converter.PlaceVisitConverter;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
-import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceLikedResponse;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedResponse;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedDateResponse;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -20,7 +19,6 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -31,17 +29,6 @@ public class PlaceVisitService {
     private final PlaceVisitRepository placeVisitRepository;
     private final MemberRepository memberRepository;
     private final PlaceRepository placeRepository;
-
-    public PlaceLikedResponse togglePlaceLiked(Long placeId) {
-        Long memberId = SecurityUtil.getCurrentMemberId();
-        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        PlaceVisit placeVisit = placeVisitRepository.findByPlaceIdAndMemberId(placeId,currentMember.getId()).orElseThrow(() -> new GeneralException(ErrorStatus.INVALID_PARAMETER));
-        PlaceVisit.toggleLiked(placeVisit);
-        return PlaceLikedResponse.builder()
-                .placeVisitId(placeVisit.getId())
-                .liked(placeVisit.isLiked())
-                .build();
-    }
 
     public PlaceVisitedResponse check(Long placeId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
