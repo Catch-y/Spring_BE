@@ -177,8 +177,9 @@ public class CourseService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         // 사용자가 가지고 있는 코스인지 검증
-        memberCourseRepository.findByCourseAndMember(course, member)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER));
+        if (!course.getMember().equals(member)) {
+            throw new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER);
+        }
 
         // 코스 이름 수정
         if (!request.getCourseName().isEmpty()) {
@@ -321,6 +322,7 @@ public class CourseService {
                 .build();
 
         memberCourseRepository.save(memberCourse);
+        courseRepository.save(course);
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
         return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
