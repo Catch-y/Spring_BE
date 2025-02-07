@@ -40,11 +40,14 @@ import umc.catchy.domain.vote.dto.response.VotedMemberResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
+import umc.catchy.infra.config.fcm.FCMService;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+
+import static umc.catchy.global.common.constants.FcmConstants.*;
 
 @Service
 @RequiredArgsConstructor
@@ -61,11 +64,15 @@ public class VoteService {
     private final PlaceReviewRepository placeReviewRepository;
     private final MemberPlaceVoteRepository memberPlaceVoteRepository;
     private final PlaceVoteRepository placeVoteRepository;
+    private final FCMService fcmService;
 
     @Transactional
     public Vote createVote(CreateVoteRequest request) {
         Groups group = groupRepository.findById(request.getGroupId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
+
+        List<Member> members = memberGroupRepository.findMembersByGroupId(group.getId());
+        List<String> deviceTokenList = members.stream().map(member -> member.getFcmInfo().getFcmToken()).toList();
 
         Vote vote = Vote.builder()
                 .status(VoteStatus.IN_PROGRESS)
@@ -82,7 +89,7 @@ public class VoteService {
                     .build();
             categoryVoteRepository.save(categoryVote);
         }
-
+        fcmService.sendGroupMessageAsync(deviceTokenList, COURSE_UPDATED_MESSAGE_TITLE, GROUP_VOTE_START_MESSAGE_CONTENT);
         return vote;
     }
 
@@ -205,6 +212,11 @@ public class VoteService {
 
         Groups group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
+
+        List<Member> members = memberGroupRepository.findMembersByGroupId(group.getId());
+        List<String> deviceTokenList = members.stream().map(member -> member.getFcmInfo().getFcmToken()).toList();
+        fcmService.sendGroupMessageAsync(deviceTokenList,COURSE_UPDATED_MESSAGE_TITLE,GROUP_VOTE_END_MESSAGE_CONTENT);
+
         String groupLocation = group.getGroupLocation();
         String alternativeLocation = LocationUtils.normalizeLocation(groupLocation);
 
