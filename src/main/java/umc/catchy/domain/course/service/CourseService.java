@@ -136,6 +136,13 @@ public class CourseService {
         return startTime.format(formatter) + " ~ " + endTime.format(formatter);
     }
 
+    //북마크 여부 가져오기
+    private Boolean getBookmarks(Course course, Member member){
+        return memberCourseRepository.findByCourseAndMember(course, member)
+                .map(MemberCourse::isBookmark)
+                .orElse(false);
+    }
+
     //코스의 상세 정보 받아오기
     public CourseInfoResponse.getCourseInfoDTO getCourseDetails(Long courseId) {
         Course course = getCourse(courseId);
@@ -144,7 +151,7 @@ public class CourseService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
-        return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
+        return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), getBookmarks(course, member), placeListOfCourse);
     }
 
     // 현재 사용자의 코스를 불러옴
@@ -242,7 +249,7 @@ public class CourseService {
         }
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
-        return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
+        return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), getBookmarks(course, member), placeListOfCourse);
     }
 
     public void deleteCourse(Long courseId) {
@@ -323,7 +330,7 @@ public class CourseService {
         memberCourseRepository.save(memberCourse);
 
         List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeListOfCourse = getPlaceListOfCourse(course, member);
-        return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), placeListOfCourse);
+        return CourseConverter.toCourseInfoDTO(course, calculateNumberOfReviews(course), getRecommendTimeToString(course), false, placeListOfCourse);
     }
 
     public List<Place> getRecommendedPlaces(List<String> regionList, List<Long> preferredCategoryIds, Long memberId, int maxPlaces) {
