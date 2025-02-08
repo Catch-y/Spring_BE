@@ -19,6 +19,7 @@ public class CourseConverter {
             Course course,
             Integer reviewCount,
             String recommendTime,
+            Boolean isBookMarked,
             List<CourseInfoResponse.getPlaceInfoOfCourseDTO> placeInfoOfCourseDTOS
     ){
         return CourseInfoResponse.getCourseInfoDTO.builder()
@@ -31,6 +32,7 @@ public class CourseConverter {
                 .reviewCount(reviewCount)
                 .recommendTime(recommendTime)
                 .participantsNumber(course.getParticipantsNumber())
+                .isBookMarked(isBookMarked)
                 .placeInfos(placeInfoOfCourseDTOS)
                 .build();
     }
