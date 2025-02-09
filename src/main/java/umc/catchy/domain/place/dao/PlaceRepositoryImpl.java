@@ -1,5 +1,6 @@
 package umc.catchy.domain.place.dao;
 
+import static umc.catchy.domain.category.domain.QCategory.category;
 import static umc.catchy.domain.mapping.placeLike.domain.QPlaceLike.placeLike;
 import static umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit.placeVisit;
 import static umc.catchy.domain.place.domain.QPlace.place;
@@ -23,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
+import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
@@ -212,5 +214,26 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                         .from(placeVisit)
                         .where(placeVisit.member.id.eq(memberId))
         );
+    }
+
+    @Override
+    public List<GptCourseInfoResponse.GptPlaceInfoResponse> findPlacesWithCategoryAndReviewCount(List<Long> placeIds) {
+        return queryFactory.select(Projections.constructor(
+                        GptCourseInfoResponse.GptPlaceInfoResponse.class,
+                        place.id,
+                        place.placeName,
+                        place.imageUrl,
+                        category.bigCategory.stringValue(),
+                        place.roadAddress,
+                        place.activeTime,
+                        place.rating.coalesce(0.0),
+                        placeReview.count().coalesce(0L).intValue()
+                ))
+                .from(place)
+                .leftJoin(place.category, category)
+                .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
+                .where(place.id.in(placeIds))
+                .groupBy(place.id, place.placeName, place.imageUrl, category.bigCategory, place.roadAddress, place.activeTime, place.rating)
+                .fetch();
     }
 }
