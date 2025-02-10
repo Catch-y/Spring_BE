@@ -27,6 +27,7 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -67,14 +68,14 @@ public class ReviewReportService {
     }
 
     //마이페이지 : 내 리뷰 조회
-    public MyPageReviewsResponse.ReviewsDTO getMyReviews(String reviewType, int pageSize, Long lastReviewId){
+    public MyPageReviewsResponse.ReviewsDTO getMyReviews(String reviewType, int pageSize, LocalDate lastPlaceReviewDate, Long lastReviewId){
         Long memberId = SecurityUtil.getCurrentMemberId();
         ReviewType type = parseReviewType(reviewType);
 
         if(type==ReviewType.PLACE){
             Integer totalCount = placeReviewRepository.countAllByMemberId(memberId);
             Slice<MyPageReviewsResponse.PlaceReviewDTO> placeReviewResponse
-                    = placeReviewRepository.getAllPlaceReviewByMemberId(memberId, pageSize, lastReviewId);
+                    = placeReviewRepository.getAllPlaceReviewByMemberId(memberId, pageSize, lastPlaceReviewDate, lastReviewId);
             List<MyPageReviewsResponse.PlaceReviewDTO> content = placeReviewResponse.getContent();
             Boolean last = placeReviewResponse.isLast();
             return toReviewsDTO(type, totalCount, content, last);

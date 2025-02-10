@@ -135,15 +135,15 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
     }
 
     @Override
-    public Slice<MyPageReviewsResponse.PlaceReviewDTO> getAllPlaceReviewByMemberId(Long memberId, int pageSize, Long lastPlaceReviewId){
+    public Slice<MyPageReviewsResponse.PlaceReviewDTO> getAllPlaceReviewByMemberId(Long memberId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId){
         List<Long> reviewIds = queryFactory
                 .select(placeReview.id)
                 .from(placeReview)
                 .where(
                         memberIdEq(memberId),
-                        lastPlaceReviewId(lastPlaceReviewId)
+                        lastPlaceReviewCondition(lastPlaceReviewDate, lastPlaceReviewId)
                 )
-                .orderBy(placeReview.visitedDate.desc())
+                .orderBy(placeReview.visitedDate.desc(), placeReview.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
 
@@ -153,7 +153,7 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                 .where(
                         placeReview.id.in(reviewIds)
                 )
-                .orderBy(placeReview.visitedDate.desc())
+                .orderBy(placeReview.visitedDate.desc(), placeReview.id.desc())
                 .transform(groupBy(placeReview.id).list(
                         Projections.fields(MyPageReviewsResponse.PlaceReviewDTO.class,
                                 placeReview.id.as("reviewId"),
@@ -174,13 +174,6 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
 
     private BooleanExpression memberIdEq(Long memberId) {
         return memberId == null ? null : placeReview.member.id.eq(memberId);
-    }
-
-    private BooleanExpression lastPlaceReviewId(Long placeReviewId) {
-        if (placeReviewId == null) {
-            return null;
-        }
-        return placeReview.id.lt(placeReviewId);
     }
 
     private Slice<MyPageReviewsResponse.PlaceReviewDTO> checkLastPageOfMyReviews(int pageSize, List<MyPageReviewsResponse.PlaceReviewDTO> results) {
