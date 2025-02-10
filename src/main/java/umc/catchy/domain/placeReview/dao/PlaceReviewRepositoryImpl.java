@@ -2,6 +2,7 @@ package umc.catchy.domain.placeReview.dao;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
+import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
 import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 
@@ -20,6 +22,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static com.querydsl.core.group.GroupBy.*;
+import static umc.catchy.domain.category.domain.QCategory.category;
 import static umc.catchy.domain.member.domain.QMember.*;
 import static umc.catchy.domain.place.domain.QPlace.place;
 import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
@@ -161,17 +164,10 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                                                 placeReviewImage.id.as("reviewImageId"),
                                                 placeReviewImage.imageUrl.as("imageUrl"))
                                 ).as("reviewImages"),
+                                placeReview.place.category.bigCategory.as("category"),
                                 placeReview.rating.as("rating"),
                                 placeReview.visitedDate.as("visitedDate"))
-                ))
-                .stream()
-                .peek(dto -> {
-                    // 리뷰 이미지가 null일 경우 빈 리스트로 대체
-                    if (dto.getReviewImages().get(0).getReviewImageId() == null) {
-                        dto.setReviewImages(Collections.emptyList());
-                    }
-                })
-                .collect(Collectors.toList());
+                ));
 
         return checkLastPageOfMyReviews(pageSize, results);
     }
