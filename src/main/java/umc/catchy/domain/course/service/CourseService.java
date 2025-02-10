@@ -299,40 +299,20 @@ public class CourseService {
         List<Long> placeIds = request.getPlaceIds();
 
         // 평점 계산
-        // 평점 계산 및 디버깅
         Double averageRating = placeIds.stream()
-                .map(placeId -> {
-                    Place place = placeRepository.findById(placeId)
-                            .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
-
-                    Double rating = place.getRating();
-                    if (rating == null) {
-                        System.out.println("DEBUG: Place ID " + placeId + " has NULL rating.");
-                        return 0.0;  // Null인 경우 0.0으로 처리
-                    } else {
-                        System.out.println("DEBUG: Place ID " + placeId + " has rating: " + rating);
-                        return rating;
-                    }
-                })
+                .map(placeId -> placeRepository.findById(placeId)
+                        .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND))
+                        .getRating())
                 .mapToDouble(Double::doubleValue)
                 .average()
                 .orElse(0.0);
 
-// 평균 평점 출력
-        System.out.println("DEBUG: Calculated average rating before rounding: " + averageRating);
-
-// 소수점 첫째 자리에서 반올림하여 저장
         course.setRating(Math.round(averageRating * 10) / 10.0);
-        System.out.println("DEBUG: Rounded average rating set to course: " + course.getRating());
 
-// 코스 순서대로 장소 저장
         IntStream.range(0, placeIds.size()).forEach(index -> {
             Long placeId = placeIds.get(index);
             Place place = placeRepository.findById(placeId)
                     .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
-
-            // 디버깅: 코스 순서 확인
-            System.out.println("DEBUG: Adding place with ID " + placeId + " to course with order " + (index + 1));
 
             // List의 Index를 기반으로 코스 순서 결정
             PlaceCourse newPlaceCourse = PlaceCourse.builder()
@@ -343,7 +323,6 @@ public class CourseService {
 
             placeCourseRepository.save(newPlaceCourse);
         });
-
 
         // MemberCourse 생성
         MemberCourse memberCourse = MemberCourse.builder()
