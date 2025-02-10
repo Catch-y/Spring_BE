@@ -1,12 +1,8 @@
 package umc.catchy.domain.place.dao;
-
-import static com.querydsl.core.group.GroupBy.groupBy;
-import static java.util.Collections.list;
 import static umc.catchy.domain.category.domain.QCategory.category;
 import static umc.catchy.domain.mapping.memberPlaceVote.domain.QMemberPlaceVote.memberPlaceVote;
 import static umc.catchy.domain.mapping.placeLike.domain.QPlaceLike.placeLike;
 import static umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit.placeVisit;
-import static umc.catchy.domain.member.domain.QMember.member;
 import static umc.catchy.domain.place.domain.QPlace.place;
 import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
 
@@ -30,20 +26,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.category.domain.BigCategory;
+import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 import umc.catchy.domain.mapping.placeLike.domain.QPlaceLike;
 import umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.place.domain.QPlace;
 
 import java.util.List;
-import umc.catchy.domain.placeReview.domain.QPlaceReview;
-import umc.catchy.domain.vote.dto.response.PlaceResponse;
-import umc.catchy.domain.vote.dto.response.VotedMemberResponse;
-import umc.catchy.global.common.response.status.ErrorStatus;
-import umc.catchy.global.error.exception.GeneralException;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -275,5 +266,26 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         }
 
         return new SliceImpl<>(places, PageRequest.of(0, pageSize), hasNext);
+    }
+
+    @Override
+    public List<GptCourseInfoResponse.GptPlaceInfoResponse> findPlacesWithCategoryAndReviewCount(List<Long> placeIds) {
+        return queryFactory.select(Projections.constructor(
+                        GptCourseInfoResponse.GptPlaceInfoResponse.class,
+                        place.id,
+                        place.placeName,
+                        place.imageUrl,
+                        category.bigCategory.stringValue(),
+                        place.roadAddress,
+                        place.activeTime,
+                        place.rating.coalesce(0.0),
+                        placeReview.count().coalesce(0L).intValue()
+                ))
+                .from(place)
+                .leftJoin(place.category, category)
+                .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
+                .where(place.id.in(placeIds))
+                .groupBy(place.id, place.placeName, place.imageUrl, category.bigCategory, place.roadAddress, place.activeTime, place.rating)
+                .fetch();
     }
 }
