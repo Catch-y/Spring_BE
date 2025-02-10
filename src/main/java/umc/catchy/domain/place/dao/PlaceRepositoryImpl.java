@@ -276,30 +276,4 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
 
         return new SliceImpl<>(places, PageRequest.of(0, pageSize), hasNext);
     }
-
-
-    private BooleanExpression lastPlacePagingCondition(Long lastPlaceId) {
-        if (lastPlaceId == null) {
-            return null;
-        }
-
-        // 서브쿼리로 lastPlaceId에 해당하는 voteCount와 placeName을 가져오기
-        Tuple lastPlaceInfo = queryFactory
-                .select(memberPlaceVote.count(), place.placeName)
-                .from(place)
-                .leftJoin(memberPlaceVote).on(memberPlaceVote.place.id.eq(place.id))
-                .where(place.id.eq(lastPlaceId))
-                .fetchOne();
-
-        Long lastVoteCount = lastPlaceInfo.get(memberPlaceVote.count());
-        String lastPlaceName = lastPlaceInfo.get(place.placeName);
-
-        // 복합 조건 적용: voteCount, placeName, placeId
-        return memberPlaceVote.count().lt(lastVoteCount)
-                .or(memberPlaceVote.count().eq(lastVoteCount)
-                        .and(place.placeName.gt(lastPlaceName)))
-                .or(memberPlaceVote.count().eq(lastVoteCount)
-                        .and(place.placeName.eq(lastPlaceName))
-                        .and(place.id.gt(lastPlaceId)));
-    }
 }
