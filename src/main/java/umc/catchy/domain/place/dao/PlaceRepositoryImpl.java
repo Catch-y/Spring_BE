@@ -2,6 +2,7 @@ package umc.catchy.domain.place.dao;
 
 import static umc.catchy.domain.mapping.placeLike.domain.QPlaceLike.placeLike;
 import static umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit.placeVisit;
+import static umc.catchy.domain.member.domain.QMember.member;
 import static umc.catchy.domain.place.domain.QPlace.place;
 import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
 
@@ -213,4 +214,69 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                         .where(placeVisit.member.id.eq(memberId))
         );
     }
+
+    @Override
+    public Slice<PlaceInfoResponse> searchPlace(int pageSize, String keyword, Long lastPlaceId) {
+
+        /*
+        NumberExpression<Double> distance = Expressions.numberTemplate(Double.class,
+                "(6371 * ACOS(COS(RADIANS({0})) * COS(RADIANS({1})) * COS(RADIANS({2}) - RADIANS({3})) + SIN(RADIANS({0})) * SIN(RADIANS({1}))))",
+                latitude, place.latitude, place.longitude, longitude);
+         */
+
+        NumberExpression<Integer> relevanceScore = Expressions.numberTemplate(Integer.class,
+                "CASE " +
+                        "WHEN {0} = {1} THEN 100 " + // 완전 일치 (100점)
+                        "WHEN {0} LIKE CONCAT('%', {1}, '%') THEN 80 " + // 포함 (80점)
+                        "WHEN {2} = {1} THEN 60 " + // 카테고리 완전 일치 (60점)
+                        "WHEN {2} LIKE CONCAT('%', {1}, '%') THEN 40 " + // 카테고리 포함 (40점)
+                        "ELSE 0 END",
+                place.placeName, keyword, place.category.bigCategory.stringValue());
+
+        List<PlaceInfoResponse> results = queryFactory.select(Projections.fields(PlaceInfoResponse.class,
+                        place.id.as("placeId"),
+                        place.imageUrl.as("imageUrl"),
+                        place.placeName.as("placeName"),
+                        place.category.bigCategory.stringValue().as("categoryName"),
+                        place.roadAddress.as("roadAddress"),
+                        place.activeTime.as("activeTime"),
+                        placeReview.rating.avg().coalesce(0.0).as("rating"),
+                        placeReview.count().as("reviewCount")
+                ))
+                .from(place)
+                .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
+                .where(
+                        keywordContains(keyword),
+                        lastPlaceId(lastPlaceId)
+                )
+                .groupBy(place.id)
+                .orderBy(relevanceScore.asc(), place.id.desc())
+                .limit(pageSize + 1)
+                .fetch();
+
+        return checkLastPage(pageSize,results);
+    }
+
+    private BooleanExpression keywordContains(String keyword) {
+        return place.placeName.containsIgnoreCase(keyword).or(place.category.bigCategory.stringValue().containsIgnoreCase(keyword));
+    }
+
+    private BooleanExpression lastPlaceId(Long placeId) {
+        if (placeId == null) {
+            return null;
+        }
+        return place.id.lt(placeId);
+    }
+
+    private Slice<PlaceInfoResponse> checkLastPage(int pageSize, List<PlaceInfoResponse> results) {
+        boolean hasNext = false;
+
+        if (results.size() > pageSize) {
+            hasNext = true;
+            results.remove(pageSize);
+        }
+
+        return new SliceImpl<>(results, PageRequest.of(0,pageSize), hasNext);
+    }
+
 }
