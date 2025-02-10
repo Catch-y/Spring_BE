@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import umc.catchy.domain.category.domain.BigCategory;
 
 import java.util.List;
 
@@ -23,11 +24,27 @@ public class GptCourseInfoResponse {
     @Getter
     @Setter
     @NoArgsConstructor
-    @AllArgsConstructor
     public static class GptPlaceInfoResponse {
         private Long placeId;
-        private String name;
+        private String placeName;
+        private String placeImage;
+        private String category;
         private String roadAddress;
-        private String recommendVisitTime; // "HH:mm~HH:mm" 형식
+        private String activeTime;
+        private double rating;
+        private int reviewCount;
+
+        // QueryDSL을 위한 생성자
+        public GptPlaceInfoResponse(Long placeId, String placeName, String placeImage, String categoryKey,
+                                    String roadAddress, String activeTime, double rating, int reviewCount) {
+            this.placeId = placeId;
+            this.placeName = placeName;
+            this.placeImage = placeImage;
+            this.category = BigCategory.valueOf(categoryKey).getValue();
+            this.roadAddress = roadAddress;
+            this.activeTime = activeTime;
+            this.rating = rating;
+            this.reviewCount = reviewCount;
+        }
     }
 }
