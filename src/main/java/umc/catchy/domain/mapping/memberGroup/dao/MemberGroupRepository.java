@@ -16,10 +16,9 @@ import java.util.Optional;
 public interface MemberGroupRepository extends JpaRepository<MemberGroup, Long> {
     boolean existsByGroupIdAndMemberId(Long groupId, Long memberId);
     Optional<MemberGroup> findByGroupIdAndMemberId(Long groupId, Long memberId);
-    @Query("SELECT mg FROM MemberGroup mg WHERE mg.member.id = :memberId")
-    Slice<MemberGroup> findAllByMemberId(@Param("memberId") Long memberId, Pageable pageable);
     int countByGroupId(Long groupId);
     @Query("SELECT mg.member FROM MemberGroup mg WHERE mg.group.id = :groupId")
     List<Member> findMembersByGroupId(@Param("groupId") Long groupId);
     Integer deleteAllByMember(Member member);
+    List<MemberGroup> findAllByMemberId(Long memberId);
 }
