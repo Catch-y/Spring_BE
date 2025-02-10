@@ -34,5 +34,6 @@ public class PlaceReview extends BaseTimeEntity {
     @JoinColumn(name = "place_id")
     private Place place;
 
+    @Setter
     private Boolean isReported = false;
 }

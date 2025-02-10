@@ -32,5 +32,6 @@ public class CourseReview extends BaseTimeEntity {
     @JoinColumn(name = "course_id")
     private Course course;
 
+    @Setter
     private Boolean isReported = false;
 }
