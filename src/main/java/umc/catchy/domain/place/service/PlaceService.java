@@ -16,6 +16,8 @@ import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewSliceResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoSliceResponse;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -75,6 +77,11 @@ public class PlaceService {
         Slice<PlaceInfoPreview> placeInfoPreviews = placeRepository.recommendPlacesByActivityData(memberId, latitude, longitude, sortedVisitCategories, categoryAverageHour, pageSize, page);
 
         return PlaceInfoPreviewSliceResponse.from(placeInfoPreviews);
+    }
+
+    public PlaceInfoSliceResponse searchPlaceByCategoryOrName(int pageSize, String keyword, Long lastPlaceId) {
+        Slice<PlaceInfoResponse> responses = placeRepository.searchPlace(pageSize, keyword, lastPlaceId);
+        return PlaceInfoSliceResponse.from(responses);
     }
 
     private Map<Long, Integer> getCategoryAverageHour(List<PlaceVisit> placeVisits) {
