@@ -2,10 +2,10 @@
 [API 테스트 영상](https://www.youtube.com/watch?v=Y6SClkNVSwo)
 
 ## 시스템 아키텍처
-![System_Architecture](https://github.com/user-attachments/assets/bd4cbdd5-3560-42d2-8f76-0dedbb629f1a)
+![System_Architecture](https://github.com/user-attachments/assets/5a41693f-e9dd-4257-b34d-8de5457b0b49)
 
 ## ERD
-![ERD](https://github.com/user-attachments/assets/b9c5ce7c-0f74-4347-bcae-fb721e20679c)
+![ERD](https://github.com/user-attachments/assets/9d2a2e7d-4c89-4baa-963d-eeccbfb2b7fe)
 
 ## 기술 스택
 ### Backend
