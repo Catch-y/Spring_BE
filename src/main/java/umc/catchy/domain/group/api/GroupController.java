@@ -77,10 +77,10 @@ public class GroupController {
 
     @Operation(summary = "사용자가 속한 그룹 조회", description = "로그인한 사용자가 속한 그룹들의 정보를 조회합니다.")
     @GetMapping("/my-groups")
-    public ResponseEntity<BaseResponse<Slice<GroupCalendarResponse>>> getUserGroups(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Slice<GroupCalendarResponse> response = groupService.getUserGroups(page, size);
+    public ResponseEntity<BaseResponse<List<GroupCalendarResponse>>> getUserGroups(
+            @RequestParam int year,
+            @RequestParam int month) {
+        List<GroupCalendarResponse> response = groupService.getUserGroups(year, month);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 

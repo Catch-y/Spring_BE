@@ -57,6 +57,7 @@ import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.converter.PlaceConverter;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
+import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
@@ -96,6 +97,7 @@ public class CourseService {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final GPTCourseService gptCourseService;
+    private final PlaceReviewRepository placeReviewRepository;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -404,18 +406,29 @@ public class CourseService {
 
         List<Long> preferredCategoryIds = categoryRepository.findIdsByNames(preferredCategories);
         List<Place> places = getRecommendedPlaces(regionList, preferredCategoryIds, memberId, 100);
+        List<Long> placeIds = places.stream().map(Place::getId).collect(Collectors.toList());
 
-        // GPT 프롬프트 생성
+        // QueryDSL로 Place + Category + Review Count 조회
+        List<GptCourseInfoResponse.GptPlaceInfoResponse> placeDtos = placeRepository.findPlacesWithCategoryAndReviewCount(placeIds);
+
         String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles, activeTimes);
 
-        // OpenAI GPT 호출
+        // GPT API 호출 비동기 처리
         CompletableFuture<String> gptResponseFuture = CompletableFuture.supplyAsync(() ->
                 gptCourseService.callOpenAiApiAsync(gptPrompt).join()
         );
 
-        // GPT 응답 및 이미지 생성 비동기 처리
+        //GPT 응답 및 이미지 생성 비동기 처리
         return gptResponseFuture.thenCompose(gptResponse -> {
             GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
+
+            // GPT가 반환한 Place ID 목록 추출 후 DB에서 정보 조회
+            List<Long> gptPlaceIds = parsedResponse.getPlaceInfos().stream()
+                    .map(GptCourseInfoResponse.GptPlaceInfoResponse::getPlaceId)
+                    .collect(Collectors.toList());
+            List<GptCourseInfoResponse.GptPlaceInfoResponse> enrichedPlaceInfos = placeRepository.findPlacesWithCategoryAndReviewCount(gptPlaceIds);
+            parsedResponse.setPlaceInfos(enrichedPlaceInfos);
+
             String courseName = parsedResponse.getCourseName();
             String courseDescription = parsedResponse.getCourseDescription();
 
@@ -428,6 +441,12 @@ public class CourseService {
             return saveCourseAndPlaces(parsedResponse, member, isForHome)
                     .thenApply(courseId -> {
                         parsedResponse.setCourseId(courseId);
+
+                        // 저장된 코스 평점 조회 및 반영
+                        Course savedCourse = courseRepository.findById(courseId)
+                                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
+                        parsedResponse.setCourseRating(savedCourse.getRating());
+
                         return parsedResponse;
                     });
         }).exceptionally(e -> {
@@ -543,10 +562,10 @@ public class CourseService {
         StringBuilder prompt = new StringBuilder();
 
         // 지역 정보
-        prompt.append("Create a full-day itinerary for the following regions: ");
-        prompt.append(String.join(", ", regionList));
-        prompt.append(". All places in the itinerary **must be chosen strictly from the provided list of places**.\n");
-
+        prompt.append("Create a unique and creative itinerary for the following regions: ");
+        prompt.append(String.join(", ", regionList)).append(".\n");
+        prompt.append("Randomly select **2 to 5** unique places from the list below to create a diverse and interesting itinerary.\n");
+        prompt.append("Do not include all places in the itinerary.\n");
         // 선호 카테고리
         prompt.append("The user's preferred categories are: ");
         prompt.append(String.join(", ", preferredCategories));
@@ -614,6 +633,8 @@ public class CourseService {
             JsonNode choicesNode = rootNode.path("choices");
             if (choicesNode.isArray() && choicesNode.size() > 0) {
                 String content = choicesNode.get(0).path("message").path("content").asText();
+                content = content.replaceAll("```json", "").replaceAll("```", "").trim();
+
                 JsonNode contentNode = objectMapper.readTree(content);
 
                 // 코스 정보 추출
@@ -630,16 +651,10 @@ public class CourseService {
                     for (JsonNode placeNode : placesNode) {
                         GptCourseInfoResponse.GptPlaceInfoResponse place = new GptCourseInfoResponse.GptPlaceInfoResponse();
 
-                        try {
-                            place.setPlaceId(placeNode.path("placeId").asLong());
-                        } catch (NumberFormatException e) {
-                            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR,
-                                    "Invalid placeId format: " + placeNode.path("placeId").asText());
-                        }
-
-                        place.setName(placeNode.path("name").asText());
-                        place.setRoadAddress(placeNode.path("roadAddress").asText());
-                        place.setRecommendVisitTime(placeNode.path("recommendVisitTime").asText());
+                        place.setPlaceId(placeNode.path("placeId").asLong());
+                        place.setPlaceName(placeNode.path("name").asText("이름 없음"));
+                        place.setRoadAddress(placeNode.path("roadAddress").asText("주소 없음"));
+                        place.setActiveTime(placeNode.path("operatingHours").asText("09:00~21:00"));
                         places.add(place);
                     }
                 }
@@ -655,10 +670,10 @@ public class CourseService {
 
                 return response;
             } else {
-                throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR);
+                throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR, "GPT 응답의 choices 배열이 비어 있습니다.");
             }
         } catch (JsonProcessingException e) {
-            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR);
+            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR, "JSON 파싱 중 오류 발생: " + e.getMessage());
         }
     }
 
