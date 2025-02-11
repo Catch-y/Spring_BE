@@ -363,11 +363,13 @@ public class CourseService {
 
         return finalPlaces;
     }
+
     // 오버로딩 메서드 (API 호출 시 사용)
     public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically(boolean isForHome) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         return generateCourseAutomatically(memberId, isForHome);
     }
+
     public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically(Long memberId, boolean isForHome) {
        // Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
