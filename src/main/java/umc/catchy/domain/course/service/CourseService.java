@@ -363,9 +363,13 @@ public class CourseService {
 
         return finalPlaces;
     }
-
+    // 오버로딩 메서드 (API 호출 시 사용)
     public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically(boolean isForHome) {
         Long memberId = SecurityUtil.getCurrentMemberId();
+        return generateCourseAutomatically(memberId, isForHome);
+    }
+    public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically(Long memberId, boolean isForHome) {
+       // Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
@@ -656,34 +660,26 @@ public class CourseService {
         }
     }
 
-    public List<CourseRecommendationResponse> getHomeRecommendedCourses() {
-        // 1. 로그인한 사용자 ID 조회
-        Long memberId = SecurityUtil.getCurrentMemberId();
-
-        // 사용자별 Redis 캐시 키 생성
+    public List<CourseRecommendationResponse> getHomeRecommendedCourses(Long memberId) {
         String userSpecificCacheKey = CACHE_KEY + ":" + memberId;
-
-        // 2. Redis에서 사용자별 캐시 데이터 조회
         String cachedData = redisTemplate.opsForValue().get(userSpecificCacheKey);
+
         if (cachedData != null) {
             return deserializeCourseRecommendations(cachedData);
         }
 
-        // 3. 캐시 데이터가 없으면 새 데이터를 생성
-        List<CourseRecommendationResponse> recommendedCourses = generateRecommendedCourses();
-
-        // 4. 생성된 데이터를 Redis에 캐싱
+        List<CourseRecommendationResponse> recommendedCourses = generateRecommendedCourses(memberId);
         String serializedData = serializeCourseRecommendations(recommendedCourses);
         redisTemplate.opsForValue().set(userSpecificCacheKey, serializedData, CACHE_TTL, TimeUnit.SECONDS);
 
         return recommendedCourses;
     }
 
-    public CompletableFuture<List<GptCourseInfoResponse>> generateMultipleAICourses(int count, boolean isForHome) {
+    public CompletableFuture<List<GptCourseInfoResponse>> generateMultipleAICourses(Long memberId, int count, boolean isForHome) {
         List<CompletableFuture<GptCourseInfoResponse>> futures = new ArrayList<>();
 
         for (int i = 0; i < count; i++) {
-            futures.add(generateCourseAutomatically(isForHome));
+            futures.add(generateCourseAutomatically(memberId, isForHome));
         }
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -692,15 +688,11 @@ public class CourseService {
                         .collect(Collectors.toList()));
     }
 
-    private List<CourseRecommendationResponse> generateRecommendedCourses() {
-        Long memberId = SecurityUtil.getCurrentMemberId();
-
-        // 사용자가 직접 만든 코스 조회
-        List<Course> userCourses = courseRepository.findTop5ByMemberIdAndCourseTypeOrderByCreatedDateDesc(memberId, CourseType.DIY);
+    private List<CourseRecommendationResponse> generateRecommendedCourses(Long memberId) {
+        List<Course> userCourses = courseRepository.findTop2ByMemberIdAndCourseTypeOrderByCreatedDateDesc(memberId, CourseType.DIY);
 
         int userCourseCount = userCourses.size();
-        int userCourseDeficit = Math.max(0, 5 - userCourseCount);
-        int aiCourseCount = 10 - userCourseCount - userCourseDeficit;
+        int aiCourseCount = 5 - userCourseCount;
 
         List<CourseRecommendationResponse> recommendedCourses = new ArrayList<>();
         recommendedCourses.addAll(userCourses.stream()
@@ -708,8 +700,7 @@ public class CourseService {
                 .collect(Collectors.toList()));
 
         if (aiCourseCount > 0) {
-            // AI 코스 생성 (isForHome = true)
-            List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(aiCourseCount, true).join();
+            List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(memberId, aiCourseCount, true).join();
 
             recommendedCourses.addAll(aiCourses.stream()
                     .map(response -> CourseRecommendationResponse.builder()
@@ -723,6 +714,12 @@ public class CourseService {
         }
 
         return recommendedCourses;
+    }
+
+    public List<Long> getAllMemberIds() {
+        return memberRepository.findAll().stream()
+                .map(Member::getId)
+                .collect(Collectors.toList());
     }
 
     private String serializeCourseRecommendations(List<CourseRecommendationResponse> courses) {
