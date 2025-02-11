@@ -26,25 +26,19 @@ public class CourseSchedulerService {
     @Scheduled(cron = "0 0 0 * * MON", zone = "Asia/Seoul")
     public void scheduledCourseGeneration() {
         List<Long> allMemberIds = courseService.getAllMemberIds();
-        log.info("총 {}명의 회원에 대해 추천 코스를 생성합니다.", allMemberIds.size());
 
         List<CompletableFuture<Void>> futures = allMemberIds.stream()
                 .map(memberId -> CompletableFuture.runAsync(() -> processMemberRecommendation(memberId)))
                 .collect(Collectors.toList());
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        log.info("모든 회원의 추천 코스 생성 작업이 완료되었습니다.");
     }
 
     private void processMemberRecommendation(Long memberId) {
         try {
             String userSpecificCacheKey = CACHE_KEY + ":" + memberId;
             redisTemplate.delete(userSpecificCacheKey);
-            log.info("회원 ID {}의 기존 캐시를 삭제했습니다.", memberId);
-
-            log.info("회원 ID {}의 추천 코스 생성을 시작합니다.", memberId);
             courseService.getHomeRecommendedCourses(memberId);
-            log.info("회원 ID {}의 추천 코스 생성이 완료되었습니다.", memberId);
         } catch (GeneralException e) {
             log.error("회원 ID {}의 추천 코스 생성 중 오류 발생: {}", memberId, e.getMessage());
         } catch (Exception e) {
