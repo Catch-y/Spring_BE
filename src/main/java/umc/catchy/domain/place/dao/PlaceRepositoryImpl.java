@@ -2,7 +2,6 @@ package umc.catchy.domain.place.dao;
 
 import static umc.catchy.domain.mapping.placeLike.domain.QPlaceLike.placeLike;
 import static umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit.placeVisit;
-import static umc.catchy.domain.member.domain.QMember.member;
 import static umc.catchy.domain.place.domain.QPlace.place;
 import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
 
@@ -25,6 +24,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.course.util.LocationUtils;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoContainRelevance;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 import umc.catchy.domain.mapping.placeLike.domain.QPlaceLike;
@@ -216,7 +216,7 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
     }
 
     @Override
-    public Slice<PlaceInfoResponse> searchPlace(int pageSize, String keyword, Long lastPlaceId) {
+    public Slice<PlaceInfoContainRelevance> searchPlace(int pageSize, String keyword, Integer lastRelevanceScore, Long lastPlaceId) {
 
         /*
         NumberExpression<Double> distance = Expressions.numberTemplate(Double.class,
@@ -224,16 +224,11 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                 latitude, place.latitude, place.longitude, longitude);
          */
 
-        NumberExpression<Integer> relevanceScore = Expressions.numberTemplate(Integer.class,
-                "CASE " +
-                        "WHEN {0} = {1} THEN 100 " + // 완전 일치 (100점)
-                        "WHEN {0} LIKE CONCAT('%', {1}, '%') THEN 80 " + // 포함 (80점)
-                        "WHEN {2} = {1} THEN 60 " + // 카테고리 완전 일치 (60점)
-                        "WHEN {2} LIKE CONCAT('%', {1}, '%') THEN 40 " + // 카테고리 포함 (40점)
-                        "ELSE 0 END",
-                place.placeName, keyword, place.category.bigCategory.stringValue());
+        NumberExpression<Integer> relevanceScore = getRelevanceScore(keyword);
 
-        List<PlaceInfoResponse> results = queryFactory.select(Projections.fields(PlaceInfoResponse.class,
+        List<PlaceInfoContainRelevance> results = queryFactory.select(
+                Projections.fields(PlaceInfoContainRelevance.class,
+                        Projections.fields(PlaceInfoResponse.class,
                         place.id.as("placeId"),
                         place.imageUrl.as("imageUrl"),
                         place.placeName.as("placeName"),
@@ -242,33 +237,54 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                         place.activeTime.as("activeTime"),
                         placeReview.rating.avg().coalesce(0.0).as("rating"),
                         placeReview.count().as("reviewCount")
-                ))
+                        ).as("placeInfoResponse")
+                        ,relevanceScore.as("relevanceScore")))
                 .from(place)
                 .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
                 .where(
                         keywordContains(keyword),
-                        lastPlaceId(lastPlaceId)
+                        cursorCondition(relevanceScore,lastRelevanceScore, lastPlaceId)
                 )
                 .groupBy(place.id)
-                .orderBy(relevanceScore.asc(), place.id.desc())
+                .orderBy(relevanceScore.desc(),place.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
 
         return checkLastPage(pageSize,results);
     }
 
+    private static NumberExpression<Integer> getRelevanceScore(String keyword) {
+        NumberExpression<Integer> relevanceScore = Expressions.numberTemplate(Integer.class,
+                "CASE " +
+                        "WHEN {0} = {1} THEN 100 " + // 완전 일치 (100점)
+                        "WHEN {0} LIKE CONCAT('%', {1}, '%') THEN 80 " + // 포함 (80점)
+                        "WHEN {2} = {1} THEN 60 " + // 카테고리 완전 일치 (60점)
+                        "WHEN {2} LIKE CONCAT('%', {1}, '%') THEN 40 " + // 카테고리 포함 (40점)
+                        "ELSE 0 END",
+                place.placeName, keyword, place.category.bigCategory.stringValue());
+        return relevanceScore;
+    }
+
     private BooleanExpression keywordContains(String keyword) {
         return place.placeName.containsIgnoreCase(keyword).or(place.category.bigCategory.stringValue().containsIgnoreCase(keyword));
     }
 
-    private BooleanExpression lastPlaceId(Long placeId) {
-        if (placeId == null) {
-            return null;
+    private BooleanExpression cursorCondition(NumberExpression<Integer> relevanceScore,Integer lastRelevanceScore, Long lastPlaceId) {
+        if (lastRelevanceScore == null || lastPlaceId == null) {
+            return null; // 첫 페이지 요청 시 조건 없음
         }
-        return place.id.lt(placeId);
+
+        // 더 낮은 relevanceScore를 가진 데이터 가져오기
+        BooleanExpression lowerScore = relevanceScore.lt(lastRelevanceScore);
+
+        // 같은 relevanceScore에서 placeId가 더 작은 데이터 가져오기 (중복 방지)
+        BooleanExpression sameScoreLargerId = relevanceScore.eq(lastRelevanceScore)
+                .and(place.id.lt(lastPlaceId));
+
+        return lowerScore.or(sameScoreLargerId);
     }
 
-    private Slice<PlaceInfoResponse> checkLastPage(int pageSize, List<PlaceInfoResponse> results) {
+    private Slice<PlaceInfoContainRelevance> checkLastPage(int pageSize, List<PlaceInfoContainRelevance> results) {
         boolean hasNext = false;
 
         if (results.size() > pageSize) {

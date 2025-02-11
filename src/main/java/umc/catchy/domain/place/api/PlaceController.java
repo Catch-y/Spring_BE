@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoContainRelevanceScoreSliceResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewSliceResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoSliceResponse;
 import umc.catchy.domain.mapping.placeLike.dto.response.PlaceLikedResponse;
@@ -87,12 +88,13 @@ public class PlaceController {
 
     @Operation(summary = "장소 검색 API", description = "장소이름/카테고리를 통해 장소 리스트 반환")
     @GetMapping("/home/search")
-    public ResponseEntity<BaseResponse<PlaceInfoSliceResponse>> getSearchPlaces(
+    public ResponseEntity<BaseResponse<PlaceInfoContainRelevanceScoreSliceResponse>> getSearchPlaces(
             @RequestParam(required = false) String keyword,
             @RequestParam int pageSize,
+            @RequestParam(required = false) Integer relevanceScore,
             @RequestParam(required = false) Long lastPlaceId
     ) {
-        PlaceInfoSliceResponse response = placeService.searchPlaceByCategoryOrName(pageSize,keyword,lastPlaceId);
+        PlaceInfoContainRelevanceScoreSliceResponse response = placeService.searchPlaceByCategoryOrName(pageSize,keyword,relevanceScore,lastPlaceId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }
