@@ -12,5 +12,5 @@ public interface PlaceReviewRepositoryCustom {
     List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> findRatingList(Long placeId);
     Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> findPlaceReviewSliceByPlaceId(Long placeId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId);
     Optional<Double> findAverageRatingByPlaceId(Long placeId);
-    Slice<MyPageReviewsResponse.PlaceReviewDTO> getAllPlaceReviewByMemberId(Long memberId, int pageSize, Long lastPlaceReviewId);
+    Slice<MyPageReviewsResponse.PlaceReviewDTO> getAllPlaceReviewByMemberId(Long memberId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId);
 }
