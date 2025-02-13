@@ -373,7 +373,6 @@ public class CourseService {
     }
 
     public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically(Long memberId, boolean isForHome) {
-       // Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
