@@ -51,7 +51,7 @@ public class PlaceConverter {
                 .build();
     }
 
-    public static PlaceInfoDetail toPlaceInfoDetail (Place place, Long reviewCount, Boolean isVisited) {
+    public static PlaceInfoDetail toPlaceInfoDetail (Place place, Long reviewCount, Boolean isVisited, Boolean isLiked) {
         String categoryName = "";
         Double rating = 0.0;
 
@@ -73,7 +73,8 @@ public class PlaceConverter {
                 .placeSite(place.getPlaceSite())
                 .rating(rating)
                 .reviewCount(reviewCount)
-                .isVisited(isVisited)
+                .visited(isVisited)
+                .liked(isLiked)
                 .build();
     }
 
