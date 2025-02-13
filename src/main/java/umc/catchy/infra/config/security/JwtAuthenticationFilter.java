@@ -12,6 +12,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import umc.catchy.domain.jwt.service.BlackTokenRedisService;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
@@ -24,6 +25,7 @@ import umc.catchy.global.util.JwtUtil;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final MemberRepository memberRepository;
+    private final BlackTokenRedisService blackTokenRedisService;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -33,6 +35,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
 
         if (token != null && jwtUtil.validateToken(token)) {
+            // 블랙리스트 토큰인지 검사
+            if (blackTokenRedisService.isTokenBlacklisted(token)) {
+                throw new GeneralException(ErrorStatus.BLACKLISTED_TOKEN);
+            }
+
             Long memberId = jwtUtil.getMemberIdFromToken(token);
 
             if (!memberRepository.existsById(memberId)) {
