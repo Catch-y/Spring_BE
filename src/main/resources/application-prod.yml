@@ -17,6 +17,10 @@ spring:
       port: ${REDIS_PORT}
       timeout: 6000
 
+  mvc:
+    async:
+      request-timeout: 60000
+
   servlet:
     multipart:
       max-file-size: 50MB

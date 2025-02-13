@@ -71,7 +71,6 @@ public class AmazonS3Manager {
             // 검증된 InputStream으로 업로드
             metadata.setContentLength(validatedContentLength);
             s3.putObject(new PutObjectRequest(amazonConfig.getBucket(), keyName, validatedInputStream, metadata));
-            System.out.println("Uploaded content length: " + validatedContentLength);
         } catch (Exception e) {
             log.error("Error uploading InputStream to S3: {}", e.getMessage());
             throw new RuntimeException("Error uploading InputStream to S3", e);
