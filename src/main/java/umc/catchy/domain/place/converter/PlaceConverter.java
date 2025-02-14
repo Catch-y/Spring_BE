@@ -28,7 +28,7 @@ public class PlaceConverter {
     }
 
     public static PlaceInfoPreview toPlaceInfoPreview(Place place, Long reviewCount) {
-        String categoryName = "";
+        String categoryName = null;
         Double rating = 0.0;
 
         if (place.getCategory() != null) {
@@ -52,7 +52,7 @@ public class PlaceConverter {
     }
 
     public static PlaceInfoDetail toPlaceInfoDetail (Place place, Long reviewCount, Boolean isVisited, Boolean isLiked) {
-        String categoryName = "";
+        String categoryName = null;
         Double rating = 0.0;
 
         if (place.getCategory() != null) {
