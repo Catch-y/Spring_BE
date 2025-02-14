@@ -27,7 +27,7 @@ public class RedisTokenService {
     public boolean isRefreshTokenValid(String refreshToken, Long memberId) {
         String key = REDIS_REFRESH_TOKEN_KEY_PREFIX + memberId;
         String storedToken = redisTemplate.opsForValue().get(key);
-        return !storedToken.equals(refreshToken);
+        return storedToken != null && storedToken.equals(refreshToken);
     }
 
     // 리프레시 토큰 삭제

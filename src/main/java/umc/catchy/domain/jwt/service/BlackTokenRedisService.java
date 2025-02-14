@@ -24,7 +24,7 @@ public class BlackTokenRedisService {
     public boolean isTokenBlacklisted(String token) {
         String key = REDIS_BLACKLIST_KEY_PREFIX + token;
         String storedToken = redisTemplate.opsForValue().get(key);
-        return storedToken != null;
+        return storedToken != null && storedToken.equals(token);
     }
 
     // 블랙리스트 토큰 제거
