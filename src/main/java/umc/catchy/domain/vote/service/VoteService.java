@@ -245,7 +245,8 @@ public class VoteService {
                 normalizedGroupLocation,
                 normalizedAlternativeLocation,
                 pageSize,
-                lastPlaceId
+                lastPlaceId,
+                groupId
         );
 
         List<PlaceResponse> placeResponses = placesSlice.getContent().stream()
@@ -253,7 +254,7 @@ public class VoteService {
                     long reviewCount = placeReviewRepository.countByPlaceId(place.getId());
 
                     // 해당 장소에 투표한 멤버 정보 조회
-                    List<Member> votingMembers = memberPlaceVoteRepository.findMembersByPlaceId(place.getId());
+                    List<Member> votingMembers = memberPlaceVoteRepository.findMembersByPlaceIdAndGroupId(place.getId(), groupId);
 
                     List<VotedMemberResponse> votedMembers = votingMembers.stream()
                             .map(member -> new VotedMemberResponse(
