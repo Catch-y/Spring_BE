@@ -1,4 +1,7 @@
-FROM openjdk:17
+FROM eclipse-temurin:17-jdk-alpine
+
+# glibc 호환성을 위한 gcompat 설치
+RUN apk add --no-cache gcompat
 
 # 애플리케이션 JAR 파일을 컨테이너로 복사
 ARG JAR_FILE=./build/libs/*.jar
