@@ -13,7 +13,7 @@ public record SignUpResponse(
         String accessToken,
         String refreshToken
 ) {
-    public static SignUpResponse of(Member member) {
+    public static SignUpResponse of(Member member, String refreshToken) {
         return new SignUpResponse(
                 member.getId(),
                 member.getProviderId(),
@@ -22,7 +22,7 @@ public record SignUpResponse(
                 member.getProfileImage(),
                 member.getCreatedDate(),
                 member.getAccessToken(),
-                member.getRefreshToken()
+                refreshToken
         );
     }
 
