@@ -81,6 +81,8 @@ import umc.catchy.domain.mapping.memberLocation.dto.response.MemberLocationCreat
 import umc.catchy.domain.mapping.memberPlaceVote.dao.MemberPlaceVoteRepository;
 import umc.catchy.domain.mapping.memberStyle.dao.MemberStyleRepository;
 import umc.catchy.domain.mapping.memberStyle.domain.MemberStyle;
+import umc.catchy.domain.mapping.placeLike.dao.PlaceLikeRepository;
+import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
@@ -121,6 +123,8 @@ public class MemberService {
     private final MemberCategoryVoteRepository memberCategoryVoteRepository;
     private final RedisTokenService redisTokenService;
     private final BlackTokenRedisService blackTokenRedisService;
+    private final PlaceVisitRepository placeVisitRepository;
+    private final PlaceLikeRepository placeLikeRepository;
 
     @Value("${security.kakao.client-id}")
     private String KAKAO_CLIENT_ID;
@@ -216,7 +220,7 @@ public class MemberService {
 
         memberRepository.save(newMember);
 
-        return SignUpResponse.of(newMember);
+        return SignUpResponse.of(newMember, refreshToken);
     }
 
     public LoginResponse login(LoginRequest request, SocialType socialType) {
@@ -427,6 +431,8 @@ public class MemberService {
         memberGroupRepository.deleteAllByMember(member);
         memberCourseRepository.deleteAllByMember(member);
         memberCategoryRepository.deleteAllByMember(member);
+        placeVisitRepository.deleteAllByMember(member);
+        placeLikeRepository.deleteAllByMember(member);
 
         // 기존 토큰들 무효화
         String originAccessToken = member.getAccessToken();

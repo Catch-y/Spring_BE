@@ -22,4 +22,5 @@ public interface PlaceVisitRepository extends JpaRepository<PlaceVisit, Long> {
     List<PlaceVisit> findPlaceVisitsByMemberAndPlaces(@Param("memberId") Long memberId, @Param("placeIds") List<Long> placeIds);
     List<PlaceVisit> findAllByMemberAndPlaceAndIsVisitedTrue(Member member, Place place);
     List<PlaceVisit> findAllByMemberOrderByVisitedDateDesc(Member member);
+    Integer deleteAllByMember(Member member);
 }
