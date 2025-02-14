@@ -11,4 +11,5 @@ import umc.catchy.domain.place.domain.Place;
 @Repository
 public interface PlaceLikeRepository extends JpaRepository<PlaceLike, Long> {
     Optional<PlaceLike> findByPlaceAndMember(Place place, Member member);
+    Integer deleteAllByMember(Member member);
 }

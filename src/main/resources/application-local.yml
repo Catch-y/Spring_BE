@@ -78,3 +78,8 @@ cache:
   recommended-courses:
     key: ${REDIS_CACHE_KEY}
     ttl: 86400 #1일
+  refreshToken:
+    key: ${REDIS_TOKEN_KEY}
+    ttl: 604800 #1주일
+  blacklist:
+    key: ${REDIS_BLACKLIST_KEY}
