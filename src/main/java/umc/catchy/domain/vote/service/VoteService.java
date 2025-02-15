@@ -27,17 +27,17 @@ import umc.catchy.domain.vote.domain.Vote;
 import umc.catchy.domain.vote.domain.VoteStatus;
 import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
 import umc.catchy.domain.vote.dto.request.PlaceVoteRequest;
-import umc.catchy.domain.vote.dto.response.CategoryDto;
-import umc.catchy.domain.vote.dto.response.CategoryResponse;
-import umc.catchy.domain.vote.dto.response.CategoryResult;
-import umc.catchy.domain.vote.dto.response.GroupPlaceResponse;
-import umc.catchy.domain.vote.dto.response.GroupVoteResultResponse;
-import umc.catchy.domain.vote.dto.response.GroupVoteStatusResponse;
-import umc.catchy.domain.vote.dto.response.MemberVoteStatus;
-import umc.catchy.domain.vote.dto.response.PlaceResponse;
-import umc.catchy.domain.vote.dto.response.VoteResult;
-import umc.catchy.domain.vote.dto.response.VoteResultResponse;
-import umc.catchy.domain.vote.dto.response.VotedMemberResponse;
+import umc.catchy.domain.vote.dto.response.group.GroupVoteResultResponse;
+import umc.catchy.domain.vote.dto.response.category.CategoryDto;
+import umc.catchy.domain.vote.dto.response.category.CategoryResponse;
+import umc.catchy.domain.vote.dto.response.category.CategoryResult;
+import umc.catchy.domain.vote.dto.response.group.GroupPlaceResponse;
+import umc.catchy.domain.vote.dto.response.group.GroupVoteStatusResponse;
+import umc.catchy.domain.vote.dto.response.vote.MemberVoteStatus;
+import umc.catchy.domain.vote.dto.response.place.PlaceResponse;
+import umc.catchy.domain.vote.dto.response.vote.VoteResult;
+import umc.catchy.domain.vote.dto.response.vote.VoteResultResponse;
+import umc.catchy.domain.vote.dto.response.vote.VotedMemberResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
@@ -245,7 +245,8 @@ public class VoteService {
                 normalizedGroupLocation,
                 normalizedAlternativeLocation,
                 pageSize,
-                lastPlaceId
+                lastPlaceId,
+                groupId
         );
 
         List<PlaceResponse> placeResponses = placesSlice.getContent().stream()
@@ -253,7 +254,7 @@ public class VoteService {
                     long reviewCount = placeReviewRepository.countByPlaceId(place.getId());
 
                     // 해당 장소에 투표한 멤버 정보 조회
-                    List<Member> votingMembers = memberPlaceVoteRepository.findMembersByPlaceId(place.getId());
+                    List<Member> votingMembers = memberPlaceVoteRepository.findMembersByPlaceIdAndGroupId(place.getId(), groupId);
 
                     List<VotedMemberResponse> votedMembers = votingMembers.stream()
                             .map(member -> new VotedMemberResponse(
