@@ -19,6 +19,7 @@ import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -300,6 +301,11 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                 latitude, place.latitude, place.longitude, longitude);
          */
 
+        // 키워드가 없으면 바로 빈 리스트 반환
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new SliceImpl<>(Collections.emptyList(), PageRequest.of(0, pageSize), false);
+        }
+
         NumberExpression<Integer> relevanceScore = getRelevanceScore(keyword);
 
         List<PlaceInfoContainRelevance> results = queryFactory.select(
@@ -361,6 +367,10 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
     }
 
     private Slice<PlaceInfoContainRelevance> checkLastPage(int pageSize, List<PlaceInfoContainRelevance> results) {
+        if (results.isEmpty()) {
+            return new SliceImpl<>(Collections.emptyList(), PageRequest.of(0, pageSize), false);
+        }
+
         boolean hasNext = false;
 
         if (results.size() > pageSize) {
