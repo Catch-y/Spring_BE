@@ -58,6 +58,7 @@ import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.converter.PlaceConverter;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
+import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
@@ -100,6 +101,7 @@ public class CourseService {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final GPTCourseService gptCourseService;
+    private final PlaceReviewRepository placeReviewRepository;
     private final FCMService fcmService;
 
     @PersistenceContext
@@ -370,8 +372,13 @@ public class CourseService {
         return finalPlaces;
     }
 
+    // 오버로딩 메서드 (API 호출 시 사용)
     public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically(boolean isForHome) {
         Long memberId = SecurityUtil.getCurrentMemberId();
+        return generateCourseAutomatically(memberId, isForHome);
+    }
+
+    public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically(Long memberId, boolean isForHome) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
@@ -404,18 +411,29 @@ public class CourseService {
 
         List<Long> preferredCategoryIds = categoryRepository.findIdsByNames(preferredCategories);
         List<Place> places = getRecommendedPlaces(regionList, preferredCategoryIds, memberId, 100);
+        List<Long> placeIds = places.stream().map(Place::getId).collect(Collectors.toList());
 
-        // GPT 프롬프트 생성
+        // QueryDSL로 Place + Category + Review Count 조회
+        List<GptCourseInfoResponse.GptPlaceInfoResponse> placeDtos = placeRepository.findPlacesWithCategoryAndReviewCount(placeIds);
+
         String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles, activeTimes);
 
-        // OpenAI GPT 호출
+        // GPT API 호출 비동기 처리
         CompletableFuture<String> gptResponseFuture = CompletableFuture.supplyAsync(() ->
                 gptCourseService.callOpenAiApiAsync(gptPrompt).join()
         );
 
-        // GPT 응답 및 이미지 생성 비동기 처리
+        //GPT 응답 및 이미지 생성 비동기 처리
         return gptResponseFuture.thenCompose(gptResponse -> {
             GptCourseInfoResponse parsedResponse = parseGptResponseToDto(gptResponse);
+
+            // GPT가 반환한 Place ID 목록 추출 후 DB에서 정보 조회
+            List<Long> gptPlaceIds = parsedResponse.getPlaceInfos().stream()
+                    .map(GptCourseInfoResponse.GptPlaceInfoResponse::getPlaceId)
+                    .collect(Collectors.toList());
+            List<GptCourseInfoResponse.GptPlaceInfoResponse> enrichedPlaceInfos = placeRepository.findPlacesWithCategoryAndReviewCount(gptPlaceIds);
+            parsedResponse.setPlaceInfos(enrichedPlaceInfos);
+
             String courseName = parsedResponse.getCourseName();
             String courseDescription = parsedResponse.getCourseDescription();
 
@@ -428,6 +446,12 @@ public class CourseService {
             return saveCourseAndPlaces(parsedResponse, member, isForHome)
                     .thenApply(courseId -> {
                         parsedResponse.setCourseId(courseId);
+
+                        // 저장된 코스 평점 조회 및 반영
+                        Course savedCourse = courseRepository.findById(courseId)
+                                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
+                        parsedResponse.setCourseRating(savedCourse.getRating());
+
                         return parsedResponse;
                     });
         }).exceptionally(e -> {
@@ -543,10 +567,10 @@ public class CourseService {
         StringBuilder prompt = new StringBuilder();
 
         // 지역 정보
-        prompt.append("Create a full-day itinerary for the following regions: ");
-        prompt.append(String.join(", ", regionList));
-        prompt.append(". All places in the itinerary **must be chosen strictly from the provided list of places**.\n");
-
+        prompt.append("Create a unique and creative itinerary for the following regions: ");
+        prompt.append(String.join(", ", regionList)).append(".\n");
+        prompt.append("Randomly select **2 to 5** unique places from the list below to create a diverse and interesting itinerary.\n");
+        prompt.append("Do not include all places in the itinerary.\n");
         // 선호 카테고리
         prompt.append("The user's preferred categories are: ");
         prompt.append(String.join(", ", preferredCategories));
@@ -614,6 +638,8 @@ public class CourseService {
             JsonNode choicesNode = rootNode.path("choices");
             if (choicesNode.isArray() && choicesNode.size() > 0) {
                 String content = choicesNode.get(0).path("message").path("content").asText();
+                content = content.replaceAll("```json", "").replaceAll("```", "").trim();
+
                 JsonNode contentNode = objectMapper.readTree(content);
 
                 // 코스 정보 추출
@@ -630,16 +656,10 @@ public class CourseService {
                     for (JsonNode placeNode : placesNode) {
                         GptCourseInfoResponse.GptPlaceInfoResponse place = new GptCourseInfoResponse.GptPlaceInfoResponse();
 
-                        try {
-                            place.setPlaceId(placeNode.path("placeId").asLong());
-                        } catch (NumberFormatException e) {
-                            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR,
-                                    "Invalid placeId format: " + placeNode.path("placeId").asText());
-                        }
-
-                        place.setName(placeNode.path("name").asText());
-                        place.setRoadAddress(placeNode.path("roadAddress").asText());
-                        place.setRecommendVisitTime(placeNode.path("recommendVisitTime").asText());
+                        place.setPlaceId(placeNode.path("placeId").asLong());
+                        place.setPlaceName(placeNode.path("name").asText("이름 없음"));
+                        place.setRoadAddress(placeNode.path("roadAddress").asText("주소 없음"));
+                        place.setActiveTime(placeNode.path("operatingHours").asText("09:00~21:00"));
                         places.add(place);
                     }
                 }
@@ -655,41 +675,33 @@ public class CourseService {
 
                 return response;
             } else {
-                throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR);
+                throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR, "GPT 응답의 choices 배열이 비어 있습니다.");
             }
         } catch (JsonProcessingException e) {
-            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR);
+            throw new GeneralException(ErrorStatus.JSON_PARSING_ERROR, "JSON 파싱 중 오류 발생: " + e.getMessage());
         }
     }
 
-    public List<CourseRecommendationResponse> getHomeRecommendedCourses() {
-        // 1. 로그인한 사용자 ID 조회
-        Long memberId = SecurityUtil.getCurrentMemberId();
-
-        // 사용자별 Redis 캐시 키 생성
+    public List<CourseRecommendationResponse> getHomeRecommendedCourses(Long memberId) {
         String userSpecificCacheKey = CACHE_KEY + ":" + memberId;
-
-        // 2. Redis에서 사용자별 캐시 데이터 조회
         String cachedData = redisTemplate.opsForValue().get(userSpecificCacheKey);
+
         if (cachedData != null) {
             return deserializeCourseRecommendations(cachedData);
         }
 
-        // 3. 캐시 데이터가 없으면 새 데이터를 생성
-        List<CourseRecommendationResponse> recommendedCourses = generateRecommendedCourses();
-
-        // 4. 생성된 데이터를 Redis에 캐싱
+        List<CourseRecommendationResponse> recommendedCourses = generateRecommendedCourses(memberId);
         String serializedData = serializeCourseRecommendations(recommendedCourses);
         redisTemplate.opsForValue().set(userSpecificCacheKey, serializedData, CACHE_TTL, TimeUnit.SECONDS);
 
         return recommendedCourses;
     }
 
-    public CompletableFuture<List<GptCourseInfoResponse>> generateMultipleAICourses(int count, boolean isForHome) {
+    public CompletableFuture<List<GptCourseInfoResponse>> generateMultipleAICourses(Long memberId, int count, boolean isForHome) {
         List<CompletableFuture<GptCourseInfoResponse>> futures = new ArrayList<>();
 
         for (int i = 0; i < count; i++) {
-            futures.add(generateCourseAutomatically(isForHome));
+            futures.add(generateCourseAutomatically(memberId, isForHome));
         }
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
@@ -698,15 +710,11 @@ public class CourseService {
                         .collect(Collectors.toList()));
     }
 
-    private List<CourseRecommendationResponse> generateRecommendedCourses() {
-        Long memberId = SecurityUtil.getCurrentMemberId();
-
-        // 사용자가 직접 만든 코스 조회
-        List<Course> userCourses = courseRepository.findTop5ByMemberIdAndCourseTypeOrderByCreatedDateDesc(memberId, CourseType.DIY);
+    private List<CourseRecommendationResponse> generateRecommendedCourses(Long memberId) {
+        List<Course> userCourses = courseRepository.findTop2ByMemberIdAndCourseTypeOrderByCreatedDateDesc(memberId, CourseType.DIY);
 
         int userCourseCount = userCourses.size();
-        int userCourseDeficit = Math.max(0, 5 - userCourseCount);
-        int aiCourseCount = 10 - userCourseCount - userCourseDeficit;
+        int aiCourseCount = 5 - userCourseCount;
 
         List<CourseRecommendationResponse> recommendedCourses = new ArrayList<>();
         recommendedCourses.addAll(userCourses.stream()
@@ -714,8 +722,7 @@ public class CourseService {
                 .collect(Collectors.toList()));
 
         if (aiCourseCount > 0) {
-            // AI 코스 생성 (isForHome = true)
-            List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(aiCourseCount, true).join();
+            List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(memberId, aiCourseCount, true).join();
 
             recommendedCourses.addAll(aiCourses.stream()
                     .map(response -> CourseRecommendationResponse.builder()
@@ -729,6 +736,12 @@ public class CourseService {
         }
 
         return recommendedCourses;
+    }
+
+    public List<Long> getAllMemberIds() {
+        return memberRepository.findAll().stream()
+                .map(Member::getId)
+                .collect(Collectors.toList());
     }
 
     private String serializeCourseRecommendations(List<CourseRecommendationResponse> courses) {

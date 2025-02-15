@@ -27,6 +27,7 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -67,14 +68,14 @@ public class ReviewReportService {
     }
 
     //마이페이지 : 내 리뷰 조회
-    public MyPageReviewsResponse.ReviewsDTO getMyReviews(String reviewType, int pageSize, Long lastReviewId){
+    public MyPageReviewsResponse.ReviewsDTO getMyReviews(String reviewType, int pageSize, LocalDate lastPlaceReviewDate, Long lastReviewId){
         Long memberId = SecurityUtil.getCurrentMemberId();
         ReviewType type = parseReviewType(reviewType);
 
         if(type==ReviewType.PLACE){
             Integer totalCount = placeReviewRepository.countAllByMemberId(memberId);
             Slice<MyPageReviewsResponse.PlaceReviewDTO> placeReviewResponse
-                    = placeReviewRepository.getAllPlaceReviewByMemberId(memberId, pageSize, lastReviewId);
+                    = placeReviewRepository.getAllPlaceReviewByMemberId(memberId, pageSize, lastPlaceReviewDate, lastReviewId);
             List<MyPageReviewsResponse.PlaceReviewDTO> content = placeReviewResponse.getContent();
             Boolean last = placeReviewResponse.isLast();
             return toReviewsDTO(type, totalCount, content, last);
@@ -90,12 +91,11 @@ public class ReviewReportService {
     }
 
     //리뷰 신고하기
-    //TODO 해당 리뷰의 state 변경
-    //TODO report 중복 판단
     public PostReviewReportResponse postReviewReport(Long reviewId, PostReviewReportRequest request) {
         if(Objects.equals(request.getReviewType(), "PLACE")){
             PlaceReview placeReview = placeReviewRepository.findById(reviewId)
                     .orElseThrow(()-> new GeneralException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
+            if(!placeReview.getIsReported()){ placeReview.setIsReported(true); }
 
             ReviewReport newReport = ReviewReportConverter.toPlaceReviewReport(request, placeReview);
             reviewReportRepository.save(newReport);
@@ -104,6 +104,7 @@ public class ReviewReportService {
         else if(Objects.equals(request.getReviewType(), "COURSE")){
             CourseReview courseReview = courseReviewRepository.findById(reviewId)
                     .orElseThrow(()-> new GeneralException(ErrorStatus.COURSE_REVIEW_NOT_FOUND));
+            if(!courseReview.getIsReported()){ courseReview.setIsReported(true); }
 
             ReviewReport newReport = ReviewReportConverter.toCourseReviewReport(request, courseReview);
             reviewReportRepository.save(newReport);

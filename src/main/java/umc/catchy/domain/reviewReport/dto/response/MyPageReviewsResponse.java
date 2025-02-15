@@ -1,6 +1,7 @@
 package umc.catchy.domain.reviewReport.dto.response;
 
 import lombok.*;
+import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.reviewReport.domain.ReviewType;
 
@@ -34,7 +35,7 @@ public class MyPageReviewsResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class PlaceReviewDTO extends BaseReviewDTO {
-        //TODO 카테고리 리스트
+        BigCategory category;
         Integer rating;
         LocalDate visitedDate;
     }

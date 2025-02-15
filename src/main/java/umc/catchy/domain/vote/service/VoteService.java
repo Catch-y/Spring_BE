@@ -1,6 +1,7 @@
 package umc.catchy.domain.vote.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.category.dao.CategoryRepository;
@@ -242,7 +243,7 @@ public class VoteService {
     }
 
     @Transactional(readOnly = true)
-    public GroupPlaceResponse getPlacesByCategory(Long groupId, String category) {
+    public GroupPlaceResponse getPlacesByCategory(Long groupId, String category, int pageSize, Long lastPlaceId) {
         Groups group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         String groupLocation = group.getGroupLocation();
@@ -250,13 +251,16 @@ public class VoteService {
         String normalizedGroupLocation = LocationUtils.normalizeLocation(groupLocation);
         String normalizedAlternativeLocation = LocationUtils.normalizeLocation(normalizedGroupLocation);
 
-        List<Place> places = placeRepository.findByBigCategoryAndLocation(
+        // QueryDSL을 활용해 카테고리 필터링 + 투표 수 정렬 + 페이징 처리
+        Slice<Place> placesSlice = placeRepository.getPlacesByCategoryWithPaging(
                 BigCategory.valueOf(category),
                 normalizedGroupLocation,
-                normalizedAlternativeLocation
+                normalizedAlternativeLocation,
+                pageSize,
+                lastPlaceId
         );
 
-        List<PlaceResponse> placeResponses = places.stream()
+        List<PlaceResponse> placeResponses = placesSlice.getContent().stream()
                 .map(place -> {
                     long reviewCount = placeReviewRepository.countByPlaceId(place.getId());
 
@@ -281,19 +285,11 @@ public class VoteService {
                             votedMembers
                     );
                 })
-                .sorted((p1, p2) -> {
-                    int voteCount1 = memberPlaceVoteRepository.countByPlaceId(p1.getPlaceId());
-                    int voteCount2 = memberPlaceVoteRepository.countByPlaceId(p2.getPlaceId());
-
-                    if (voteCount1 != voteCount2) {
-                        return Integer.compare(voteCount2, voteCount1);
-                    }
-
-                    return p1.getPlaceName().compareTo(p2.getPlaceName());
-                })
                 .toList();
 
-        return new GroupPlaceResponse(groupLocation, placeResponses);
+        boolean isLast = !placesSlice.hasNext();
+
+        return new GroupPlaceResponse(groupLocation, placeResponses, isLast);
     }
 
     @Transactional

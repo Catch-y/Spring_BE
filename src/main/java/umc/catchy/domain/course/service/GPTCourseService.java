@@ -4,21 +4,25 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+import reactor.util.retry.Retry;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GPTCourseService {
@@ -93,9 +97,9 @@ public class GPTCourseService {
                 .bodyValue(requestBody)
                 .retrieve()
                 .bodyToMono(String.class)
-                .doOnError(e -> {
-                    System.err.println("Error during DALL-E API call: " + e.getMessage());
-                })
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(10))  // 최대 3회 재시도, 10초 간격
+                        .filter(throwable -> throwable instanceof WebClientResponseException.TooManyRequests))  // 429 상태일 때만 재시도
+                .doOnError(e -> log.error("Error during DALL-E API call: {}", e.getMessage()))
                 .map(this::extractImageUrl)
                 .toFuture();
     }

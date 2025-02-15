@@ -1,10 +1,12 @@
 package umc.catchy.domain.place.dao;
-
+import static umc.catchy.domain.category.domain.QCategory.category;
+import static umc.catchy.domain.mapping.memberPlaceVote.domain.QMemberPlaceVote.memberPlaceVote;
 import static umc.catchy.domain.mapping.placeLike.domain.QPlaceLike.placeLike;
 import static umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit.placeVisit;
 import static umc.catchy.domain.place.domain.QPlace.place;
 import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
 
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -23,16 +25,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
+import umc.catchy.domain.category.domain.BigCategory;
+import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 import umc.catchy.domain.mapping.placeLike.domain.QPlaceLike;
 import umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.place.domain.QPlace;
 
 import java.util.List;
-import umc.catchy.domain.placeReview.domain.QPlaceReview;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -212,5 +214,78 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                         .from(placeVisit)
                         .where(placeVisit.member.id.eq(memberId))
         );
+    }
+
+    public Slice<Place> getPlacesByCategoryWithPaging(BigCategory bigCategory, String groupLocation, String alternativeLocation, int pageSize, Long lastPlaceId) {
+        // 마지막 장소 정보를 가져와서 페이징 기준 설정
+        Tuple lastPlaceInfo = null;
+        if (lastPlaceId != null) {
+            lastPlaceInfo = queryFactory
+                    .select(place.id, memberPlaceVote.count(), place.placeName)
+                    .from(place)
+                    .leftJoin(memberPlaceVote).on(memberPlaceVote.place.id.eq(place.id))
+                    .where(place.id.eq(lastPlaceId))
+                    .groupBy(place.id, place.placeName)
+                    .fetchOne();
+        }
+
+        Long lastVoteCount = lastPlaceInfo != null ? lastPlaceInfo.get(memberPlaceVote.count()) : null;
+        String lastPlaceName = lastPlaceInfo != null ? lastPlaceInfo.get(place.placeName) : null;
+
+        List<Place> places = queryFactory
+                .selectFrom(place)
+                .leftJoin(memberPlaceVote).on(memberPlaceVote.place.id.eq(place.id))
+                .join(place.category, category)
+                .where(
+                        category.bigCategory.eq(bigCategory),
+                        place.roadAddress.like("%" + groupLocation + "%")
+                                .or(place.roadAddress.like("%" + alternativeLocation + "%"))
+                )
+                .groupBy(place.id)
+                .having(
+                        lastPlaceId == null ? null : (
+                                memberPlaceVote.count().lt(lastVoteCount)
+                                        .or(memberPlaceVote.count().eq(lastVoteCount)
+                                                .and(place.placeName.gt(lastPlaceName)))
+                                        .or(memberPlaceVote.count().eq(lastVoteCount)
+                                                .and(place.placeName.eq(lastPlaceName))
+                                                .and(place.id.gt(lastPlaceId)))
+                        )
+                )
+                .orderBy(
+                        memberPlaceVote.count().desc(),  // 투표 수 많은 순
+                        place.placeName.asc(),           // 이름순 정렬
+                        place.id.asc()                   // ID 정렬
+                )
+                .limit(pageSize + 1)
+                .fetch();
+
+        boolean hasNext = places.size() > pageSize;
+        if (hasNext) {
+            places.remove(pageSize);
+        }
+
+        return new SliceImpl<>(places, PageRequest.of(0, pageSize), hasNext);
+    }
+
+    @Override
+    public List<GptCourseInfoResponse.GptPlaceInfoResponse> findPlacesWithCategoryAndReviewCount(List<Long> placeIds) {
+        return queryFactory.select(Projections.constructor(
+                        GptCourseInfoResponse.GptPlaceInfoResponse.class,
+                        place.id,
+                        place.placeName,
+                        place.imageUrl,
+                        category.bigCategory.stringValue(),
+                        place.roadAddress,
+                        place.activeTime,
+                        place.rating.coalesce(0.0),
+                        placeReview.count().coalesce(0L).intValue()
+                ))
+                .from(place)
+                .leftJoin(place.category, category)
+                .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
+                .where(place.id.in(placeIds))
+                .groupBy(place.id, place.placeName, place.imageUrl, category.bigCategory, place.roadAddress, place.activeTime, place.rating)
+                .fetch();
     }
 }

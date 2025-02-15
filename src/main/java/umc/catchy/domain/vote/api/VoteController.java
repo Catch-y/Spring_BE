@@ -85,13 +85,16 @@ public class VoteController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
-    @Operation(summary = "투표 완료 -카테고리 별 장소 확인", description = "카테고리 별 장소를 조회합니다.")
+    @Operation(summary = "투표 완료 - 카테고리 별 장소 확인", description = "카테고리 별 장소를 조회합니다.")
     @GetMapping("/{groupId}/categories/{category}/places")
     public ResponseEntity<BaseResponse<GroupPlaceResponse>> getPlacesByCategory(
             @PathVariable Long groupId,
             @Parameter(description = "카테고리 값", schema = @Schema(implementation = BigCategory.class))
-            @PathVariable BigCategory category) {
-        GroupPlaceResponse response = voteService.getPlacesByCategory(groupId, category.name());
+            @PathVariable BigCategory category,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) Long lastPlaceId
+    ) {
+        GroupPlaceResponse response = voteService.getPlacesByCategory(groupId, category.name(), pageSize, lastPlaceId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 

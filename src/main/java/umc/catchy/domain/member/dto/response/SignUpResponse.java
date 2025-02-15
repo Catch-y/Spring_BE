@@ -16,7 +16,7 @@ public record SignUpResponse(
         String refreshToken,
         FcmInfo fcmInfo
 ) {
-    public static SignUpResponse of(Member member) {
+    public static SignUpResponse of(Member member, String refreshToken) {
         return new SignUpResponse(
                 member.getId(),
                 member.getProviderId(),
@@ -25,7 +25,7 @@ public record SignUpResponse(
                 member.getProfileImage(),
                 member.getCreatedDate(),
                 member.getAccessToken(),
-                member.getRefreshToken(),
+                refreshToken,
                 member.getFcmInfo()
         );
     }

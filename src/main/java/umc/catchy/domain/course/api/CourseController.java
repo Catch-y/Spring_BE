@@ -8,6 +8,8 @@ import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
@@ -28,6 +30,7 @@ import umc.catchy.domain.place.dto.request.SetCategoryRequest;
 import umc.catchy.domain.place.service.PlaceService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
+import umc.catchy.global.util.SecurityUtil;
 
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
@@ -144,10 +147,11 @@ public class CourseController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
-    @Operation(summary = "홈화면 추천 코스 API", description = "홈화면에서 사용자 맞춤 추천 코스를 조회합니다. 사용자 코스와 AI 코스를 조합하여 최대 10개를 반환합니다.")
+    @Operation(summary = "홈화면 추천 코스 API", description = "홈화면에서 사용자 맞춤 추천 코스를 조회합니다. 사용자 코스와 AI 코스를 조합하여 5개를 반환합니다.")
     @GetMapping("/home/personal-courses")
-    public ResponseEntity<BaseResponse<List<CourseRecommendationResponse>>> getHomeRecommendedCourses() {
-        List<CourseRecommendationResponse> recommendedCourses = courseService.getHomeRecommendedCourses();
+    public ResponseEntity<BaseResponse<List<CourseRecommendationResponse>>> getHomeRecommendedCourses(@AuthenticationPrincipal UserDetails userDetails) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        List<CourseRecommendationResponse> recommendedCourses = courseService.getHomeRecommendedCourses(memberId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, recommendedCourses));
     }
 

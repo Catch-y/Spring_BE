@@ -17,6 +17,10 @@ spring:
       port: ${REDIS_PORT}
       timeout: 6000
 
+  mvc:
+    async:
+      request-timeout: 60000
+
   servlet:
     multipart:
       max-file-size: 50MB
@@ -74,6 +78,11 @@ cache:
   recommended-courses:
     key: ${REDIS_CACHE_KEY}
     ttl: 604800  # 7일
+  refreshToken:
+    key: ${REDIS_TOKEN_KEY}
+    ttl: 604800 #1주일
+  blacklist:
+    key: ${REDIS_BLACKLIST_KEY}
 
 server:
   port: 8081

@@ -1,5 +1,7 @@
 package umc.catchy.global.util;
 
+import io.jsonwebtoken.Jwts;
+import java.util.Date;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import umc.catchy.domain.jwt.domain.JwtTokenProvider;
@@ -38,5 +40,13 @@ public class JwtUtil {
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND)
         );
         return member.getId();
+    }
+
+    public Date getExpirationTime(String accessToken) {
+        return Jwts.parser()
+                .setSigningKey(jwtProperties.getSecret())
+                .parseClaimsJws(accessToken)
+                .getBody()
+                .getExpiration();
     }
 }

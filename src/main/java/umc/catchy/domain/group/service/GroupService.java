@@ -128,23 +128,29 @@ public class GroupService {
     }
 
     @Transactional(readOnly = true)
-    public Slice<GroupCalendarResponse> getUserGroups(int page, int size) {
+    public List<GroupCalendarResponse> getUserGroups(int year, int month) {
         Long memberId = SecurityUtil.getCurrentMemberId();
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        PageRequest pageRequest = PageRequest.of(page, size);
-        Slice<MemberGroup> memberGroups = memberGroupRepository.findAllByMemberId(memberId, pageRequest);
+        List<MemberGroup> memberGroups = memberGroupRepository.findAllByMemberId(memberId);
 
-        return memberGroups.map(memberGroup -> {
-            Groups group = memberGroup.getGroup();
-            return GroupCalendarResponse.builder()
-                    .groupId(group.getId())
-                    .groupName(group.getGroupName())
-                    .promiseTime(group.getPromiseTime())
-                    .build();
-        });
+        // 해당 년도와 월에 맞는 그룹 필터링
+        return memberGroups.stream()
+                .filter(memberGroup -> {
+                    LocalDateTime promiseTime = memberGroup.getGroup().getPromiseTime();
+                    return promiseTime.getYear() == year && promiseTime.getMonthValue() == month;
+                })
+                .map(memberGroup -> {
+                    Groups group = memberGroup.getGroup();
+                    return GroupCalendarResponse.builder()
+                            .groupId(group.getId())
+                            .groupName(group.getGroupName())
+                            .promiseTime(group.getPromiseTime())
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

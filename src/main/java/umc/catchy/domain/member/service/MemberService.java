@@ -18,8 +18,6 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.PrivateKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
@@ -62,6 +60,8 @@ import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.category.dto.request.CategorySurveyRequest;
+import umc.catchy.domain.jwt.service.BlackTokenRedisService;
+import umc.catchy.domain.jwt.service.RedisTokenService;
 import umc.catchy.domain.location.dao.LocationRepository;
 import umc.catchy.domain.location.domain.Location;
 import umc.catchy.domain.location.dto.request.LocationSurveyRequest;
@@ -79,6 +79,8 @@ import umc.catchy.domain.mapping.memberLocation.dto.response.MemberLocationCreat
 import umc.catchy.domain.mapping.memberPlaceVote.dao.MemberPlaceVoteRepository;
 import umc.catchy.domain.mapping.memberStyle.dao.MemberStyleRepository;
 import umc.catchy.domain.mapping.memberStyle.domain.MemberStyle;
+import umc.catchy.domain.mapping.placeLike.dao.PlaceLikeRepository;
+import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.FcmInfo;
 import umc.catchy.domain.member.domain.Member;
@@ -119,6 +121,10 @@ public class MemberService {
     private final MemberGroupRepository memberGroupRepository;
     private final MemberCourseRepository memberCourseRepository;
     private final MemberCategoryVoteRepository memberCategoryVoteRepository;
+    private final RedisTokenService redisTokenService;
+    private final BlackTokenRedisService blackTokenRedisService;
+    private final PlaceVisitRepository placeVisitRepository;
+    private final PlaceLikeRepository placeLikeRepository;
 
     @Value("${security.kakao.client-id}")
     private String KAKAO_CLIENT_ID;
@@ -154,7 +160,7 @@ public class MemberService {
     private String APPLE_PRIVATE_KEY;
 
     public SignUpResponse signUp(SignUpRequest request, MultipartFile profileImage, SocialType socialType) {
-        String accessToken = request.accessToken();
+        String token = request.accessToken();
 
         String profileImageUrl = null;
 
@@ -166,8 +172,8 @@ public class MemberService {
 
         // 유저 정보 받아오기
         Map<String, String> info = new HashMap<>();
-        if (socialType == SocialType.KAKAO) info = getKakaoInfo(accessToken);
-        else if (socialType == SocialType.APPLE) info = getAppleInfo(accessToken);
+        if (socialType == SocialType.KAKAO) info = getKakaoInfo(token);
+        else if (socialType == SocialType.APPLE) info = getAppleInfo(token);
 
         String providerId = info.get("providerId");
         String email = info.get("email");
@@ -202,13 +208,19 @@ public class MemberService {
             newMember.setAuthorizationCode(authorizationCode);
         }
 
-        // 토큰 생성
-        newMember.setAccessToken(jwtUtil.createAccessToken(newMember.getEmail()));
-        newMember.setRefreshToken(jwtUtil.createRefreshToken(newMember.getEmail()));
+        // 토큰 발급
+        String accessToken = jwtUtil.createAccessToken(newMember.getEmail());
+        String refreshToken = jwtUtil.createRefreshToken(newMember.getEmail());
+
+        // 액세스 토큰 DB 저장
+        newMember.setAccessToken(accessToken);
+
+        // 리프레시 토큰 redis 저장
+        redisTokenService.addRefreshToken(refreshToken, newMember.getId());
 
         memberRepository.save(newMember);
 
-        return SignUpResponse.of(newMember);
+        return SignUpResponse.of(newMember, refreshToken);
     }
 
     public LoginResponse login(LoginRequest request, SocialType socialType) {
@@ -221,39 +233,48 @@ public class MemberService {
         Member member = optionalMember.orElseThrow(() ->
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        // 로그인 성공 시 토큰 생성
+        // 기존 리프레시 토큰 삭제
+        redisTokenService.deleteRefreshToken(member.getId());
+
+        // 토큰 발급
         String accessToken = jwtUtil.createAccessToken(member.getEmail());
         String refreshToken = jwtUtil.createRefreshToken(member.getEmail());
 
+        // 액세스 토큰 DB 저장
         member.setAccessToken(accessToken);
-        member.setRefreshToken(refreshToken);
+
+        // 리프레시 토큰 redis 저장
+        redisTokenService.addRefreshToken(refreshToken, member.getId());
 
         return LoginResponse.of(member, accessToken, refreshToken);
     }
 
     public ReIssueTokenResponse validateRefreshToken() {
         String refreshToken = SecurityUtil.extractRefreshToken();
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         if (refreshToken == null) throw new GeneralException(ErrorStatus.NOT_FOUND_TOKEN);
 
-        System.out.println(refreshToken);
-
         // 리프레시 토큰 만료 검사
-        boolean isValid = jwtUtil.validateToken(refreshToken);
-
-        // 등록된 유저가 아니면 예외 처리
-        Member member = memberRepository.findByRefreshToken(refreshToken).orElseThrow(() ->
-            new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-
+        boolean isValid = redisTokenService.isRefreshTokenValid(refreshToken, memberId);
 
         // 리프레시 토큰이 유효할 때
         if (isValid) {
+            // 기존 토큰들 무효화
+            String originAccessToken = member.getAccessToken();
+            long expirationTime = jwtUtil.getExpirationTime(originAccessToken).getTime() - System.currentTimeMillis();
+            blackTokenRedisService.addBlacklistedToken(originAccessToken, expirationTime);
+            redisTokenService.deleteRefreshToken(member.getId());
+
             // 액세스 토큰 재발급
             String newAccessToken = jwtUtil.createAccessToken(member.getEmail());
             String newRefreshToken = jwtUtil.createRefreshToken(member.getEmail());
 
             member.setAccessToken(newAccessToken);
-            member.setRefreshToken(newRefreshToken);
+
+            redisTokenService.addRefreshToken(newRefreshToken, member.getId());
 
             return ReIssueTokenResponse.of(newAccessToken, newRefreshToken);
         }
@@ -287,7 +308,6 @@ public class MemberService {
 
             //결과 코드가 200이라면 성공
             int responseCode = conn.getResponseCode();
-            System.out.println("responseCode : " + responseCode);
 
             if (responseCode != 200) {
                 BufferedReader errorReader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
@@ -296,7 +316,6 @@ public class MemberService {
                 while ((errorLine = errorReader.readLine()) != null) {
                     errorResult.append(errorLine);
                 }
-                System.out.println("Error response body: " + errorResult.toString());
                 errorReader.close();
             }
 
@@ -308,7 +327,6 @@ public class MemberService {
             while ((line = br.readLine()) != null) {
                 result += line;
             }
-            System.out.println("response body : " + result);
 
             //Gson 라이브러리에 포함된 클래스로 JSON파싱 객체 생성
             JsonParser parser = new JsonParser();
@@ -316,9 +334,6 @@ public class MemberService {
 
             access_Token = element.getAsJsonObject().get("access_token").getAsString();
             refresh_Token = element.getAsJsonObject().get("refresh_token").getAsString();
-
-            System.out.println("access_token : " + access_Token);
-            System.out.println("refresh_token : " + refresh_Token);
 
             br.close();
             bw.close();
@@ -401,7 +416,6 @@ public class MemberService {
             try {
                 appleWithdraw(authorizationCode);
             } catch (IOException e) {
-                System.out.println(e.getMessage());
                 throw new GeneralException(ErrorStatus.APPLE_WITHDRAW_FAILED);
             } catch (net.minidev.json.parser.ParseException e) {
                 throw new RuntimeException(e);
@@ -417,6 +431,14 @@ public class MemberService {
         memberGroupRepository.deleteAllByMember(member);
         memberCourseRepository.deleteAllByMember(member);
         memberCategoryRepository.deleteAllByMember(member);
+        placeVisitRepository.deleteAllByMember(member);
+        placeLikeRepository.deleteAllByMember(member);
+
+        // 기존 토큰들 무효화
+        String originAccessToken = member.getAccessToken();
+        long expirationTime = jwtUtil.getExpirationTime(originAccessToken).getTime() - System.currentTimeMillis();
+        blackTokenRedisService.addBlacklistedToken(originAccessToken, expirationTime);
+        redisTokenService.deleteRefreshToken(member.getId());
 
         memberRepository.delete(member);
     }
@@ -426,8 +448,14 @@ public class MemberService {
         Member member = memberRepository.findById(memberId).orElseThrow(() ->
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        member.setAccessToken(null);
-        member.setRefreshToken(null);
+        // JWT 블랙리스트에 추가
+        Date expirationTime = jwtUtil.getExpirationTime(member.getAccessToken());
+
+        // 액세스 토큰 만료
+        blackTokenRedisService.addBlacklistedToken(member.getAccessToken(), expirationTime.getTime() - System.currentTimeMillis());
+
+        // redis 리프레시 토큰 삭제
+        redisTokenService.deleteRefreshToken(memberId);
         member.deleteFcmToken(member.getFcmInfo());
     }
 
@@ -475,9 +503,6 @@ public class MemberService {
 
             conn.setRequestProperty("Authorization", "Bearer " + token);
 
-            int responseCode = conn.getResponseCode();
-            System.out.println("responseCode : " + responseCode);
-
             BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             String line = "";
             StringBuilder result = new StringBuilder();
@@ -485,7 +510,6 @@ public class MemberService {
             while ((line = br.readLine()) != null) {
                 result.append(line);
             }
-            System.out.println("response body : " + result);
 
             JsonElement element = JsonParser.parseString(result.toString());
             String providerId = String.valueOf(element.getAsJsonObject().get("id"));

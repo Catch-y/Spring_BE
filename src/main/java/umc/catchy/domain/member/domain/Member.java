@@ -41,9 +41,6 @@ public class Member extends BaseTimeEntity {
     private String accessToken;
 
     @Setter
-    private String refreshToken;
-
-    @Setter
     private String authorizationCode;
 
     @Column(nullable = false)
