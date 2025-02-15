@@ -116,13 +116,13 @@ public class PlaceReviewService {
     }
 
     @Transactional(readOnly = true)
-    public PostPlaceReviewResponse.placeReviewAllResponseDTO getAllPlaceReviews(Long placeId, int pageSize, Long lastPlaceReviewId) {
+    public PostPlaceReviewResponse.placeReviewAllResponseDTO getAllPlaceReviews(Long placeId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId) {
         Place place = placeRepository.findById(placeId).orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
         Double averageRatingTypeDouble = placeReviewRepository.findAverageRatingByPlaceId(placeId).orElseThrow(() -> new ResultEmptyListException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
         Float averageRating = Math.round(averageRatingTypeDouble * 10) / 10.0f;
         List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> ratingList = placeReviewRepository.findRatingList(placeId);
         Long totalCount = placeReviewRepository.countByPlaceId(placeId);
-        Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> contentList = placeReviewRepository.findPlaceReviewSliceByPlaceId(placeId, pageSize, lastPlaceReviewId);
+        Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> contentList = placeReviewRepository.findPlaceReviewSliceByPlaceId(placeId, pageSize, lastPlaceReviewDate, lastPlaceReviewId);
 
         return PostPlaceReviewResponse.placeReviewAllResponseDTO.builder()
                 .averageRating(averageRating)

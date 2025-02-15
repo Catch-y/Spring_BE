@@ -28,7 +28,7 @@ public class PlaceConverter {
     }
 
     public static PlaceInfoPreview toPlaceInfoPreview(Place place, Long reviewCount) {
-        String categoryName = "";
+        String categoryName = null;
         Double rating = 0.0;
 
         if (place.getCategory() != null) {
@@ -51,8 +51,8 @@ public class PlaceConverter {
                 .build();
     }
 
-    public static PlaceInfoDetail toPlaceInfoDetail (Place place, Long reviewCount, Boolean isVisited) {
-        String categoryName = "";
+    public static PlaceInfoDetail toPlaceInfoDetail (Place place, Long reviewCount, Boolean isVisited, Boolean isLiked) {
+        String categoryName = null;
         Double rating = 0.0;
 
         if (place.getCategory() != null) {
@@ -73,7 +73,8 @@ public class PlaceConverter {
                 .placeSite(place.getPlaceSite())
                 .rating(rating)
                 .reviewCount(reviewCount)
-                .isVisited(isVisited)
+                .visited(isVisited)
+                .liked(isLiked)
                 .build();
     }
 

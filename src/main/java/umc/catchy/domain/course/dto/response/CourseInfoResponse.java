@@ -24,6 +24,7 @@ public class CourseInfoResponse {
         Integer reviewCount;
         String recommendTime;
         Long participantsNumber;
+        Boolean isBookMarked;
         List<getPlaceInfoOfCourseDTO> placeInfos;
     }
 

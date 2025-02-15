@@ -10,4 +10,5 @@ import java.util.List;
 public class GroupPlaceResponse {
     private String groupLocation;
     private List<PlaceResponse> places;
+    private Boolean isLast;
 }

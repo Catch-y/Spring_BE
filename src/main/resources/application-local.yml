@@ -22,6 +22,10 @@ spring:
       port: 6379
       timeout: 6000
 
+  mvc:
+    async:
+      request-timeout: 60000
+
 jwt:
   secret: ${JWT_KEY}
   accessTokenValidity: 86400000 # 1 day
@@ -74,3 +78,8 @@ cache:
   recommended-courses:
     key: ${REDIS_CACHE_KEY}
     ttl: 86400 #1일
+  refreshToken:
+    key: ${REDIS_TOKEN_KEY}
+    ttl: 604800 #1주일
+  blacklist:
+    key: ${REDIS_BLACKLIST_KEY}

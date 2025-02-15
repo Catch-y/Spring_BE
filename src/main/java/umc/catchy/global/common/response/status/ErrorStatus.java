@@ -61,6 +61,7 @@ public enum ErrorStatus implements BaseErrorCode {
     TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "TOKEN401", "만료된 토큰입니다."),
     UNSUPPORTED_TOKEN(HttpStatus.BAD_REQUEST, "TOKEN402", "지원하지 않는 형식의 토큰입니다."),
     NOT_FOUND_TOKEN(HttpStatus.NOT_FOUND, "TOKEN404", "토큰의 클레임이 비어있습니다."),
+    BLACKLISTED_TOKEN(HttpStatus.UNAUTHORIZED, "BLACKLIST_TOKEN", "만료된 액세스토큰 입니다."),
 
     // 투표 관련 에러
     CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "VOTE404", "해당 카테고리를 찾을 수 없습니다."),

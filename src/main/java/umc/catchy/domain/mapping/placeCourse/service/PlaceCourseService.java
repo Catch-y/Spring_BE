@@ -26,6 +26,8 @@ import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoSliceResponse;
+import umc.catchy.domain.mapping.placeLike.dao.PlaceLikeRepository;
+import umc.catchy.domain.mapping.placeLike.domain.PlaceLike;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -47,6 +49,7 @@ public class PlaceCourseService {
     private static final String GOOGLE_API_URL = "https://maps.googleapis.com/maps/api/place/";
     private final MemberRepository memberRepository;
     private final PlaceVisitRepository placeVisitRepository;
+    private final PlaceLikeRepository placeLikeRepository;
 
     @Value("${map.tmap.app-key}")
     private String TMAP_APP_KEY;
@@ -100,7 +103,10 @@ public class PlaceCourseService {
         Optional<PlaceVisit> placeVisit = placeVisitRepository.findByPlaceAndMember(place, member);
         Boolean isVisited = placeVisit.map(PlaceVisit::isVisited).orElse(false);
 
-        return PlaceConverter.toPlaceInfoDetail(place, reviewCount, isVisited);
+        Optional<PlaceLike> placeLike = placeLikeRepository.findByPlaceAndMember(place, member);
+        Boolean isLiked = placeLike.map(PlaceLike::isLiked).orElse(false);
+
+        return PlaceConverter.toPlaceInfoDetail(place, reviewCount, isVisited, isLiked);
     }
 
     private StringBuilder getSearchResponse(String keyword, Double latitude, Double longitude, Integer page) {
