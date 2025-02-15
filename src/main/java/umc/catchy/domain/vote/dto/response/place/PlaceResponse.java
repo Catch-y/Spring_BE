@@ -1,7 +1,8 @@
-package umc.catchy.domain.vote.dto.response;
+package umc.catchy.domain.vote.dto.response.place;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import umc.catchy.domain.vote.dto.response.vote.VotedMemberResponse;
 
 import java.util.List;
 

@@ -11,14 +11,9 @@ import java.util.List;
 
 @Repository
 public interface MemberPlaceVoteRepository extends JpaRepository<MemberPlaceVote, Long> {
-
-    boolean existsByMemberIdAndPlaceIdAndVoteId(Long memberId, Long placeId, Long voteId);
-    List<MemberPlaceVote> findByGroupId(Long groupId);
-    @Query("SELECT mpv.member FROM MemberPlaceVote mpv WHERE mpv.place.id = :placeId")
-    List<Member> findMembersByPlaceId(@Param("placeId") Long placeId);
     MemberPlaceVote findByMemberIdAndPlaceIdAndVoteId(Long memberId, Long placeId, Long voteId);
-    @Query("SELECT COUNT(mpv) FROM MemberPlaceVote mpv WHERE mpv.place.id = :placeId")
-    int countByPlaceId(@Param("placeId") Long placeId);
-
     Integer deleteAllByMember(Member member);
+
+    @Query("SELECT mpv.member FROM MemberPlaceVote mpv WHERE mpv.place.id = :placeId AND mpv.group.id = :groupId")
+    List<Member> findMembersByPlaceIdAndGroupId(@Param("placeId") Long placeId, @Param("groupId") Long groupId);
 }

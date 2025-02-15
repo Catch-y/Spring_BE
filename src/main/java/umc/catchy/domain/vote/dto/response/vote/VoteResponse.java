@@ -1,4 +1,4 @@
-package umc.catchy.domain.vote.dto.response;
+package umc.catchy.domain.vote.dto.response.vote;
 
 import lombok.Builder;
 import lombok.Getter;

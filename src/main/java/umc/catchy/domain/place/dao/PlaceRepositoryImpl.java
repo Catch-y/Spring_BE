@@ -216,22 +216,35 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         );
     }
 
-    public Slice<Place> getPlacesByCategoryWithPaging(BigCategory bigCategory, String groupLocation, String alternativeLocation, int pageSize, Long lastPlaceId) {
-        // 마지막 장소 정보를 가져와서 페이징 기준 설정
+    public Slice<Place> getPlacesByCategoryWithPaging(
+            BigCategory bigCategory, String groupLocation, String alternativeLocation, int pageSize, Long lastPlaceId, Long groupId) {
+
+        // 마지막 장소 정보 가져오기
         Tuple lastPlaceInfo = null;
         if (lastPlaceId != null) {
             lastPlaceInfo = queryFactory
-                    .select(place.id, memberPlaceVote.count(), place.placeName)
+                    .select(place.id,
+                            JPAExpressions
+                                    .select(memberPlaceVote.count())
+                                    .from(memberPlaceVote)
+                                    .where(memberPlaceVote.place.id.eq(place.id)
+                                            .and(memberPlaceVote.group.id.eq(groupId))),
+                            place.placeName)
                     .from(place)
-                    .leftJoin(memberPlaceVote).on(memberPlaceVote.place.id.eq(place.id))
                     .where(place.id.eq(lastPlaceId))
-                    .groupBy(place.id, place.placeName)
                     .fetchOne();
         }
 
-        Long lastVoteCount = lastPlaceInfo != null ? lastPlaceInfo.get(memberPlaceVote.count()) : null;
+        Long lastVoteCount = lastPlaceInfo != null ? lastPlaceInfo.get(1, Long.class) : null;
         String lastPlaceName = lastPlaceInfo != null ? lastPlaceInfo.get(place.placeName) : null;
 
+        NumberExpression<Long> groupVoteCount = Expressions.asNumber(
+                JPAExpressions
+                        .select(memberPlaceVote.count())
+                        .from(memberPlaceVote)
+                        .where(memberPlaceVote.place.id.eq(place.id)
+                                .and(memberPlaceVote.group.id.eq(groupId)))
+        );
         List<Place> places = queryFactory
                 .selectFrom(place)
                 .leftJoin(memberPlaceVote).on(memberPlaceVote.place.id.eq(place.id))
@@ -244,18 +257,18 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                 .groupBy(place.id)
                 .having(
                         lastPlaceId == null ? null : (
-                                memberPlaceVote.count().lt(lastVoteCount)
-                                        .or(memberPlaceVote.count().eq(lastVoteCount)
+                                groupVoteCount.lt(lastVoteCount)
+                                        .or(groupVoteCount.eq(lastVoteCount)
                                                 .and(place.placeName.gt(lastPlaceName)))
-                                        .or(memberPlaceVote.count().eq(lastVoteCount)
+                                        .or(groupVoteCount.eq(lastVoteCount)
                                                 .and(place.placeName.eq(lastPlaceName))
                                                 .and(place.id.gt(lastPlaceId)))
                         )
                 )
                 .orderBy(
-                        memberPlaceVote.count().desc(),  // 투표 수 많은 순
-                        place.placeName.asc(),           // 이름순 정렬
-                        place.id.asc()                   // ID 정렬
+                        groupVoteCount.desc(),
+                        place.placeName.asc(),
+                        place.id.asc()
                 )
                 .limit(pageSize + 1)
                 .fetch();
