@@ -10,15 +10,13 @@ import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import static com.querydsl.core.group.GroupBy.groupBy;
-import static com.querydsl.core.group.GroupBy.list;
+import static com.querydsl.core.group.GroupBy.*;
 import static umc.catchy.domain.course.domain.QCourse.course;
 import static umc.catchy.domain.courseReview.domain.QCourseReview.*;
 import static umc.catchy.domain.courseReviewImage.domain.QCourseReviewImage.*;
+import static umc.catchy.domain.mapping.placeCourse.domain.QPlaceCourse.placeCourse;
 import static umc.catchy.domain.member.domain.QMember.*;
 
 @RequiredArgsConstructor
@@ -102,6 +100,7 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
         List<MyPageReviewsResponse.CourseReviewDTO> result = queryFactory.selectFrom(courseReview)
                 .leftJoin(courseReview.course, course).on(courseReview.course.id.eq(course.id))
                 .leftJoin(courseReviewImage).on(courseReviewImage.courseReview.id.eq(courseReview.id))
+                .leftJoin(placeCourse).on(placeCourse.course.id.eq(courseReview.course.id))
                 .where(
                         courseReview.id.in(reviewIds)
                 )
@@ -117,17 +116,10 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                                             courseReviewImage.imageUrl.as("imageUrl")
                                         )
                                 ).as("reviewImages"),
-                                courseReview.course.courseType.as("courseType")
+                                courseReview.course.courseType.as("courseType"),
+                                list(placeCourse.place.category.bigCategory).as("categories")
                         )
-                ))
-                .stream()
-                .peek(dto -> {
-                    // 리뷰 이미지가 null일 경우 빈 리스트로 대체
-                    if (dto.getReviewImages().get(0).getReviewImageId() == null) {
-                        dto.setReviewImages(Collections.emptyList());
-                    }
-                })
-                .collect(Collectors.toList());
+                ));
 
         return checkLastPageOfMyReviews(pageSize, result);
     }
