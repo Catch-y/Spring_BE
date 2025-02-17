@@ -2,6 +2,7 @@ package umc.catchy.domain.mapping.placeCourse.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,24 +27,25 @@ public class PlaceCourseController {
 
     @GetMapping("/current")
     @Operation(summary = "내 위치 기반 장소 검색 API", description = "사용자 반경 5km 이내에 사용자 키워드 관련 장소를 불러온다.")
-    public ResponseEntity<BaseResponse<PlaceInfoPreviewResponse>> searchPlacesByMemberLocation(
+    public CompletableFuture<ResponseEntity<BaseResponse<PlaceInfoPreviewResponse>>> searchPlacesByMemberLocation(
             @RequestParam String searchKeyword,
             @RequestParam Double latitude,
             @RequestParam Double longitude,
             @RequestParam Integer page
     ){
-        PlaceInfoPreviewResponse response = placeCourseService.getPlacesByLocation(searchKeyword, latitude, longitude, page);
-        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+
+        return placeCourseService.getPlacesByLocation(searchKeyword, latitude, longitude, page)
+                .thenApply(response -> ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response)));
     }
 
     @GetMapping("/region")
     @Operation(summary = "지역명 기반 장소 검색 API", description = "지역명이 포함된 키워드를 받아 관련 장소를 검색")
-    public ResponseEntity<BaseResponse<PlaceInfoPreviewResponse>> searchPlacesByLocation(
+    public CompletableFuture<ResponseEntity<BaseResponse<PlaceInfoPreviewResponse>>> searchPlacesByLocation(
             @RequestParam String searchKeyword,
             @RequestParam Integer page
     ){
-        PlaceInfoPreviewResponse response = placeCourseService.getPlacesByLocation(searchKeyword, null, null, page);
-        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+        return placeCourseService.getPlacesByLocation(searchKeyword, null, null, page)
+                .thenApply(response -> ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response)));
     }
 
     @GetMapping("/{placeId}")

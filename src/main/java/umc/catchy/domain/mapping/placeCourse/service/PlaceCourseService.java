@@ -3,6 +3,7 @@ package umc.catchy.domain.mapping.placeCourse.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mysema.commons.lang.Pair;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -14,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,33 +63,39 @@ public class PlaceCourseService {
     private final PlaceReviewRepository placeReviewRepository;
     private final PlaceCourseRepository placeCourseRepository;
 
-    public PlaceInfoPreviewResponse getPlacesByLocation(String searchKeyword, Double latitude, Double longitude, Integer page) {
-
-        StringBuilder response = getSearchResponse(searchKeyword, latitude, longitude, page);
-
-        List<Long> poiIds;
-        Boolean isLast;
-        try {
-            poiIds = parsePoiIds(response.toString());
-            isLast = getIsLast(response.toString());
-        } catch (IOException e) {
-            throw new GeneralException(ErrorStatus.SEARCH_PLACE_NOT_FOUND);
-        }
-
-        List<PlaceInfoPreview> placeInfoPreviews = poiIds.stream()
-                .map(poiId -> {
-                    Optional<Place> place = placeRepository.findByPoiId(poiId);
-
-                    if (place.isPresent()) {
-                        Long reviewCount = placeReviewRepository.countByPlaceId(place.get().getId());
-                        return PlaceConverter.toPlaceInfoPreview(place.get(), reviewCount);
+    public CompletableFuture<PlaceInfoPreviewResponse> getPlacesByLocation(String searchKeyword, Double latitude, Double longitude, Integer page) {
+        return CompletableFuture.supplyAsync(() -> getSearchResponse(searchKeyword, latitude, longitude, page))
+                .thenApply(response -> {
+                    try {
+                        List<Long> poiIds = parsePoiIds(response.toString());
+                        Boolean isLast = getIsLast(response.toString());
+                        return Pair.of(poiIds, isLast);
+                    } catch (IOException e) {
+                        throw new GeneralException(ErrorStatus.SEARCH_PLACE_NOT_FOUND);
                     }
-                    else {
-                        return createPlace(poiId);
-                    }
-                }).toList();
+                })
+                .thenCompose(pair -> {
+                    List<Long> poiIds = pair.getFirst();
+                    Boolean isLast = pair.getSecond();
 
-        return PlaceConverter.toPlaceInfoPreviewResponse(placeInfoPreviews, isLast);
+                    List<CompletableFuture<PlaceInfoPreview>> placeInfoPreviewFutures = poiIds.stream()
+                            .map(poiId -> CompletableFuture.supplyAsync(() -> {
+                                Optional<Place> place = placeRepository.findByPoiId(poiId);
+                                if (place.isPresent()) {
+                                    Long reviewCount = placeReviewRepository.countByPlaceId(place.get().getId());
+                                    return PlaceConverter.toPlaceInfoPreview(place.get(), reviewCount);
+                                } else {
+                                    return createPlace(poiId);
+                                }
+                            }))
+                            .toList();
+
+                    return CompletableFuture.allOf(placeInfoPreviewFutures.toArray(new CompletableFuture[0]))
+                            .thenApply(unused -> placeInfoPreviewFutures.stream()
+                                    .map(CompletableFuture::join)
+                                    .toList())
+                            .thenApply(placeInfoPreviews -> PlaceConverter.toPlaceInfoPreviewResponse(placeInfoPreviews, isLast));
+                });
     }
 
     public PlaceInfoDetail getPlaceDetailByPlaceId(Long placeId) {
