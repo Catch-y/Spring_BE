@@ -117,7 +117,7 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                                         )
                                 ).as("reviewImages"),
                                 courseReview.course.courseType.as("courseType"),
-                                list(placeCourse.place.category.bigCategory).as("categories")
+                                set(placeCourse.place.category.bigCategory).as("categories")
                         )
                 ));
 
