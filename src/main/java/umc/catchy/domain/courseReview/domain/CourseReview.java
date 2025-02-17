@@ -33,5 +33,5 @@ public class CourseReview extends BaseTimeEntity {
     private Course course;
 
     @Setter
-    private Boolean isReported = false;
+    private Boolean isReported;
 }

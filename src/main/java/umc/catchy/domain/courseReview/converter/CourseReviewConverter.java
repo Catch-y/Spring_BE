@@ -30,6 +30,7 @@ public class CourseReviewConverter {
                 .member(member)
                 .course(course)
                 .createdAt(LocalDate.now())
+                .isReported(false)
                 .build();
     }
 }
