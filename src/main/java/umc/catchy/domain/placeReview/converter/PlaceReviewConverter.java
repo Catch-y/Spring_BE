@@ -29,6 +29,7 @@ public class PlaceReviewConverter {
                 .visitedDate(request.getVisitedDate())
                 .member(member)
                 .place(place)
+                .isReported(false)
                 .build();
     }
 }
