@@ -140,9 +140,12 @@ public class CourseController {
     }
 
     @Operation(summary = "장소 방문체크 API", description = "프론트에서 체크 가능여부 판단 후 방문체크를 합니다.")
-    @PostMapping("/visited/{placeId}")
-    public ResponseEntity<BaseResponse<PlaceVisitedResponse>> visitCheck(@PathVariable("placeId") Long placeId) {
-        PlaceVisitedResponse response = placeVisitService.check(placeId);
+    @PostMapping("/visited/{courseId}/{placeId}")
+    public ResponseEntity<BaseResponse<PlaceVisitedResponse>> visitCheck(
+            @PathVariable("courseId") Long courseId,
+            @PathVariable("placeId") Long placeId
+    ) {
+        PlaceVisitedResponse response = placeVisitService.check(courseId, placeId);
 
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }

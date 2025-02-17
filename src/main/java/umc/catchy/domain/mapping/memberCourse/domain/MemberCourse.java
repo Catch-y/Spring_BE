@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.member.domain.Member;
@@ -24,8 +25,10 @@ public class MemberCourse extends BaseTimeEntity {
     @Column(name = "member_course_id")
     private Long id;
 
+    @Setter
     private boolean isVisited = false;
 
+    @Setter
     private LocalDate visitedDate;
 
     private boolean bookmark = false;

@@ -40,6 +40,7 @@ public class Course extends BaseTimeEntity {
     @Setter
     private String courseDescription;
 
+    @Setter
     private Long participantsNumber;
 
     @Setter

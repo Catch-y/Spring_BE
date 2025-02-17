@@ -303,6 +303,7 @@ public class CourseService {
                 .map(placeId -> placeRepository.findById(placeId)
                         .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND))
                         .getRating())
+                .filter(rating -> rating != null && rating > 0)
                 .mapToDouble(Double::doubleValue)
                 .average()
                 .orElse(0.0);

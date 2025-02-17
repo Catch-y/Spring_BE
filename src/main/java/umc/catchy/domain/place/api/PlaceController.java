@@ -58,9 +58,12 @@ public class PlaceController {
     }
 
     @Operation(summary = "장소 방문 날짜 리스트 조회 API", description = "사용자가 해당 장소를 방문 한 날짜들을 보여줍니다.")
-    @GetMapping("/{placeId}/visit")
-    public ResponseEntity<BaseResponse<PlaceVisitedDateResponse>> getPlaceVisitDate(@PathVariable("placeId") Long placeId) {
-        PlaceVisitedDateResponse response = placeVisitService.getPlaceVisitDate(placeId);
+    @GetMapping("/{courseId}/{placeId}/visit")
+    public ResponseEntity<BaseResponse<PlaceVisitedDateResponse>> getPlaceVisitDate(
+            @PathVariable("courseId") Long courseId,
+            @PathVariable("placeId") Long placeId
+    ) {
+        PlaceVisitedDateResponse response = placeVisitService.getPlaceVisitDate(courseId, placeId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK,response));
     }
 

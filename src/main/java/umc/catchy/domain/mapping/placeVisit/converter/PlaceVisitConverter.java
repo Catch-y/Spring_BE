@@ -1,6 +1,7 @@
 package umc.catchy.domain.mapping.placeVisit.converter;
 
 import java.time.LocalDate;
+import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedResponse;
 import umc.catchy.domain.member.domain.Member;
@@ -16,8 +17,9 @@ public class PlaceVisitConverter {
                 .build();
     }
 
-    public static PlaceVisit toPlaceVisit(Place place, Member member) {
+    public static PlaceVisit toPlaceVisit(Course course, Place place, Member member) {
         return PlaceVisit.builder()
+                .course(course)
                 .place(place)
                 .member(member)
                 .visitedDate(LocalDate.now())
