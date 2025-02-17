@@ -763,18 +763,4 @@ public class CourseService {
     public List<PopularCourseInfoResponse> getPopularCourses(){
         return CourseConverter.toPopularCourseInfoResponseList(courseRepository.findPopularCourses());
     }
-
-    public void pushNotificationCourseRecommend(){
-        LocalDateTime today = LocalDateTime.now();
-        List<Member> allMembers =
-                memberRepository.findAll();
-        List<String> tokenList =
-                allMembers.stream()
-                        .map(member -> member.getFcmInfo().getFcmToken())
-                        .toList();
-        if (!tokenList.isEmpty()) {
-            fcmService.sendGroupMessageAsync(
-                    tokenList, COURSE_UPDATED_MESSAGE_TITLE, COURSE_UPDATED_MESSAGE_CONTENT);
-        }
-    }
 }
