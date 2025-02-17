@@ -81,8 +81,7 @@ dependencies {
 	//Redis 관련
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	// firebase 관련
-	implementation 'com.google.firebase:firebase-admin:9.2.0'
-
+	implementation 'com.google.firebase:firebase-admin:9.4.3'
 }
 
 tasks.named('test') {
