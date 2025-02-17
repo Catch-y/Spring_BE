@@ -20,7 +20,11 @@ public class FCMService {
                 MulticastMessage.builder()
                         .addAllTokens(tokenList)
                         .setNotification(
-                                Notification.builder().setTitle(title).setBody(content).build())
+                                Notification.builder()
+                                        .setTitle(title).setBody(content).build())
+                        .setApnsConfig(ApnsConfig.builder()
+                                .setAps(Aps.builder().setSound("default").build())
+                                .build())
                         .build();
         return FirebaseMessaging.getInstance().sendEachForMulticastAsync(multicast);
     }
