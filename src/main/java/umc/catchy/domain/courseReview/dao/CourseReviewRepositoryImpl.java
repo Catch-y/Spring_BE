@@ -13,6 +13,7 @@ import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 import java.util.List;
 
 import static com.querydsl.core.group.GroupBy.*;
+import static com.querydsl.jpa.JPAExpressions.select;
 import static umc.catchy.domain.course.domain.QCourse.course;
 import static umc.catchy.domain.courseReview.domain.QCourseReview.*;
 import static umc.catchy.domain.courseReviewImage.domain.QCourseReviewImage.*;
@@ -100,7 +101,6 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
         List<MyPageReviewsResponse.CourseReviewDTO> result = queryFactory.selectFrom(courseReview)
                 .leftJoin(courseReview.course, course).on(courseReview.course.id.eq(course.id))
                 .leftJoin(courseReviewImage).on(courseReviewImage.courseReview.id.eq(courseReview.id))
-                .leftJoin(placeCourse).on(placeCourse.course.id.eq(courseReview.course.id))
                 .where(
                         courseReview.id.in(reviewIds)
                 )
@@ -117,7 +117,10 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                                         )
                                 ).as("reviewImages"),
                                 courseReview.course.courseType.as("courseType"),
-                                set(placeCourse.place.category.bigCategory).as("categories")
+                                list(select(placeCourse.place.category.bigCategory)
+                                        .from(placeCourse)
+                                        .where(placeCourse.course.id.eq(courseReview.course.id))
+                                        .distinct()).as("categories")
                         )
                 ));
 
