@@ -19,6 +19,7 @@ import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +29,9 @@ import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.util.LocationUtils;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoContainRelevance;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
 import umc.catchy.domain.mapping.placeLike.domain.QPlaceLike;
 import umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit;
 import umc.catchy.domain.place.domain.Place;
@@ -216,22 +219,35 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         );
     }
 
-    public Slice<Place> getPlacesByCategoryWithPaging(BigCategory bigCategory, String groupLocation, String alternativeLocation, int pageSize, Long lastPlaceId) {
-        // 마지막 장소 정보를 가져와서 페이징 기준 설정
+    public Slice<Place> getPlacesByCategoryWithPaging(
+            BigCategory bigCategory, String groupLocation, String alternativeLocation, int pageSize, Long lastPlaceId, Long groupId) {
+
+        // 마지막 장소 정보 가져오기
         Tuple lastPlaceInfo = null;
         if (lastPlaceId != null) {
             lastPlaceInfo = queryFactory
-                    .select(place.id, memberPlaceVote.count(), place.placeName)
+                    .select(place.id,
+                            JPAExpressions
+                                    .select(memberPlaceVote.count())
+                                    .from(memberPlaceVote)
+                                    .where(memberPlaceVote.place.id.eq(place.id)
+                                            .and(memberPlaceVote.group.id.eq(groupId))),
+                            place.placeName)
                     .from(place)
-                    .leftJoin(memberPlaceVote).on(memberPlaceVote.place.id.eq(place.id))
                     .where(place.id.eq(lastPlaceId))
-                    .groupBy(place.id, place.placeName)
                     .fetchOne();
         }
 
-        Long lastVoteCount = lastPlaceInfo != null ? lastPlaceInfo.get(memberPlaceVote.count()) : null;
+        Long lastVoteCount = lastPlaceInfo != null ? lastPlaceInfo.get(1, Long.class) : null;
         String lastPlaceName = lastPlaceInfo != null ? lastPlaceInfo.get(place.placeName) : null;
 
+        NumberExpression<Long> groupVoteCount = Expressions.asNumber(
+                JPAExpressions
+                        .select(memberPlaceVote.count())
+                        .from(memberPlaceVote)
+                        .where(memberPlaceVote.place.id.eq(place.id)
+                                .and(memberPlaceVote.group.id.eq(groupId)))
+        );
         List<Place> places = queryFactory
                 .selectFrom(place)
                 .leftJoin(memberPlaceVote).on(memberPlaceVote.place.id.eq(place.id))
@@ -244,18 +260,18 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                 .groupBy(place.id)
                 .having(
                         lastPlaceId == null ? null : (
-                                memberPlaceVote.count().lt(lastVoteCount)
-                                        .or(memberPlaceVote.count().eq(lastVoteCount)
+                                groupVoteCount.lt(lastVoteCount)
+                                        .or(groupVoteCount.eq(lastVoteCount)
                                                 .and(place.placeName.gt(lastPlaceName)))
-                                        .or(memberPlaceVote.count().eq(lastVoteCount)
+                                        .or(groupVoteCount.eq(lastVoteCount)
                                                 .and(place.placeName.eq(lastPlaceName))
                                                 .and(place.id.gt(lastPlaceId)))
                         )
                 )
                 .orderBy(
-                        memberPlaceVote.count().desc(),  // 투표 수 많은 순
-                        place.placeName.asc(),           // 이름순 정렬
-                        place.id.asc()                   // ID 정렬
+                        groupVoteCount.desc(),
+                        place.placeName.asc(),
+                        place.id.asc()
                 )
                 .limit(pageSize + 1)
                 .fetch();
@@ -288,4 +304,94 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                 .groupBy(place.id, place.placeName, place.imageUrl, category.bigCategory, place.roadAddress, place.activeTime, place.rating)
                 .fetch();
     }
+
+    @Override
+    public Slice<PlaceInfoContainRelevance> searchPlace(int pageSize, String keyword, Integer lastRelevanceScore, Long lastPlaceId) {
+
+        /*
+        NumberExpression<Double> distance = Expressions.numberTemplate(Double.class,
+                "(6371 * ACOS(COS(RADIANS({0})) * COS(RADIANS({1})) * COS(RADIANS({2}) - RADIANS({3})) + SIN(RADIANS({0})) * SIN(RADIANS({1}))))",
+                latitude, place.latitude, place.longitude, longitude);
+         */
+
+        // 키워드가 없으면 바로 빈 리스트 반환
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return new SliceImpl<>(Collections.emptyList(), PageRequest.of(0, pageSize), false);
+        }
+
+        NumberExpression<Integer> relevanceScore = getRelevanceScore(keyword);
+
+        List<PlaceInfoContainRelevance> results = queryFactory.select(
+                Projections.fields(PlaceInfoContainRelevance.class,
+                        Projections.fields(PlaceInfoResponse.class,
+                        place.id.as("placeId"),
+                        place.imageUrl.as("imageUrl"),
+                        place.placeName.as("placeName"),
+                        place.category.bigCategory.stringValue().as("categoryName"),
+                        place.roadAddress.as("roadAddress"),
+                        place.activeTime.as("activeTime"),
+                        placeReview.rating.avg().coalesce(0.0).as("rating"),
+                        placeReview.count().as("reviewCount")
+                        ).as("placeInfoResponse")
+                        ,relevanceScore.as("relevanceScore")))
+                .from(place)
+                .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
+                .where(
+                        keywordContains(keyword),
+                        cursorCondition(relevanceScore,lastRelevanceScore, lastPlaceId)
+                )
+                .groupBy(place.id)
+                .orderBy(relevanceScore.desc(),place.id.desc())
+                .limit(pageSize + 1)
+                .fetch();
+
+        return checkLastPage(pageSize,results);
+    }
+
+    private static NumberExpression<Integer> getRelevanceScore(String keyword) {
+        NumberExpression<Integer> relevanceScore = Expressions.numberTemplate(Integer.class,
+                "CASE " +
+                        "WHEN {0} = {1} THEN 100 " + // 완전 일치 (100점)
+                        "WHEN {0} LIKE CONCAT('%', {1}, '%') THEN 80 " + // 포함 (80점)
+                        "WHEN {2} = {1} THEN 60 " + // 카테고리 완전 일치 (60점)
+                        "WHEN {2} LIKE CONCAT('%', {1}, '%') THEN 40 " + // 카테고리 포함 (40점)
+                        "ELSE 0 END",
+                place.placeName, keyword, place.category.bigCategory.stringValue());
+        return relevanceScore;
+    }
+
+    private BooleanExpression keywordContains(String keyword) {
+        return place.placeName.containsIgnoreCase(keyword).or(place.category.bigCategory.stringValue().containsIgnoreCase(keyword));
+    }
+
+    private BooleanExpression cursorCondition(NumberExpression<Integer> relevanceScore,Integer lastRelevanceScore, Long lastPlaceId) {
+        if (lastRelevanceScore == null || lastPlaceId == null) {
+            return null; // 첫 페이지 요청 시 조건 없음
+        }
+
+        // 더 낮은 relevanceScore를 가진 데이터 가져오기
+        BooleanExpression lowerScore = relevanceScore.lt(lastRelevanceScore);
+
+        // 같은 relevanceScore에서 placeId가 더 작은 데이터 가져오기 (중복 방지)
+        BooleanExpression sameScoreLargerId = relevanceScore.eq(lastRelevanceScore)
+                .and(place.id.lt(lastPlaceId));
+
+        return lowerScore.or(sameScoreLargerId);
+    }
+
+    private Slice<PlaceInfoContainRelevance> checkLastPage(int pageSize, List<PlaceInfoContainRelevance> results) {
+        if (results.isEmpty()) {
+            return new SliceImpl<>(Collections.emptyList(), PageRequest.of(0, pageSize), false);
+        }
+
+        boolean hasNext = false;
+
+        if (results.size() > pageSize) {
+            hasNext = true;
+            results.remove(pageSize);
+        }
+
+        return new SliceImpl<>(results, PageRequest.of(0,pageSize), hasNext);
+    }
+
 }
