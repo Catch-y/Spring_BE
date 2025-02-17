@@ -1,5 +1,6 @@
 package umc.catchy.domain.course.service;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collections;
 import java.util.Objects;
@@ -62,12 +63,15 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
+import umc.catchy.infra.config.fcm.FCMService;
 
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static umc.catchy.global.common.constants.FcmConstants.*;
 
 @Service
 @EnableAsync
@@ -98,6 +102,8 @@ public class CourseService {
     private final ObjectMapper objectMapper;
     private final GPTCourseService gptCourseService;
     private final PlaceReviewRepository placeReviewRepository;
+    private final FCMService fcmService;
+
     @PersistenceContext
     private EntityManager entityManager;
 

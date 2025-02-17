@@ -1,6 +1,8 @@
 package umc.catchy.domain.member.dto.response;
 
 import java.time.LocalDateTime;
+
+import umc.catchy.domain.member.domain.FcmInfo;
 import umc.catchy.domain.member.domain.Member;
 
 public record SignUpResponse(
@@ -11,7 +13,8 @@ public record SignUpResponse(
         String profileImage,
         LocalDateTime createdDate,
         String accessToken,
-        String refreshToken
+        String refreshToken,
+        FcmInfo fcmInfo
 ) {
     public static SignUpResponse of(Member member, String refreshToken) {
         return new SignUpResponse(
@@ -22,7 +25,8 @@ public record SignUpResponse(
                 member.getProfileImage(),
                 member.getCreatedDate(),
                 member.getAccessToken(),
-                refreshToken
+                refreshToken,
+                member.getFcmInfo()
         );
     }
 

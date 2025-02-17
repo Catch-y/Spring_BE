@@ -18,8 +18,6 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.PrivateKey;
 import java.text.ParseException;
 import java.time.LocalDateTime;
@@ -84,12 +82,14 @@ import umc.catchy.domain.mapping.memberStyle.domain.MemberStyle;
 import umc.catchy.domain.mapping.placeLike.dao.PlaceLikeRepository;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.member.dao.MemberRepository;
+import umc.catchy.domain.member.domain.FcmInfo;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.NicknameRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
+import umc.catchy.domain.member.dto.request.*;
 import umc.catchy.domain.member.dto.response.*;
 import umc.catchy.domain.style.dao.StyleRepository;
 import umc.catchy.domain.style.domain.Style;
@@ -456,6 +456,7 @@ public class MemberService {
 
         // redis 리프레시 토큰 삭제
         redisTokenService.deleteRefreshToken(memberId);
+        member.deleteFcmToken(member.getFcmInfo());
     }
 
     private Optional<Member> getMemberByTokenAndSocialType(String token, SocialType socialType) {
@@ -532,7 +533,8 @@ public class MemberService {
                 email,
                 nickname,
                 profileImageUrl,
-                socialType);
+                socialType,
+                FcmInfo.createFcmInfo());
     }
 
     private void appleWithdraw(String authorizationCode)
@@ -688,6 +690,18 @@ public class MemberService {
                 .collect(Collectors.toList());
 
         return new MemberLocationCreatedResponse(memberLocationIds);
+    }
+
+    public void toggleAppAlarm() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        currentMember.toggleAppAlarmState(currentMember.getFcmInfo());
+    }
+
+    public void updateFcmToken(UpdateFcmTokenRequest request) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        currentMember.updateFcmToken(currentMember.getFcmInfo(),request.getFcmToken());
     }
 }
 

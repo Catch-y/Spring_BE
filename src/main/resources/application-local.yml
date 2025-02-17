@@ -83,3 +83,6 @@ cache:
     ttl: 604800 #1주일
   blacklist:
     key: ${REDIS_BLACKLIST_KEY}
+
+fcm:
+  certification: ${FCM_CERTIFICATION:}
