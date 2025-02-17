@@ -7,6 +7,7 @@ import umc.catchy.domain.reviewReport.domain.ReviewType;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 public class MyPageReviewsResponse {
 
@@ -46,7 +47,7 @@ public class MyPageReviewsResponse {
     @NoArgsConstructor
     public static class CourseReviewDTO extends BaseReviewDTO {
         CourseType courseType;
-        List<BigCategory> categories;
+        Set<BigCategory> categories;
     }
 
     @Getter
