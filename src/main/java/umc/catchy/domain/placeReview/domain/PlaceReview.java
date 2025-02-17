@@ -35,5 +35,5 @@ public class PlaceReview extends BaseTimeEntity {
     private Place place;
 
     @Setter
-    private Boolean isReported = false;
+    private Boolean isReported;
 }
