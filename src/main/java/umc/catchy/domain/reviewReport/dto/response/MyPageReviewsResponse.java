@@ -46,6 +46,7 @@ public class MyPageReviewsResponse {
     @NoArgsConstructor
     public static class CourseReviewDTO extends BaseReviewDTO {
         CourseType courseType;
+        List<BigCategory> categories;
     }
 
     @Getter
