@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import umc.catchy.domain.common.BaseTimeEntity;
+import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.domain.Place;
 
@@ -37,4 +38,8 @@ public class PlaceVisit extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_id")
     private Place place;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    private Course course;
 }

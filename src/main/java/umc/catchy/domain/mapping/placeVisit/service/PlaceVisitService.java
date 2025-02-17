@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import umc.catchy.domain.course.dao.CourseRepository;
+import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.mapping.placeVisit.converter.PlaceVisitConverter;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
@@ -29,14 +31,19 @@ public class PlaceVisitService {
     private final PlaceVisitRepository placeVisitRepository;
     private final MemberRepository memberRepository;
     private final PlaceRepository placeRepository;
+    private final CourseRepository courseRepository;
 
-    public PlaceVisitedResponse check(Long placeId) {
+    public PlaceVisitedResponse check(Long courseId, Long placeId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
+
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+
 
         // 이미 오늘 방문 체크를 하였다면 예외 처리
         Optional<PlaceVisit> optionalPlaceVisit = placeVisitRepository.findByPlaceAndMemberAndVisitedDate(place, member, LocalDate.now());
@@ -45,7 +52,7 @@ public class PlaceVisitService {
         }
 
         // placeVisit 생성
-        PlaceVisit placeVisit = PlaceVisitConverter.toPlaceVisit(place, member);
+        PlaceVisit placeVisit = PlaceVisitConverter.toPlaceVisit(course, place, member);
 
         placeVisitRepository.save(placeVisit);
 
