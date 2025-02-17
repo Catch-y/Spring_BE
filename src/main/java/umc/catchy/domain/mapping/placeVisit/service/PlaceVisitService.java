@@ -82,11 +82,12 @@ public class PlaceVisitService {
         return PlaceVisitConverter.toPlaceVisitResponse(placeVisit);
     }
 
-    public PlaceVisitedDateResponse getPlaceVisitDate(Long placeId) {
+    public PlaceVisitedDateResponse getPlaceVisitDate(Long courseId, Long placeId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
         Place place = placeRepository.findById(placeId).orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
-        List<PlaceVisit> placeVisitList = placeVisitRepository.findAllByMemberAndPlaceAndIsVisitedTrue(currentMember,place);
+        Course course = courseRepository.findById(courseId).orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
+        List<PlaceVisit> placeVisitList = placeVisitRepository.findAllByMemberAndPlaceAndCourseAndIsVisitedTrue(currentMember,place,course);
         List<LocalDate> visitedDate = placeVisitList.stream().map(PlaceVisit::getVisitedDate).toList();
         return new PlaceVisitedDateResponse(visitedDate);
     }
