@@ -47,6 +47,7 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static umc.catchy.global.common.constants.FcmConstants.*;
 
@@ -73,7 +74,10 @@ public class VoteService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
 
         List<Member> members = memberGroupRepository.findMembersByGroupId(group.getId());
-        List<String> deviceTokenList = members.stream().map(member -> member.getFcmInfo().getFcmToken()).toList();
+        List<String> deviceTokenList = members.stream()
+                .filter(member -> member.getFcmInfo().getAppAlarm()) // getAppAlarm()이 true인 경우만 필터링
+                .map(member -> member.getFcmInfo().getFcmToken()) // FCM 토큰만 추출
+                .collect(Collectors.toList());
 
         Vote vote = Vote.builder()
                 .status(VoteStatus.IN_PROGRESS)
@@ -215,7 +219,10 @@ public class VoteService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
 
         List<Member> members = memberGroupRepository.findMembersByGroupId(group.getId());
-        List<String> deviceTokenList = members.stream().map(member -> member.getFcmInfo().getFcmToken()).toList();
+        List<String> deviceTokenList = members.stream()
+                .filter(member -> member.getFcmInfo().getAppAlarm()) // getAppAlarm()이 true인 경우만 필터링
+                .map(member -> member.getFcmInfo().getFcmToken()) // FCM 토큰만 추출
+                .collect(Collectors.toList());
         fcmService.sendGroupMessageAsync(deviceTokenList,COURSE_UPDATED_MESSAGE_TITLE,GROUP_VOTE_END_MESSAGE_CONTENT);
 
         String groupLocation = group.getGroupLocation();
