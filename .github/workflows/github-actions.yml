@@ -38,7 +38,7 @@ jobs:
     needs: build
     name: Deploy
     runs-on: ubuntu-latest
-    steps: #docker-compose.yml&application-prod.yml -> ec2 코드의 추가 필요
+    steps:
       - name: SSH into EC2 and Deploy
         uses: appleboy/ssh-action@master
         with:
@@ -50,7 +50,6 @@ jobs:
             sudo docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
             sudo docker image rm ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }} || true
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_REPO }}
-            sudo docker-compose down
-            sudo docker-compose up -d
+            sudo docker-compose up -d --no-deps ${{ secrets.DOCKER_CONTAINER_NAME }}
             sudo docker-compose logs
             sudo docker image prune -f
