@@ -73,6 +73,7 @@ openai:
 
 osrm:
   base-url: ${OSRM_BASE_URL}
+  param: ${OSRM_OPTION}
 
 cache:
   recommended-courses:
