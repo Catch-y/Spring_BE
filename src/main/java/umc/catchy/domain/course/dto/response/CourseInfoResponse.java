@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.course.domain.CourseType;
 
 import java.util.List;
@@ -35,6 +36,7 @@ public class CourseInfoResponse {
     public static class getPlaceInfoOfCourseDTO{
         Long placeId;
         String placeName;
+        BigCategory category;
         Double placeLatitude;
         Double placeLongitude;
         Boolean isVisited;
