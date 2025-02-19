@@ -54,7 +54,7 @@ public class PlaceVisitService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER));
 
         // 이미 오늘 방문 체크를 하였다면 예외 처리
-        Optional<PlaceVisit> optionalPlaceVisit = placeVisitRepository.findByPlaceAndMemberAndVisitedDate(place, member, LocalDate.now());
+        Optional<PlaceVisit> optionalPlaceVisit = placeVisitRepository.findByPlaceAndMemberAndCourseAndVisitedDate(place, member, course, LocalDate.now());
         if (optionalPlaceVisit.isPresent()) {
             throw new GeneralException(ErrorStatus.PLACE_VISIT_ALREADY_CHECK);
         }
@@ -69,11 +69,11 @@ public class PlaceVisitService {
         int placeNum = placeCourses.size();
         int visitNum = (int) placeCourses.stream()
                 .filter(placeCourse -> {
-                    Optional<PlaceVisit> optionalVisit = placeVisitRepository.findByPlaceAndMember(placeCourse.getPlace(), member);
+                    Optional<PlaceVisit> optionalVisit = placeVisitRepository.findByPlaceAndMemberAndCourse(placeCourse.getPlace(), member, course);
                     return optionalVisit.isPresent();
                 }).count();
 
-        if (visitNum > placeNum / 2) {
+        if (visitNum == Math.round((double) placeNum / 2)) {
             memberCourse.setVisited(true);
             memberCourse.setVisitedDate(LocalDate.now());
             course.setParticipantsNumber(course.getParticipantsNumber() + 1);
