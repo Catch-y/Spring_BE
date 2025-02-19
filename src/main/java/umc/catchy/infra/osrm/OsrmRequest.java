@@ -34,7 +34,7 @@ public class OsrmRequest {
         @NotNull(message = "Start location is required")
         routeInfo start;
 
-        @Size(max = 6, message = "Routes can contain up to 8 waypoints")
+        @Size(max = 3, message = "Routes can contain up to 5 waypoints")
         List<routeInfo> routes;
 
         @NotNull(message = "End location is required")

@@ -21,6 +21,7 @@ public class PlaceConverter {
                 .builder()
                 .placeId(place.getId())
                 .placeName(place.getPlaceName())
+                .category(place.getCategory().getBigCategory())
                 .placeLatitude(place.getLatitude())
                 .placeLongitude(place.getLongitude())
                 .isVisited(isVisited)
@@ -73,6 +74,8 @@ public class PlaceConverter {
                 .placeSite(place.getPlaceSite())
                 .rating(rating)
                 .reviewCount(reviewCount)
+                .placeLatitude(place.getLatitude())
+                .placeLongitude(place.getLongitude())
                 .visited(isVisited)
                 .liked(isLiked)
                 .build();

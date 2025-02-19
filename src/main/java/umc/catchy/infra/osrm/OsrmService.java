@@ -9,6 +9,8 @@ public class OsrmService {
 
     @Value("${osrm.base-url}")
     private String osrmBaseUrl;
+    @Value("${osrm.param}")
+    private String osrmOption;
     private final RestTemplate restTemplate;
 
     public OsrmService(){
@@ -25,7 +27,7 @@ public class OsrmService {
             String routeUrl = route.getLongitude() + "," + route.getLatitude() + ";";
             osrmUrl.append(routeUrl);
         }
-        osrmUrl.append(end).append("?steps=true");
+        osrmUrl.append(end).append(osrmOption);
         return restTemplate.getForObject(osrmUrl.toString(), OsrmResponse.class);
     }
 }
