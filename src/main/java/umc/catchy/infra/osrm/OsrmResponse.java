@@ -18,36 +18,44 @@ public class OsrmResponse {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Route {
-        private String geometry;
+        private Geometry geometry;
         private List<Leg> legs;
-        private double weight;
-        private double duration;
         private double distance;
+        private double duration;
         private String weight_name;
+        private double weight;
+
+        @Data
+        @AllArgsConstructor
+        @NoArgsConstructor
+        public static class Geometry{
+            private List<List<Double>> coordinates;
+            private String type;
+        }
 
         @Data
         @AllArgsConstructor
         @NoArgsConstructor
         public static class Leg {
             private List<Step> steps;
+            private double distance;
+            private double duration;
             private String summary;
             private double weight;
-            private double duration;
-            private double distance;
 
             @Data
             @AllArgsConstructor
             @NoArgsConstructor
             public static class Step {
-                private String geometry;
-                private Maneuver maneuver;
-                private String mode;
-                private String driving_side;
-                private String name;
                 private List<Intersection> intersections;
-                private double weight;
+                private String driving_side;
+                private Geometry geometry;
+                private String mode;
                 private double duration;
+                private Maneuver maneuver;
+                private double weight;
                 private double distance;
+                private String name;
 
                 @Data
                 @AllArgsConstructor
@@ -63,21 +71,20 @@ public class OsrmResponse {
                 @Data
                 @AllArgsConstructor
                 @NoArgsConstructor
+                public static class Geometry{
+                    private List<List<Double>> coordinates;
+                    private String type;
+                }
+
+                @Data
+                @AllArgsConstructor
+                @NoArgsConstructor
                 public static class Intersection {
                     private int out;
                     private int in;
                     private List<Boolean> entry;
                     private List<Integer> bearings;
                     private List<Double> location;
-                    private List<Lane> lanes;
-
-                    @Data
-                    @AllArgsConstructor
-                    @NoArgsConstructor
-                    public static class Lane {
-                        private boolean valid;
-                        private List<String> indications;
-                    }
                 }
             }
         }
