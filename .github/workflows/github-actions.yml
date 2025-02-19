@@ -39,7 +39,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build with Gradle
-        run: ./gradlew assemble
+        run: ./gradlew bootJar
 
       - name: Docker build and push
         run: |
