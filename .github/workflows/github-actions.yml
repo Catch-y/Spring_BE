@@ -41,7 +41,7 @@ jobs:
         run: ./gradlew bootJar
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: app-jar
           path: build/libs/*.jar
@@ -55,7 +55,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download JAR Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: app-jar
           path: build/libs/
