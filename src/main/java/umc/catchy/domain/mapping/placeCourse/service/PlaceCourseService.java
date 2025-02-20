@@ -366,6 +366,8 @@ public class PlaceCourseService {
             }
         }
 
+        if (photoReference.isBlank()) return null;
+
         // photo_reference로 photo_url 받아오기
         String query = String.format(
                 "photo?maxwidth=400&photoreference=%s&key=GOOGLE_API_KEY",

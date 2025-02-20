@@ -20,6 +20,6 @@ public class PlaceInfoDetail {
     private Long reviewCount;
     private Double placeLatitude;
     private Double placeLongitude;
-    private boolean visited;
+    private boolean isVisited;
     private boolean liked;
 }
