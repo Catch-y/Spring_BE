@@ -68,7 +68,7 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
     @Override
     public Slice<MemberCourseResponse> findCourseByFilters(CourseType courseType, String upperLocation,
                                                            String lowerLocation, Long memberId, Long lastCourseId) {
-        List<MemberCourseResponse> results = queryFactory.select(Projections.constructor(MemberCourseResponse.class,
+        List<MemberCourseResponse> results = queryFactory.selectDistinct(Projections.constructor(MemberCourseResponse.class,
                         course.id,
                         course.courseType,
                         course.courseImage,
