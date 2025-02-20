@@ -10,6 +10,7 @@ import org.springframework.data.domain.SliceImpl;
 
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.course.domain.CourseType;
+import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 
 
@@ -76,6 +77,8 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
                 .from(memberCourse)
                 .leftJoin(memberCourse.course,course).on(memberCourse.course.id.eq(course.id))
                 .leftJoin(memberCourse.member,member).on(memberCourse.member.id.eq(member.id))
+                .leftJoin(placeCourse).on(course.id.eq(placeCourse.course.id))
+                .leftJoin(place).on(placeCourse.place.id.eq(place.id))
                 .where(
                         memberCourse.member.id.eq(memberId),
                         course.courseType.eq(courseType),
@@ -126,7 +129,7 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
         if ("all".equals(upperLocation)) {
             return null;
         }
-        return place.roadAddress.startsWith(upperLocation + " ");
+        return place.roadAddress.startsWith(LocationUtils.normalizeLocation(upperLocation) + " ");
     }
 
     private BooleanExpression lowerLocationFilter(String lowerLocation) {
