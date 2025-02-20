@@ -64,6 +64,10 @@ public class PlaceCourseService {
     private final PlaceCourseRepository placeCourseRepository;
 
     public CompletableFuture<PlaceInfoPreviewResponse> getPlacesByLocation(String searchKeyword, Double latitude, Double longitude, Integer page) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
         return CompletableFuture.supplyAsync(() -> getSearchResponse(searchKeyword, latitude, longitude, page))
                 .thenApply(response -> {
                     try {
@@ -83,7 +87,8 @@ public class PlaceCourseService {
                                 Optional<Place> place = placeRepository.findByPoiId(poiId);
                                 if (place.isPresent()) {
                                     Long reviewCount = placeReviewRepository.countByPlaceId(place.get().getId());
-                                    return PlaceConverter.toPlaceInfoPreview(place.get(), reviewCount);
+                                    Boolean isLiked = placeLikeRepository.findByPlaceAndMember(place.get(), member).isPresent();
+                                    return PlaceConverter.toPlaceInfoPreview(place.get(), reviewCount, isLiked);
                                 } else {
                                     return createPlace(poiId);
                                 }
@@ -219,7 +224,7 @@ public class PlaceCourseService {
 
         placeRepository.save(place);
 
-        return PlaceConverter.toPlaceInfoPreview(place, 0L);
+        return PlaceConverter.toPlaceInfoPreview(place, 0L, false);
     }
 
     private Map<String, String> getPlaceInfo(Long poiId) {

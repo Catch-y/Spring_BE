@@ -19,6 +19,8 @@ public class PlaceInfoPreview {
     private String roadAddress;
     private String activeTime;
     private Double rating;
+    private Double placeLatitude;
+    private Double placeLongitude;
     private Long reviewCount;
     private boolean isLiked;
 }
