@@ -78,7 +78,7 @@ public class PlaceConverter {
                 .reviewCount(reviewCount)
                 .placeLatitude(place.getLatitude())
                 .placeLongitude(place.getLongitude())
-                .visited(isVisited)
+                .isVisited(isVisited)
                 .liked(isLiked)
                 .build();
     }
