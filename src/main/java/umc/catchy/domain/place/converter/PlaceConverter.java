@@ -67,11 +67,16 @@ public class PlaceConverter {
             rating = place.getRating();
         }
 
+        String category;
+
+        if (categoryName == null) category = null;
+        else category = categoryName.toString();
+
         return PlaceInfoDetail.builder()
                 .placeId(place.getId())
                 .imageUrl(place.getImageUrl())
                 .placeName(place.getPlaceName())
-                .categoryName(categoryName.toString())
+                .categoryName(category)
                 .roadAddress(place.getRoadAddress())
                 .activeTime(place.getActiveTime())
                 .placeSite(place.getPlaceSite())
