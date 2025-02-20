@@ -10,7 +10,7 @@ import umc.catchy.global.error.exception.GeneralException;
 @AllArgsConstructor
 public enum BigCategory {
     CAFE("카페"),
-    ALCOHOL("주류"),
+    BAR("주류"),
     RESTAURANT("음식점"),
     EXPERIENCE("체험"),
     CULTURE("문화생활"),

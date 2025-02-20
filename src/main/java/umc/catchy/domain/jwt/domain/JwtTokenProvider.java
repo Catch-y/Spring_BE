@@ -22,7 +22,21 @@ public class JwtTokenProvider {
 
     private final JwtProperties jwtProperties;
 
-    public String createToken(String email, Long validity) {
+    public String createAccessToken(String refreshToken, Long validity) {
+        Claims claims = Jwts.claims().setSubject(refreshToken);
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + validity);
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(SignatureAlgorithm.HS512, jwtProperties.getSecret())
+                .compact();
+
+    }
+
+    public String createRefreshToken(String email, Long validity) {
         Claims claims = Jwts.claims().setSubject(email);
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + validity);
@@ -55,10 +69,18 @@ public class JwtTokenProvider {
         }
     }
 
-    public String getEmailFromToken(String token) {
+    public String getEmailFromRefreshToken(String refreshToken) {
         Claims claims = Jwts.parser()
                 .setSigningKey(jwtProperties.getSecret())
-                .parseClaimsJws(token)
+                .parseClaimsJws(refreshToken)
+                .getBody();
+        return claims.getSubject();
+    }
+
+    public String getRefreshTokenFromAccessToken(String accessToken) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(jwtProperties.getSecret())
+                .parseClaimsJws(accessToken)
                 .getBody();
         return claims.getSubject();
     }
