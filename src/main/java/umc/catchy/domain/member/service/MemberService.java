@@ -209,14 +209,14 @@ public class MemberService {
         }
 
         // 토큰 발급
-        String accessToken = jwtUtil.createAccessToken(newMember.getEmail());
         String refreshToken = jwtUtil.createRefreshToken(newMember.getEmail());
+        String accessToken = jwtUtil.createAccessToken(refreshToken);
 
         // 액세스 토큰 DB 저장
         newMember.setAccessToken(accessToken);
 
         // 리프레시 토큰 redis 저장
-        redisTokenService.addRefreshToken(refreshToken, newMember.getId());
+        redisTokenService.addRefreshToken(refreshToken);
 
         memberRepository.save(newMember);
 
@@ -233,48 +233,43 @@ public class MemberService {
         Member member = optionalMember.orElseThrow(() ->
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        // 기존 리프레시 토큰 삭제
-        redisTokenService.deleteRefreshToken(member.getId());
-
         // 토큰 발급
-        String accessToken = jwtUtil.createAccessToken(member.getEmail());
         String refreshToken = jwtUtil.createRefreshToken(member.getEmail());
+        String accessToken = jwtUtil.createAccessToken(refreshToken);
 
         // 액세스 토큰 DB 저장
         member.setAccessToken(accessToken);
 
         // 리프레시 토큰 redis 저장
-        redisTokenService.addRefreshToken(refreshToken, member.getId());
+        redisTokenService.addRefreshToken(refreshToken);
 
         return LoginResponse.of(member, accessToken, refreshToken);
     }
 
     public ReIssueTokenResponse validateRefreshToken() {
         String refreshToken = SecurityUtil.extractRefreshToken();
-        Long memberId = SecurityUtil.getCurrentMemberId();
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         if (refreshToken == null) throw new GeneralException(ErrorStatus.NOT_FOUND_TOKEN);
 
         // 리프레시 토큰 만료 검사
-        boolean isValid = redisTokenService.isRefreshTokenValid(refreshToken, memberId);
+        boolean isValid = redisTokenService.isRefreshTokenValid(refreshToken);
 
         // 리프레시 토큰이 유효할 때
         if (isValid) {
             // 기존 토큰들 무효화
+            String email = jwtUtil.getEmailFromToken(refreshToken);
+            Member member = memberRepository.findByEmail(email)
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
             String originAccessToken = member.getAccessToken();
             long expirationTime = jwtUtil.getExpirationTime(originAccessToken).getTime() - System.currentTimeMillis();
             blackTokenRedisService.addBlacklistedToken(originAccessToken, expirationTime);
-            redisTokenService.deleteRefreshToken(member.getId());
+            redisTokenService.deleteRefreshToken(refreshToken);
 
-            // 액세스 토큰 재발급
-            String newAccessToken = jwtUtil.createAccessToken(member.getEmail());
-            String newRefreshToken = jwtUtil.createRefreshToken(member.getEmail());
+            // 토큰 재발급
+            String newRefreshToken = jwtUtil.createRefreshToken(email);
+            String newAccessToken = jwtUtil.createAccessToken(refreshToken);
 
-            member.setAccessToken(newAccessToken);
-
-            redisTokenService.addRefreshToken(newRefreshToken, member.getId());
+            redisTokenService.addRefreshToken(newRefreshToken);
 
             return ReIssueTokenResponse.of(newAccessToken, newRefreshToken);
         }
@@ -406,6 +401,7 @@ public class MemberService {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId).orElseThrow(() ->
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        String refreshToken = SecurityUtil.extractRefreshToken();
 
         if (member.getSocialType() == SocialType.APPLE) {
 
@@ -438,7 +434,7 @@ public class MemberService {
         String originAccessToken = member.getAccessToken();
         long expirationTime = jwtUtil.getExpirationTime(originAccessToken).getTime() - System.currentTimeMillis();
         blackTokenRedisService.addBlacklistedToken(originAccessToken, expirationTime);
-        redisTokenService.deleteRefreshToken(member.getId());
+        redisTokenService.deleteRefreshToken(refreshToken);
 
         memberRepository.delete(member);
     }
@@ -448,6 +444,8 @@ public class MemberService {
         Member member = memberRepository.findById(memberId).orElseThrow(() ->
                 new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
+        String refreshToken = SecurityUtil.extractRefreshToken();
+
         // JWT 블랙리스트에 추가
         Date expirationTime = jwtUtil.getExpirationTime(member.getAccessToken());
 
@@ -455,7 +453,7 @@ public class MemberService {
         blackTokenRedisService.addBlacklistedToken(member.getAccessToken(), expirationTime.getTime() - System.currentTimeMillis());
 
         // redis 리프레시 토큰 삭제
-        redisTokenService.deleteRefreshToken(memberId);
+        redisTokenService.deleteRefreshToken(refreshToken);
         member.deleteFcmToken(member.getFcmInfo());
     }
 

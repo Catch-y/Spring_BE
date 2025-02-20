@@ -18,27 +18,27 @@ public class RedisTokenService {
     private long EXPIRATION;
 
     // 리프레시 토큰 저장
-    public void addRefreshToken(String refreshToken, Long memberId) {
-        String key = REDIS_REFRESH_TOKEN_KEY_PREFIX + memberId;
+    public void addRefreshToken(String refreshToken) {
+        String key = REDIS_REFRESH_TOKEN_KEY_PREFIX + refreshToken;
         redisTemplate.opsForValue().set(key, refreshToken, EXPIRATION, TimeUnit.SECONDS);
     }
 
     // 리프레시 토큰 유효성 검사
-    public boolean isRefreshTokenValid(String refreshToken, Long memberId) {
-        String key = REDIS_REFRESH_TOKEN_KEY_PREFIX + memberId;
-        String storedToken = redisTemplate.opsForValue().get(key);
-        return storedToken != null && storedToken.equals(refreshToken);
+    public boolean isRefreshTokenValid(String refreshToken) {
+        String key = REDIS_REFRESH_TOKEN_KEY_PREFIX + refreshToken;
+        String storedUserId = redisTemplate.opsForValue().get(key);
+        return storedUserId != null;
     }
 
     // 리프레시 토큰 삭제
-    public void deleteRefreshToken(Long memberId) {
-        String key = REDIS_REFRESH_TOKEN_KEY_PREFIX + memberId;
+    public void deleteRefreshToken(String refreshToken) {
+        String key = REDIS_REFRESH_TOKEN_KEY_PREFIX + refreshToken;
         redisTemplate.delete(key);
     }
 
     // 리프레시 토큰 찾기
-    public String getRefreshToken(Long memberId) {
-        String key = REDIS_REFRESH_TOKEN_KEY_PREFIX + memberId;
+    public String getRefreshToken(String refreshToken) {
+        String key = REDIS_REFRESH_TOKEN_KEY_PREFIX + refreshToken;
         return redisTemplate.opsForValue().get(key);
     }
 }

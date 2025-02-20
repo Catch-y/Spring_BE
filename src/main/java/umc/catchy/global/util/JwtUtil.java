@@ -19,12 +19,12 @@ public class JwtUtil {
     private final JwtProperties jwtProperties;
     private final MemberRepository memberRepository;
 
-    public String createAccessToken(String email) {
-        return jwtTokenProvider.createToken(email, jwtProperties.getAccessTokenValidity());
+    public String createAccessToken(String refreshToken) {
+        return jwtTokenProvider.createAccessToken(refreshToken, jwtProperties.getAccessTokenValidity());
     }
 
     public String createRefreshToken(String email) {
-        return jwtTokenProvider.createToken(email, jwtProperties.getRefreshTokenValidity());
+        return jwtTokenProvider.createRefreshToken(email, jwtProperties.getRefreshTokenValidity());
     }
 
     public boolean validateToken(String token) {
@@ -32,7 +32,11 @@ public class JwtUtil {
     }
 
     public String getEmailFromToken(String token) {
-        return jwtTokenProvider.getEmailFromToken(token);
+        return jwtTokenProvider.getEmailFromRefreshToken(token);
+    }
+
+    public String getRefreshTokenFromToken(String token) {
+        return jwtTokenProvider.getRefreshTokenFromAccessToken(token);
     }
 
     public Long getMemberIdFromToken(String token) {
