@@ -13,9 +13,9 @@ public enum BigCategory {
     BAR("주류"),
     RESTAURANT("음식점"),
     EXPERIENCE("체험"),
-    CULTURE("문화생활"),
-    SPORTS("스포츠"),
-    WELLNESS("휴식/웰니스");
+    CULTURELIFE("문화생활"),
+    SPORT("스포츠"),
+    REST("휴식");
 
     private final String value;
 
