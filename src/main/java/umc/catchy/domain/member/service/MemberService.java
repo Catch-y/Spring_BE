@@ -261,17 +261,14 @@ public class MemberService {
             Member member = memberRepository.findByEmail(email)
                     .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
             String originAccessToken = member.getAccessToken();
-            long expirationTime = jwtUtil.getExpirationTime(originAccessToken).getTime() - System.currentTimeMillis();
-            blackTokenRedisService.addBlacklistedToken(originAccessToken, expirationTime);
             redisTokenService.deleteRefreshToken(refreshToken);
 
             // 토큰 재발급
             String newRefreshToken = jwtUtil.createRefreshToken(email);
-            String newAccessToken = jwtUtil.createAccessToken(refreshToken);
 
             redisTokenService.addRefreshToken(newRefreshToken);
 
-            return ReIssueTokenResponse.of(newAccessToken, newRefreshToken);
+            return ReIssueTokenResponse.of(originAccessToken, newRefreshToken);
         }
         // 리프레시 토큰이 만료되었을 때
         else throw new GeneralException(ErrorStatus.TOKEN_EXPIRED);
