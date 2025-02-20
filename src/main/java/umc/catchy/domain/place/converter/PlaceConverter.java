@@ -28,7 +28,7 @@ public class PlaceConverter {
                 .build();
     }
 
-    public static PlaceInfoPreview toPlaceInfoPreview(Place place, Long reviewCount) {
+    public static PlaceInfoPreview toPlaceInfoPreview(Place place, Long reviewCount, Boolean isLiked) {
         String categoryName = null;
         Double rating = 0.0;
 
@@ -49,6 +49,8 @@ public class PlaceConverter {
                 .activeTime(place.getActiveTime())
                 .rating(rating)
                 .reviewCount(reviewCount)
+                .placeLatitude(place.getLatitude())
+                .placeLongitude(place.getLongitude())
                 .build();
     }
 
