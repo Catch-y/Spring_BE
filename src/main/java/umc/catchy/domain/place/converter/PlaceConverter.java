@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.course.dto.response.CourseInfoResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
@@ -55,22 +56,27 @@ public class PlaceConverter {
     }
 
     public static PlaceInfoDetail toPlaceInfoDetail (Place place, Long reviewCount, Boolean isVisited, Boolean isLiked) {
-        String categoryName = null;
+        BigCategory categoryName = null;
         Double rating = 0.0;
 
         if (place.getCategory() != null) {
-            categoryName = place.getCategory().getName();
+            categoryName = place.getCategory().getBigCategory();
         }
 
         if (place.getRating() != null) {
             rating = place.getRating();
         }
 
+        String category;
+
+        if (categoryName == null) category = null;
+        else category = categoryName.toString();
+
         return PlaceInfoDetail.builder()
                 .placeId(place.getId())
                 .imageUrl(place.getImageUrl())
                 .placeName(place.getPlaceName())
-                .categoryName(categoryName)
+                .categoryName(category)
                 .roadAddress(place.getRoadAddress())
                 .activeTime(place.getActiveTime())
                 .placeSite(place.getPlaceSite())
