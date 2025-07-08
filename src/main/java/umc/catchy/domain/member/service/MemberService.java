@@ -94,6 +94,7 @@ import umc.catchy.domain.member.dto.response.*;
 import umc.catchy.domain.style.dao.StyleRepository;
 import umc.catchy.domain.style.domain.Style;
 import umc.catchy.global.common.response.status.ErrorStatus;
+import umc.catchy.global.config.auth.AuthConfig;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.JwtUtil;
 import umc.catchy.global.util.SecurityUtil;
@@ -125,39 +126,7 @@ public class MemberService {
     private final BlackTokenRedisService blackTokenRedisService;
     private final PlaceVisitRepository placeVisitRepository;
     private final PlaceLikeRepository placeLikeRepository;
-
-    @Value("${security.kakao.client-id}")
-    private String KAKAO_CLIENT_ID;
-
-    @Value("${security.kakao.client-secret}")
-    private String KAKAO_CLIENT_SECRET;
-
-    @Value("${security.kakao.redirect-url}")
-    private String KAKAO_REDIRECT_URL;
-
-    @Value("${security.kakao.token-request-url}")
-    private String KAKAO_TOKEN_URL;
-
-    @Value("${security.kakao.info-request-url}")
-    private String KAKAO_INFO_URL;
-
-    @Value("${security.apple.key-id}")
-    private String APPLE_KEY_ID;
-
-    @Value("${security.apple.service-id}")
-    private String APPLE_CLIENT_ID;
-
-    @Value("${security.apple.team-id}")
-    private String APPLE_TEAM_ID;
-
-    @Value("${security.apple.redirect-url}")
-    private String APPLE_REDIRECT_URL;
-
-    @Value("${security.apple.request-url}")
-    private String APPLE_REQUEST_URL;
-
-    @Value("${security.apple.private-key}")
-    private String APPLE_PRIVATE_KEY;
+    private final AuthConfig authConfig;
 
     public SignUpResponse signUp(SignUpRequest request, MultipartFile profileImage, SocialType socialType) {
         String token = request.accessToken();
@@ -277,7 +246,7 @@ public class MemberService {
     public String getKakaoAccessToken (String code) {
         String access_Token = "";
         String refresh_Token = "";
-        String reqURL = KAKAO_TOKEN_URL;
+        String reqURL = authConfig.KAKAO_TOKEN_URL;
 
         try {
             URL url = new URL(reqURL);
@@ -291,9 +260,9 @@ public class MemberService {
             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
             StringBuilder sb = new StringBuilder();
             sb.append("grant_type=authorization_code");
-            sb.append("&client_id=" + KAKAO_CLIENT_ID);
-            sb.append("&client_secret=" + KAKAO_CLIENT_SECRET);
-            sb.append("&redirect_uri=" + KAKAO_REDIRECT_URL);
+            sb.append("&client_id=" + authConfig.KAKAO_CLIENT_ID);
+            sb.append("&client_secret=" + authConfig.KAKAO_CLIENT_SECRET);
+            sb.append("&redirect_uri=" + authConfig.KAKAO_REDIRECT_URL);
             sb.append("&code=" + code);
             bw.write(sb.toString());
             bw.flush();
@@ -488,7 +457,7 @@ public class MemberService {
     }
 
     private Map<String, String> getKakaoInfo(String token) {
-        String postURL = KAKAO_INFO_URL;
+        String postURL = authConfig.KAKAO_INFO_URL;
         Map<String, String> info = new HashMap<>();
 
         try {
@@ -541,9 +510,9 @@ public class MemberService {
 
         if (accessToken != null) {
             RestTemplate restTemplate = new RestTemplateBuilder().build();
-            String revokeUrl = APPLE_REQUEST_URL + "/auth/oauth2/v2/revoke";
+            String revokeUrl = authConfig.APPLE_REQUEST_URL + "/auth/oauth2/v2/revoke";
             LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-            params.add("client_id", APPLE_CLIENT_ID);
+            params.add("client_id", authConfig.APPLE_CLIENT_ID);
             params.add("client_secret", createClientSecret());
             params.add("token", accessToken);
             HttpHeaders headers = new HttpHeaders();
@@ -559,10 +528,10 @@ public class MemberService {
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("grant_type", "authorization_code");
-        params.add("client_id", APPLE_CLIENT_ID);
+        params.add("client_id", authConfig.APPLE_CLIENT_ID);
         params.add("client_secret", createClientSecret());
         params.add("code", code);
-        params.add("redirect_uri", APPLE_REDIRECT_URL);
+        params.add("redirect_uri", authConfig.APPLE_REDIRECT_URL);
 
         RestTemplate restTemplate = new RestTemplate();
 
@@ -573,7 +542,7 @@ public class MemberService {
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
-                    APPLE_REQUEST_URL + "/auth/token",
+                    authConfig.APPLE_REQUEST_URL + "/auth/token",
                     HttpMethod.POST,
                     httpEntity,
                     String.class
@@ -588,22 +557,22 @@ public class MemberService {
     private String createClientSecret() throws IOException {
         Date expirationDate = Date.from(LocalDateTime.now().plusDays(30).atZone(ZoneId.systemDefault()).toInstant());
         Map<String, Object> jwtHeader = new HashMap<>();
-        jwtHeader.put("kid", APPLE_KEY_ID);
+        jwtHeader.put("kid", authConfig.APPLE_KEY_ID);
         jwtHeader.put("alg", "ES256"); // alg
 
         return Jwts.builder()
                 .setHeaderParams(jwtHeader)
-                .setIssuer(APPLE_TEAM_ID) // iss
+                .setIssuer(authConfig.APPLE_TEAM_ID) // iss
                 .setIssuedAt(new Date(System.currentTimeMillis())) // 발행 시간
                 .setExpiration(expirationDate) // 만료 시간
-                .setAudience(APPLE_REQUEST_URL) // aud
-                .setSubject(APPLE_CLIENT_ID) // sub
+                .setAudience(authConfig.APPLE_REQUEST_URL) // aud
+                .setSubject(authConfig.APPLE_CLIENT_ID) // sub
                 .signWith(SignatureAlgorithm.ES256, getPrivateKey())
                 .compact();
     }
 
     private PrivateKey getPrivateKey() throws IOException {
-        String privateKey = APPLE_PRIVATE_KEY.replace("\\\\", "\\").replace("\\n", "\n");
+        String privateKey = authConfig.APPLE_PRIVATE_KEY.replace("\\\\", "\\").replace("\\n", "\n");
         Reader pemReader = new StringReader(privateKey);
         PEMParser pemParser = new PEMParser(pemReader);
         JcaPEMKeyConverter converter = new JcaPEMKeyConverter();
