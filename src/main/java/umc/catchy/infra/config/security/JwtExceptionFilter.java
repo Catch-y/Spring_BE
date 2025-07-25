@@ -31,34 +31,10 @@ public class JwtExceptionFilter extends OncePerRequestFilter {
         try {
             filterChain.doFilter(request, response);
         } catch (GeneralException e) {
-            ErrorReasonDTO errorReason = e instanceof GeneralException
-                    ? ((GeneralException) e).getErrorReason()
-                    : null;
+            ErrorStatus errorStatus = e.getErrorStatus();
+            BaseResponse<?> baseResponse = BaseResponse.onFailure(errorStatus);
 
-            BaseResponse<?> baseResponse;
-
-            if (errorReason != null) {
-                if (ErrorStatus.INVALID_TOKEN.getMessage().equals(errorReason.getMessage())) {
-                    baseResponse = BaseResponse.onFailure(ErrorStatus.INVALID_TOKEN);
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
-                } else if (ErrorStatus.TOKEN_EXPIRED.getMessage().equals(errorReason.getMessage())) {
-                    baseResponse = BaseResponse.onFailure(ErrorStatus.TOKEN_EXPIRED);
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
-                } else if (ErrorStatus.UNSUPPORTED_TOKEN.getMessage().equals(errorReason.getMessage())) {
-                    baseResponse = BaseResponse.onFailure(ErrorStatus.UNSUPPORTED_TOKEN);
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400
-                } else if (ErrorStatus.NOT_FOUND_TOKEN.getMessage().equals(errorReason.getMessage())) {
-                    baseResponse = BaseResponse.onFailure(ErrorStatus.NOT_FOUND_TOKEN);
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400
-                } else {
-                    baseResponse = BaseResponse.onFailure(ErrorStatus._UNAUTHORIZED);
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
-                }
-            } else {
-                baseResponse = BaseResponse.onFailure(ErrorStatus._UNAUTHORIZED);
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
-            }
-
+            response.setStatus(errorStatus.getHttpStatus().value());
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(jacksonObjectMapper.writeValueAsString(baseResponse));
         }

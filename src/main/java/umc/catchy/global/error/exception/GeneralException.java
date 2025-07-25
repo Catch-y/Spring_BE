@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import umc.catchy.global.common.response.code.BaseErrorCode;
 import umc.catchy.global.common.response.code.ErrorReasonDTO;
+import umc.catchy.global.common.response.status.ErrorStatus;
 
 @Getter
 public class GeneralException extends RuntimeException {
@@ -31,5 +32,12 @@ public class GeneralException extends RuntimeException {
 
     public ErrorReasonDTO getErrorReasonHttpStatus() {
         return this.code.getReasonHttpStatus();
+    }
+
+    public ErrorStatus getErrorStatus() {
+        if (this.code instanceof ErrorStatus errorStatus) {
+            return errorStatus;
+        }
+        return null;
     }
 }
