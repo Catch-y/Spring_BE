@@ -22,13 +22,15 @@ public class JwtTokenProvider {
 
     private final JwtProperties jwtProperties;
 
-    public String createAccessToken(String refreshToken, Long validity) {
-        Claims claims = Jwts.claims().setSubject(refreshToken);
+    /* 액세스 토큰 생성 */
+    public String createAccessToken(String email, Long memberId) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + validity);
+        Date expiryDate = new Date(now.getTime() + jwtProperties.getAccessTokenValidity());
 
         return Jwts.builder()
-                .setClaims(claims)
+                .setSubject(email)
+                .claim("memberId", memberId)
+                .claim("type", "access")
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(SignatureAlgorithm.HS512, jwtProperties.getSecret())
@@ -36,13 +38,15 @@ public class JwtTokenProvider {
 
     }
 
-    public String createRefreshToken(String email, Long validity) {
-        Claims claims = Jwts.claims().setSubject(email);
+    /* 리프레시 토큰 생성 */
+    public String createRefreshToken(String email, Long memberId) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + validity);
+        Date expiryDate = new Date(now.getTime() + jwtProperties.getRefreshTokenValidity());
 
         return Jwts.builder()
-                .setClaims(claims)
+                .setSubject(email)
+                .claim("memberId", memberId)
+                .claim("type", "refresh")
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(SignatureAlgorithm.HS512, jwtProperties.getSecret())
@@ -50,38 +54,81 @@ public class JwtTokenProvider {
 
     }
 
-    public boolean validateToken(String token) {
+    /* 토큰 검증 */
+    public void validateToken(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            log.debug("Token is null or empty");
+            throw new GeneralException(ErrorStatus.NOT_FOUND_TOKEN);
+        }
+
+        log.debug("token: {}", token);
+        log.debug("secret: {}", jwtProperties.getSecret());
+
         try {
-            Jwts.parser().setSigningKey(jwtProperties.getSecret()).parseClaimsJws(token);
-            return true;
-        } catch (SecurityException | MalformedJwtException e) {
-            log.info("Invalid JWT Token", e);
-            throw new GeneralException(ErrorStatus.INVALID_TOKEN); // 유효하지 않은 토큰 에러 반환
+            Jwts.parser()
+                    .setSigningKey(jwtProperties.getSecret())
+                    .parseClaimsJws(token)
+                    .getBody();
         } catch (ExpiredJwtException e) {
-            log.info("Expired JWT Token", e);
-            throw new GeneralException(ErrorStatus.TOKEN_EXPIRED); // 만료된 토큰 에러 반환
+            log.debug("Token expired while extracting claims: {}", e.getMessage());
+            throw new GeneralException(ErrorStatus.TOKEN_EXPIRED);
+        } catch (MalformedJwtException e) {
+            log.debug("Malformed token while extracting claims: {}", e.getMessage());
+            throw new GeneralException(ErrorStatus.INVALID_TOKEN);
         } catch (UnsupportedJwtException e) {
-            log.info("Unsupported JWT Token", e);
-            throw new GeneralException(ErrorStatus.UNSUPPORTED_TOKEN); // 지원하지 않는 형식 토큰 에러 반환
+            log.debug("Unsupported token while extracting claims: {}", e.getMessage());
+            throw new GeneralException(ErrorStatus.UNSUPPORTED_TOKEN);
         } catch (IllegalArgumentException e) {
-            log.info("JWT claims string is empty.", e);
-            throw new GeneralException(ErrorStatus.NOT_FOUND_TOKEN); // 토큰의 클레임이 비어 있는 경우 에러 반환
+            log.debug("Invalid token while extracting claims: {}", e.getMessage());
+            throw new GeneralException(ErrorStatus.NOT_FOUND_TOKEN);
+        } catch (Exception e) {
+            log.error("Unexpected error while extracting claims: {}", e.getMessage(), e);
+            throw new GeneralException(ErrorStatus.INVALID_TOKEN);
         }
     }
 
-    public String getEmailFromRefreshToken(String refreshToken) {
+    /* 토큰에서 이메일 추출 */
+    public String getEmailFromToken(String token) {
         Claims claims = Jwts.parser()
                 .setSigningKey(jwtProperties.getSecret())
-                .parseClaimsJws(refreshToken)
+                .parseClaimsJws(token)
                 .getBody();
         return claims.getSubject();
     }
 
-    public String getRefreshTokenFromAccessToken(String accessToken) {
+    /* 토큰에서 memberId 추출 */
+    public Long getMemberIdFromToken(String token) {
         Claims claims = Jwts.parser()
                 .setSigningKey(jwtProperties.getSecret())
-                .parseClaimsJws(accessToken)
+                .parseClaimsJws(token)
                 .getBody();
-        return claims.getSubject();
+        return claims.get("memberId", Long.class);
+    }
+
+    public Date getExpirationTime(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(jwtProperties.getSecret())
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.getExpiration();
+    }
+
+    /* 토큰 타입 확인 */
+    public String getTokenType(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(jwtProperties.getSecret())
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.get("type", String.class);
+    }
+
+    /* AccessToken인지 확인 */
+    public boolean isAccessToken(String token) {
+        return "access".equals(getTokenType(token));
+    }
+
+    /* RefreshToken인지 확인 */
+    public boolean isRefreshToken(String token) {
+        return "refresh".equals(getTokenType(token));
     }
 }
