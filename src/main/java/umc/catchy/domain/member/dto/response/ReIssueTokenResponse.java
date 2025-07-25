@@ -4,7 +4,7 @@ public record ReIssueTokenResponse(
         String accessToken,
         String refreshToken
 ) {
-    public static ReIssueTokenResponse of(String accessToken, String refreshToken) {
-        return new ReIssueTokenResponse(accessToken, refreshToken);
+    public static ReIssueTokenResponse of(TokenPair tokens) {
+        return new ReIssueTokenResponse(tokens.accessToken(), tokens.refreshToken());
     }
 }
