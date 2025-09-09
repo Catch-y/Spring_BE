@@ -12,15 +12,15 @@ public record LoginResponse(
         String accessToken,
         String refreshToken
 ) {
-    public static LoginResponse of(Member member, String accessToken, String refreshToken) {
+    public static LoginResponse of(Member member, TokenPair tokens) {
         return new LoginResponse(
                 member.getId(),
                 member.getProviderId(),
                 member.getEmail(),
                 member.getNickname(),
                 member.getCreatedDate(),
-                accessToken,
-                refreshToken
+                tokens.accessToken(),
+                tokens.refreshToken()
         );
     }
 }

@@ -12,6 +12,7 @@ import umc.catchy.global.error.exception.GeneralException;
 public class SecurityUtil {
     private static final String BEARER = "Bearer ";
 
+    /* memberId 추출 */
     public static Long getCurrentMemberId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
@@ -28,9 +29,21 @@ public class SecurityUtil {
         }
     }
 
+    /* refreshToken 추출 */
     public static String extractRefreshToken() {
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
-
         return request.getHeader("Refresh-Token");
+    }
+
+    /* accessToken 추출 */
+    public static String getCurrentAccessToken() {
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith(BEARER)) {
+            return authHeader.substring(BEARER.length());
+        }
+
+        return null;
     }
 }

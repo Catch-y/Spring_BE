@@ -38,9 +38,6 @@ public class Member extends BaseTimeEntity {
     private MemberState state;
 
     @Setter
-    private String accessToken;
-
-    @Setter
     private String authorizationCode;
 
     @Column(nullable = false)
@@ -72,6 +69,7 @@ public class Member extends BaseTimeEntity {
                 .socialType(socialType)
                 .state(MemberState.ACTIVE)
                 .fcmInfo(fcmInfo)
+                .gpt_count(0)
                 .build();
     }
 

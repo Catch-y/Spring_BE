@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import net.minidev.json.parser.ParseException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,11 +31,12 @@ import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.request.StyleAndActiveTimeSurveyRequest;
 import umc.catchy.domain.member.dto.request.*;
 import umc.catchy.domain.member.dto.response.*;
-import umc.catchy.domain.member.service.MemberService;
+import umc.catchy.domain.member.service.*;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.common.response.status.SuccessStatus;
 
+import java.io.IOException;
 import java.util.List;
 import umc.catchy.global.error.exception.GeneralException;
 
@@ -44,8 +46,12 @@ import umc.catchy.global.error.exception.GeneralException;
 @RequestMapping("/member")
 public class MemberController {
 
-    private final MemberService memberService;
+    private final MemberProfileService memberProfileService;
+    private final OAuthService OAuthService;
+    private final MemberAccountService memberAccountService;
+    private final MemberSurveyService memberSurveyService;
 
+    /* 소셜(카카오, 애플) 관련 */
     @PostMapping(value = "/signup/{platform}", consumes = "multipart/form-data")
     @Operation(summary = "소셜 회원가입 API", description = "소셜 로그인 후 계정이 없다면 진행")
     public BaseResponse<SignUpResponse> signUp(
@@ -63,7 +69,7 @@ public class MemberController {
             return BaseResponse.onFailure(ErrorStatus.PLATFORM_BAD_REQUEST);
         }
 
-        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberService.signUp(request, profileImage, socialType));
+        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberAccountService.signUp(request, profileImage, socialType));
     }
 
     @PostMapping("/login/{platform}")
@@ -82,7 +88,7 @@ public class MemberController {
             return BaseResponse.onFailure(ErrorStatus.PLATFORM_BAD_REQUEST);
         }
 
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.login(request, socialType));
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberAccountService.login(request, socialType));
     }
 
     @PostMapping("/callback/apple")
@@ -113,8 +119,8 @@ public class MemberController {
 
     @DeleteMapping("/withdraw")
     @Operation(summary = "회원 탈퇴 API ", description = "현재 로그인된 사용자 탈퇴 / 애플 탈퇴 시 인가 코드를 입력")
-    public BaseResponse<Void> withdrawMember(@RequestParam(required = false) String authorizationCode) {
-        memberService.withdraw(authorizationCode);
+    public BaseResponse<Void> withdrawMember(@RequestParam(required = false) String authorizationCode) throws IOException, ParseException {
+        memberAccountService.withdraw(authorizationCode);
 
         return BaseResponse.onSuccess(SuccessStatus._OK, null);
     }
@@ -122,25 +128,26 @@ public class MemberController {
     @GetMapping("/reissue")
     @Operation(summary = "토큰 검사 및 재발급 API", description = "refresh token 검사 후 accessToken 재발급, 만료되었다면 재로그인")
     public BaseResponse<ReIssueTokenResponse> reIssue() {
-        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberService.validateRefreshToken());
+        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberAccountService.reIssueRefreshToken());
     }
 
     @GetMapping("/token/kakao")
     @Operation(summary = "인가코드를 통해 카카오 액세스 토큰 받아오기", description = "실제로는 프론트에서 액세스 토큰을 지급함")
     public BaseResponse<String> getAccessToken(String code) {
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.getKakaoAccessToken(code));
+        return BaseResponse.onSuccess(SuccessStatus._OK, OAuthService.getKakaoAccessToken(code));
     }
 
+    /* 마이페이지 관련 */
     @GetMapping("/mypage")
     @Operation(summary = "프로필 조회 API", description = "현재 로그인된 사용자의 정보를 조회")
     public BaseResponse<ProfileResponse> getProfile() {
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.getCurrentMember());
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberProfileService.getCurrentMember());
     }
 
     @PostMapping("/mypage/nickname")
     @Operation(summary = "닉네임 중복 검사 API", description = "변경하려는 닉네임이 중복인지 검사")
     public BaseResponse<Void> validateNickname(@RequestBody @Valid NicknameRequest request) {
-        memberService.validateNickname(request);
+        memberProfileService.validateNickname(request);
 
         return BaseResponse.onSuccess(SuccessStatus.NICKNAME_AVAILABLE, null);
     }
@@ -148,27 +155,28 @@ public class MemberController {
     @PatchMapping("/mypage/nickname")
     @Operation(summary = "닉네임 변경 API", description = "현재 로그인된 사용자의 닉네임 변경")
     public BaseResponse<NicknameResponse> updateNickname(@RequestBody @Valid NicknameRequest request) {
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateNickname(request));
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberProfileService.updateNickname(request));
     }
 
     @PatchMapping(value = "/mypage/profileImage", consumes = "multipart/form-data")
     @Operation(summary = "프로필 사진 변경 API", description = "현재 로그인된 사용자의 프로필 사진 변경")
     public BaseResponse<ProfileImageResponse> updateProfileImage(@RequestPart @Valid MultipartFile profileImage) {
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberService.updateProfileImage(profileImage));
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberProfileService.updateProfileImage(profileImage));
     }
 
     @PostMapping("/mypage/logout")
     @Operation(summary = "로그아웃 API", description = "사용자의 토큰을 만료시킨다.")
     public BaseResponse<Void> logout() {
-        memberService.logout();
+        memberAccountService.logout();
         return BaseResponse.onSuccess(SuccessStatus._OK, null);
     }
 
+    /* 사용자 설문 관련 */
     @PostMapping("/survey/category")
     @Operation(summary = "사용자 취향설문 카테고리 저장 API ", description = "사용자 취향설문 1,2단계를 저장")
     public BaseResponse<MemberCategoryCreatedResponse> createMemberCategory(
             @RequestBody CategorySurveyRequest request) {
-        MemberCategoryCreatedResponse response = memberService.createMemberCategory(request);
+        MemberCategoryCreatedResponse response = memberSurveyService.createMemberCategory(request);
         return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
     }
 
@@ -176,28 +184,29 @@ public class MemberController {
     @Operation(summary = "사용자 취향설문 참여스타일 및 활동요일,시간 저장 API ", description = "사용자 취향설문 3,4단계를 저장")
     public BaseResponse<StyleAndActiveTimeSurveyCreatedResponse> createMemberStyleTime(
             @RequestBody StyleAndActiveTimeSurveyRequest request) {
-        StyleAndActiveTimeSurveyCreatedResponse response = memberService.createStyleAndActiveTimeSurvey(request);
+        StyleAndActiveTimeSurveyCreatedResponse response = memberSurveyService.createStyleAndActiveTimeSurvey(request);
         return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
     }
 
     @PostMapping("/survey/location")
     @Operation(summary = "사용자 취향설문 선호지역 저장 API", description = "사용자 취향설문 5단계를 저장")
     public BaseResponse<MemberLocationCreatedResponse> createMemberLocation(@RequestBody List<LocationSurveyRequest> request) {
-        MemberLocationCreatedResponse response = memberService.createMemberLocation(request);
+        MemberLocationCreatedResponse response = memberSurveyService.createMemberLocation(request);
         return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
     }
 
+    /* fcm 알람 관련 */
     @Operation(summary = "알람 여부 변경", description = "기존 토글 값을 변경합니다.")
     @PatchMapping("/alarm")
     public ResponseEntity<BaseResponse<Void>> memberToggleAppAlarmStateUpdate() {
-        memberService.toggleAppAlarm();
+        memberAccountService.toggleAppAlarm();
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 
     @Operation(summary = "FCM 토큰 갱신", description = "FCM 토큰을 갱신합니다.")
     @PatchMapping("/fcm-token")
     public ResponseEntity<BaseResponse<Void>> memberFcmTokenUpdate(@RequestBody UpdateFcmTokenRequest updateFcmTokenRequest) {
-        memberService.updateFcmToken(updateFcmTokenRequest);
+        memberAccountService.updateFcmToken(updateFcmTokenRequest);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 }

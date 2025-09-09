@@ -1,56 +1,90 @@
 package umc.catchy.global.util;
 
-import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.ExpiredJwtException;
+
 import java.util.Date;
+
+import io.jsonwebtoken.MalformedJwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import umc.catchy.domain.jwt.domain.JwtTokenProvider;
-import umc.catchy.domain.member.dao.MemberRepository;
-import umc.catchy.domain.member.domain.Member;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
-import umc.catchy.infra.config.jwt.JwtProperties;
 
 @Component
 @RequiredArgsConstructor
 public class JwtUtil {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final JwtProperties jwtProperties;
-    private final MemberRepository memberRepository;
 
-    public String createAccessToken(String refreshToken) {
-        return jwtTokenProvider.createAccessToken(refreshToken, jwtProperties.getAccessTokenValidity());
+    public String createAccessToken(String email, Long memberId) {
+        return jwtTokenProvider.createAccessToken(email, memberId);
     }
 
-    public String createRefreshToken(String email) {
-        return jwtTokenProvider.createRefreshToken(email, jwtProperties.getRefreshTokenValidity());
+    public String createRefreshToken(String email, Long memberId) {
+        return jwtTokenProvider.createRefreshToken(email, memberId);
     }
 
-    public boolean validateToken(String token) {
-        return jwtTokenProvider.validateToken(token);
+    public void validateToken(String token) {
+        jwtTokenProvider.validateToken(token);
     }
 
     public String getEmailFromToken(String token) {
-        return jwtTokenProvider.getEmailFromRefreshToken(token);
+        return jwtTokenProvider.getEmailFromToken(token);
     }
 
-    public String getRefreshTokenFromToken(String token) {
-        return jwtTokenProvider.getRefreshTokenFromAccessToken(token);
+    public boolean isTokenValid(String token) {
+        try {
+            validateToken(token);
+            return true;
+        } catch (GeneralException e) {
+            return false;
+        }
     }
 
     public Long getMemberIdFromToken(String token) {
-        Member member = memberRepository.findByAccessToken(token).orElseThrow(() ->
-                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND)
-        );
-        return member.getId();
+        try {
+            return jwtTokenProvider.getMemberIdFromToken(token);
+        } catch (ExpiredJwtException e) {
+            throw new GeneralException(ErrorStatus.TOKEN_EXPIRED);
+        } catch (MalformedJwtException e) {
+            throw new GeneralException(ErrorStatus.INVALID_TOKEN);
+        } catch (Exception e) {
+            throw new GeneralException(ErrorStatus.NOT_FOUND_TOKEN);
+        }
     }
 
-    public Date getExpirationTime(String accessToken) {
-        return Jwts.parser()
-                .setSigningKey(jwtProperties.getSecret())
-                .parseClaimsJws(accessToken)
-                .getBody()
-                .getExpiration();
+    public String getTokenType(String token) {
+        try {
+            return jwtTokenProvider.getTokenType(token);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public boolean isRefreshToken(String token) {
+        try {
+            return jwtTokenProvider.isRefreshToken(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isAccessToken(String token) {
+        try {
+            return jwtTokenProvider.isAccessToken(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public Date getExpirationTime(String token) {
+        try {
+            return jwtTokenProvider.getExpirationTime(token);
+        } catch (ExpiredJwtException e) {
+            return e.getClaims().getExpiration();
+        } catch (Exception e) {
+            throw new GeneralException(ErrorStatus.NOT_FOUND_TOKEN);
+        }
     }
 }
