@@ -51,7 +51,7 @@ public class MemberSurveyService {
     public MemberCategoryCreatedResponse createMemberCategory(CategorySurveyRequest request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        List<Category> categories = categoryRepository.findAllByNameIn(request.getCategories());
+        List<Category> categories = categoryRepository.findAllByNameIn(request.categories());
         List<MemberCategory> collect = categories.stream().map(category -> MemberCategory.createMemberCategory(currentMember, category)).collect(Collectors.toList());
         memberCategoryRepository.saveAll(collect);
 
@@ -65,17 +65,17 @@ public class MemberSurveyService {
     public StyleAndActiveTimeSurveyCreatedResponse createStyleAndActiveTimeSurvey(StyleAndActiveTimeSurveyRequest request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        List<Style> styleList = styleRepository.findAllByNameIn(request.getStyleNames());
+        List<Style> styleList = styleRepository.findAllByNameIn(request.styleNames());
 
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
-        List<ActiveTime> activeTimeList = request.getActiveTimes().stream().map(activeTime ->
-                activeTimeRepository.findByDayOfWeekAndStartTimeAndEndTime(activeTime.getDayOfWeek(),
-                                LocalTime.parse(activeTime.getStartTime(),dateTimeFormatter),
-                                LocalTime.parse(activeTime.getEndTime(), dateTimeFormatter))
-                        .orElseGet(() -> activeTimeRepository.save(ActiveTime.createActiveTime(activeTime.getDayOfWeek(),
-                                LocalTime.parse(activeTime.getStartTime(),dateTimeFormatter),
-                                LocalTime.parse(activeTime.getEndTime(), dateTimeFormatter)))
+        List<ActiveTime> activeTimeList = request.activeTimes().stream().map(activeTime ->
+                activeTimeRepository.findByDayOfWeekAndStartTimeAndEndTime(activeTime.dayOfWeek(),
+                                LocalTime.parse(activeTime.startTime(),dateTimeFormatter),
+                                LocalTime.parse(activeTime.endTime(), dateTimeFormatter))
+                        .orElseGet(() -> activeTimeRepository.save(ActiveTime.createActiveTime(activeTime.dayOfWeek(),
+                                LocalTime.parse(activeTime.startTime(),dateTimeFormatter),
+                                LocalTime.parse(activeTime.endTime(), dateTimeFormatter)))
                         )).toList();
 
         List<MemberStyle> memberStyleList = styleList.stream().map(style -> MemberStyle.createMemberStyle(currentMember, style)).collect(Collectors.toList());
@@ -106,8 +106,8 @@ public class MemberSurveyService {
         Long memberId = SecurityUtil.getCurrentMemberId();
 
         Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        List<Location> locationList = request.stream().map(r -> locationRepository.findByUpperLocationAndLowerLocation(r.getUpperLocation(), r.getLowerLocation())
-                .orElseGet(() -> locationRepository.save(Location.createLocation(r.getUpperLocation(), r.getLowerLocation())))
+        List<Location> locationList = request.stream().map(r -> locationRepository.findByUpperLocationAndLowerLocation(r.upperLocation(), r.lowerLocation())
+                .orElseGet(() -> locationRepository.save(Location.createLocation(r.upperLocation(), r.lowerLocation())))
         ).toList();
 
         List<MemberLocation> memberLocationList = locationList.stream().map(location -> MemberLocation.createMemberLocation(currentMember, location)).collect(Collectors.toList());

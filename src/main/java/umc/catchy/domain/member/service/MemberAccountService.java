@@ -128,7 +128,7 @@ public class MemberAccountService {
     public void updateFcmToken(UpdateFcmTokenRequest request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        currentMember.updateFcmToken(currentMember.getFcmInfo(),request.getFcmToken());
+        currentMember.updateFcmToken(currentMember.getFcmInfo(),request.fcmToken());
     }
 
     private String uploadProfileImage(MultipartFile profileImage) {
