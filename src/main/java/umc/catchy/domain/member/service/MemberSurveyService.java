@@ -2,6 +2,7 @@ package umc.catchy.domain.member.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.activetime.dao.ActiveTimeRepository;
 import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
@@ -37,7 +38,10 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class MemberSurveyService {
+
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     private final MemberRepository memberRepository;
     private final CategoryRepository categoryRepository;
@@ -51,9 +55,9 @@ public class MemberSurveyService {
 
     public MemberCategoryCreatedResponse createMemberCategory(CategorySurveyRequest request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        Member currentMember = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        Member currentMember = findMemberById(memberId);
         List<Category> categories = categoryRepository.findAllByNameIn(request.categories());
+
         List<MemberCategory> memberCategories = categories.stream()
                 .map(category -> MemberCategory.createMemberCategory(currentMember, category))
                 .collect(Collectors.toList());
@@ -69,61 +73,36 @@ public class MemberSurveyService {
 
     public StyleAndActiveTimeSurveyCreatedResponse createStyleAndActiveTimeSurvey(StyleAndActiveTimeSurveyRequest request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        Member currentMember = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        Member currentMember = findMemberById(memberId);
         List<Style> styleList = styleRepository.findAllByNameIn(request.styleNames());
 
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-
-        List<ActiveTime> activeTimeList = request.activeTimes().stream().map(activeTime ->
-                activeTimeRepository.findByDayOfWeekAndStartTimeAndEndTime(
-                                activeTime.dayOfWeek(),
-                                LocalTime.parse(activeTime.startTime(), dateTimeFormatter),
-                                LocalTime.parse(activeTime.endTime(), dateTimeFormatter))
-                        .orElseGet(() -> activeTimeRepository.save(ActiveTime.createActiveTime(
-                                activeTime.dayOfWeek(),
-                                LocalTime.parse(activeTime.startTime(), dateTimeFormatter),
-                                LocalTime.parse(activeTime.endTime(), dateTimeFormatter)))
-                        )).toList();
+        List<ActiveTime> activeTimeList = request.activeTimes().stream()
+                .map(activeTime -> findOrCreateActiveTime(
+                        activeTime.dayOfWeek(),
+                        LocalTime.parse(activeTime.startTime(), TIME_FORMATTER),
+                        LocalTime.parse(activeTime.endTime(), TIME_FORMATTER)))
+                .toList();
 
         List<MemberStyle> memberStyleList = styleList.stream()
                 .map(style -> MemberStyle.createMemberStyle(currentMember, style))
                 .collect(Collectors.toList());
-        List<Long> memberStyleIds = saveMemberStyleAndReturnIds(memberStyleList);
+        List<Long> memberStyleIds = saveAndExtractIds(memberStyleRepository.saveAll(memberStyleList), MemberStyle::getId);
 
         List<MemberActiveTime> memberActiveTimeList = activeTimeList.stream()
                 .map(activeTime -> MemberActiveTime.createMemberActiveTime(currentMember, activeTime))
                 .collect(Collectors.toList());
-        List<Long> memberActiveTimeIds = saveMemberActiveTimeAndReturnIds(memberActiveTimeList);
+        List<Long> memberActiveTimeIds = saveAndExtractIds(memberActiveTimeRepository.saveAll(memberActiveTimeList), MemberActiveTime::getId);
 
         return new StyleAndActiveTimeSurveyCreatedResponse(memberStyleIds, memberActiveTimeIds);
     }
 
-    private List<Long> saveMemberStyleAndReturnIds(List<MemberStyle> memberStyleList) {
-        List<MemberStyle> savedEntities = memberStyleRepository.saveAll(memberStyleList);
-
-        return savedEntities.stream()
-                .map(MemberStyle::getId)
-                .collect(Collectors.toList());
-    }
-
-    private List<Long> saveMemberActiveTimeAndReturnIds(List<MemberActiveTime> memberActiveTimeList) {
-        List<MemberActiveTime> savedEntities = memberActiveTimeRepository.saveAll(memberActiveTimeList);
-
-        return savedEntities.stream()
-                .map(MemberActiveTime::getId)
-                .collect(Collectors.toList());
-    }
-
     public MemberLocationCreatedResponse createMemberLocation(List<LocationSurveyRequest> request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
+        Member currentMember = findMemberById(memberId);
 
-        Member currentMember = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        List<Location> locationList = request.stream().map(r ->
-                locationRepository.findByUpperLocationAndLowerLocation(r.upperLocation(), r.lowerLocation())
-                        .orElseGet(() -> locationRepository.save(Location.createLocation(r.upperLocation(), r.lowerLocation())))
-        ).toList();
+        List<Location> locationList = request.stream()
+                .map(r -> findOrCreateLocation(r.upperLocation(), r.lowerLocation()))
+                .toList();
 
         List<MemberLocation> memberLocationList = locationList.stream()
                 .map(location -> MemberLocation.createMemberLocation(currentMember, location))
@@ -136,5 +115,26 @@ public class MemberSurveyService {
                 .collect(Collectors.toList());
 
         return new MemberLocationCreatedResponse(memberLocationIds);
+    }
+
+    private <T> List<Long> saveAndExtractIds(List<T> savedEntities, java.util.function.Function<T, Long> idExtractor) {
+        return savedEntities.stream()
+                .map(idExtractor)
+                .collect(Collectors.toList());
+    }
+
+    private ActiveTime findOrCreateActiveTime(java.time.DayOfWeek dayOfWeek, LocalTime startTime, LocalTime endTime) {
+        return activeTimeRepository.findByDayOfWeekAndStartTimeAndEndTime(dayOfWeek, startTime, endTime)
+                .orElseGet(() -> activeTimeRepository.save(ActiveTime.createActiveTime(dayOfWeek, startTime, endTime)));
+    }
+
+    private Location findOrCreateLocation(String upperLocation, String lowerLocation) {
+        return locationRepository.findByUpperLocationAndLowerLocation(upperLocation, lowerLocation)
+                .orElseGet(() -> locationRepository.save(Location.createLocation(upperLocation, lowerLocation)));
+    }
+
+    private Member findMemberById(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
     }
 }
