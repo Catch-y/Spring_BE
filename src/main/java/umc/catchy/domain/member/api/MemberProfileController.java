@@ -18,7 +18,9 @@ import umc.catchy.domain.member.dto.request.*;
 import umc.catchy.domain.member.dto.response.*;
 import umc.catchy.domain.member.service.*;
 import umc.catchy.global.common.response.BaseResponse;
+import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.common.response.status.SuccessStatus;
+import umc.catchy.global.error.exception.GeneralException;
 
 
 @Tag(name = "Profile", description = "사용자 프로필/설정 API")
@@ -53,6 +55,10 @@ public class MemberProfileController {
     @PatchMapping(value = "/mypage/profileImage", consumes = "multipart/form-data")
     @Operation(summary = "프로필 사진 변경 API", description = "현재 로그인된 사용자의 프로필 사진 변경")
     public BaseResponse<ProfileImageResponse> updateProfileImage(@RequestPart @Valid MultipartFile profileImage) {
+        if (profileImage.isEmpty()) {
+            throw new GeneralException(ErrorStatus.PROFILE_IMAGE_EMPTY);
+        }
+
         return BaseResponse.onSuccess(SuccessStatus._OK, memberProfileService.updateProfileImage(profileImage));
     }
 
