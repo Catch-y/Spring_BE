@@ -18,72 +18,66 @@ import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 @Slf4j
 public class MemberProfileService {
+
+    private static final String PROFILE_IMAGE_PREFIX = "profile-images/";
+
     private final MemberRepository memberRepository;
     private final AmazonS3Manager s3Manager;
 
-    /* 회원 프로필 조회 */
     public ProfileResponse getCurrentMember() {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        Member member = memberRepository.findById(memberId).orElseThrow(() ->
-                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        Member member = findMemberById(memberId);
 
         return ProfileResponse.of(member);
     }
 
-    /* 닉네임 변경 */
+    @Transactional
     public NicknameResponse updateNickname(NicknameRequest request) {
-        // 닉네임 중복 검사
-        memberRepository.findByNickname(request.nickname())
-                .ifPresent(member -> {
-                    throw new GeneralException(ErrorStatus.NICKNAME_DUPLICATE);
-                });
+        validateNicknameDuplicate(request.nickname());
 
         Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = findMemberById(memberId);
 
-        Member member = memberRepository.findById(memberId).orElseThrow(() ->
-                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-
-        // 닉네임 변경
-        member.setNickname(request.nickname());
+        member.updateNickname(request.nickname());
 
         return NicknameResponse.of(member);
     }
 
-    /* 프로필 사진 변경 */
+    @Transactional
     public ProfileImageResponse updateProfileImage(MultipartFile newProfileImage) {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        Member member = memberRepository.findById(memberId).orElseThrow(() ->
-                new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        Member member = findMemberById(memberId);
 
         String originProfileImageUrl = member.getProfileImage();
 
-        // 기존에 프로필 사진이 있었다면 제거
         if (originProfileImageUrl != null) {
             s3Manager.deleteImage(originProfileImageUrl);
         }
 
-        // 프로필 사진 url 생성
-        String keyName = "profile-images/" + UUID.randomUUID();
+        String keyName = PROFILE_IMAGE_PREFIX + UUID.randomUUID();
         String newProfileImageUrl = s3Manager.uploadFile(keyName, newProfileImage);
 
-        // 이미지 변경
-        member.setProfileImage(newProfileImageUrl);
+        member.updateProfileImage(newProfileImageUrl);
 
         return ProfileImageResponse.of(member);
     }
 
-    /* 닉네임 중복 검사 */
     public void validateNickname(NicknameRequest request) {
-        String nickname = request.nickname();
+        validateNicknameDuplicate(request.nickname());
+    }
 
-        // 닉네임 중복 검사
+    private void validateNicknameDuplicate(String nickname) {
         memberRepository.findByNickname(nickname)
                 .ifPresent(member -> {
                     throw new GeneralException(ErrorStatus.NICKNAME_DUPLICATE);
                 });
     }
-}
 
+    private Member findMemberById(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+    }
+}
