@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import umc.catchy.domain.common.BaseTimeEntity;
 
 @Entity
@@ -25,10 +24,8 @@ public class Member extends BaseTimeEntity {
 
     private String email;
 
-    @Setter
     private String nickname;
 
-    @Setter
     private String profileImage;
 
     @Enumerated(EnumType.STRING)
@@ -37,18 +34,10 @@ public class Member extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private MemberState state;
 
-    @Setter
     private String authorizationCode;
 
     @Column(nullable = false)
     private Integer gpt_count = 0;
-
-    public void increaseGptCount() {
-        if (this.gpt_count == null) {
-            this.gpt_count = 0;
-        }
-        this.gpt_count += 1;
-    }
 
     @Embedded
     private FcmInfo fcmInfo;
@@ -71,6 +60,25 @@ public class Member extends BaseTimeEntity {
                 .fcmInfo(fcmInfo)
                 .gpt_count(0)
                 .build();
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void updateProfileImage(String profileImage) {
+        this.profileImage = profileImage;
+    }
+
+    public void updateAuthorizationCode(String authorizationCode) {
+        this.authorizationCode = authorizationCode;
+    }
+
+    public void increaseGptCount() {
+        if (this.gpt_count == null) {
+            this.gpt_count = 0;
+        }
+        this.gpt_count += 1;
     }
 
     public void toggleAppAlarmState(FcmInfo fcmState) {
