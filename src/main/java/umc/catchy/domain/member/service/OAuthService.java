@@ -10,7 +10,6 @@ import com.nimbusds.jwt.SignedJWT;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
@@ -42,8 +41,11 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class OAuthService {
+
+    private static final String GRANT_TYPE_AUTHORIZATION_CODE = "authorization_code";
+    private static final String APPLE_ALGORITHM = "ES256";
+    private static final int CLIENT_SECRET_EXPIRATION_DAYS = 30;
 
     private final AuthConfig authConfig;
 
@@ -54,67 +56,57 @@ public class OAuthService {
         };
     }
 
-    /* 카카오 액세스 토큰 발급 */
-    public String getKakaoAccessToken (String code) {
-        String access_Token = "";
-        String refresh_Token = "";
+    public String getKakaoAccessToken(String code) {
         String reqURL = authConfig.KAKAO_TOKEN_URL;
 
         try {
             URL url = new URL(reqURL);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-            //POST 요청을 위해 기본값이 false인 setDoOutput을 true로
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
 
-            //POST 요청에 필요로 요구하는 파라미터 스트림을 통해 전송
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
-            StringBuilder sb = new StringBuilder();
-            sb.append("grant_type=authorization_code");
-            sb.append("&client_id=" + authConfig.KAKAO_CLIENT_ID);
-            sb.append("&client_secret=" + authConfig.KAKAO_CLIENT_SECRET);
-            sb.append("&redirect_uri=" + authConfig.KAKAO_REDIRECT_URL);
-            sb.append("&code=" + code);
-            bw.write(sb.toString());
-            bw.flush();
+            sendKakaoTokenRequest(conn, code);
+            validateResponse(conn);
 
-            //결과 코드가 200이라면 성공
-            int responseCode = conn.getResponseCode();
-
-            if (responseCode != 200) {
-                BufferedReader errorReader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
-                String errorLine = "";
-                StringBuilder errorResult = new StringBuilder();
-                while ((errorLine = errorReader.readLine()) != null) {
-                    errorResult.append(errorLine);
-                }
-                errorReader.close();
-            }
-
-            //요청을 통해 얻은 JSON타입의 Response 메세지 읽어오기
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            String line = "";
-            String result = "";
-
-            while ((line = br.readLine()) != null) {
-                result += line;
-            }
-
-            //Gson 라이브러리에 포함된 클래스로 JSON파싱 객체 생성
-            JsonParser parser = new JsonParser();
-            JsonElement element = parser.parse(result);
-
-            access_Token = element.getAsJsonObject().get("access_token").getAsString();
-            refresh_Token = element.getAsJsonObject().get("refresh_token").getAsString();
-
-            br.close();
-            bw.close();
+            return parseKakaoAccessToken(conn);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new GeneralException(ErrorStatus.SOCIAL_MEMBER_NOT_FOUND);
+        }
+    }
+
+    public void appleWithdraw(String authorizationCode)
+            throws IOException, net.minidev.json.parser.ParseException {
+        JSONParser jsonParser = new JSONParser();
+        JSONObject jsonObj = (JSONObject) jsonParser.parse(generateAuthToken(authorizationCode));
+
+        String accessToken = String.valueOf(jsonObj.get("access_token"));
+
+        if (accessToken != null) {
+            revokeAppleToken(accessToken);
+        }
+    }
+
+    public String generateAuthToken(String code) throws IOException {
+        if (code == null) {
+            throw new GeneralException(ErrorStatus.AUTHORIZATION_CODE_NOT_FOUND);
         }
 
-        return access_Token;
+        MultiValueMap<String, String> params = createAppleTokenParams(code);
+        HttpHeaders headers = createJsonHeaders();
+        HttpEntity<MultiValueMap<String, String>> httpEntity = new HttpEntity<>(params, headers);
+
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<String> response = restTemplate.exchange(
+                    authConfig.APPLE_REQUEST_URL + "/auth/token",
+                    HttpMethod.POST,
+                    httpEntity,
+                    String.class
+            );
+            return response.getBody();
+        } catch (HttpClientErrorException e) {
+            throw new GeneralException(ErrorStatus.AUTHORIZATION_CODE_UNAUTHORIZED);
+        }
     }
 
     private SocialUserInfo getAppleInfo(String token) {
@@ -130,7 +122,6 @@ public class OAuthService {
 
             return new SocialUserInfo(providerId, email);
         } catch (ParseException | JsonProcessingException e) {
-            log.error("Kakao user info request failed", e);
             throw new GeneralException(ErrorStatus.SOCIAL_MEMBER_NOT_FOUND);
         }
     }
@@ -142,96 +133,127 @@ public class OAuthService {
             URL url = new URL(postURL);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
-
             conn.setRequestProperty("Authorization", "Bearer " + token);
 
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            String line = "";
-            StringBuilder result = new StringBuilder();
+            String result = readResponse(conn);
 
-            while ((line = br.readLine()) != null) {
-                result.append(line);
-            }
-
-            JsonElement element = JsonParser.parseString(result.toString());
+            JsonElement element = JsonParser.parseString(result);
             String providerId = String.valueOf(element.getAsJsonObject().get("id"));
 
             JsonObject kakaoAccount = element.getAsJsonObject().get("kakao_account").getAsJsonObject();
-            String email = kakaoAccount.getAsJsonObject().get("email").getAsString();
+            String email = kakaoAccount.get("email").getAsString();
 
             return new SocialUserInfo(providerId, email);
         } catch (IOException e) {
-            log.error("Apple user info request failed", e);
             throw new GeneralException(ErrorStatus.SOCIAL_MEMBER_NOT_FOUND);
         }
     }
 
-    public void appleWithdraw(String authorizationCode)
-            throws IOException, net.minidev.json.parser.ParseException {
-        JSONParser jsonParser = new JSONParser();
-        JSONObject jsonObj = (JSONObject) jsonParser.parse(generateAuthToken(authorizationCode));
+    private void sendKakaoTokenRequest(HttpURLConnection conn, String code) throws IOException {
+        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
+        StringBuilder sb = new StringBuilder();
+        sb.append("grant_type=").append(GRANT_TYPE_AUTHORIZATION_CODE);
+        sb.append("&client_id=").append(authConfig.KAKAO_CLIENT_ID);
+        sb.append("&client_secret=").append(authConfig.KAKAO_CLIENT_SECRET);
+        sb.append("&redirect_uri=").append(authConfig.KAKAO_REDIRECT_URL);
+        sb.append("&code=").append(code);
+        bw.write(sb.toString());
+        bw.flush();
+        bw.close();
+    }
 
-        String accessToken = String.valueOf(jsonObj.get("access_token"));
-
-        if (accessToken != null) {
-            RestTemplate restTemplate = new RestTemplateBuilder().build();
-            String revokeUrl = authConfig.APPLE_REQUEST_URL + "/auth/oauth2/v2/revoke";
-            LinkedMultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-            params.add("client_id", authConfig.APPLE_CLIENT_ID);
-            params.add("client_secret", createClientSecret());
-            params.add("token", accessToken);
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-            HttpEntity<MultiValueMap<String, String>> httpEntity = new HttpEntity<>(params, headers);
-            restTemplate.postForEntity(revokeUrl, httpEntity, String.class);
+    private void validateResponse(HttpURLConnection conn) throws IOException {
+        int responseCode = conn.getResponseCode();
+        if (responseCode != 200) {
+            readErrorResponse(conn);
+            throw new GeneralException(ErrorStatus.SOCIAL_MEMBER_NOT_FOUND);
         }
     }
 
-    public String generateAuthToken(String code) throws IOException {
-        if (code == null) throw new GeneralException(ErrorStatus.AUTHORIZATION_CODE_NOT_FOUND);
+    private String readErrorResponse(HttpURLConnection conn) throws IOException {
+        BufferedReader errorReader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
+        StringBuilder errorResult = new StringBuilder();
+        String errorLine;
+        while ((errorLine = errorReader.readLine()) != null) {
+            errorResult.append(errorLine);
+        }
+        errorReader.close();
+        return errorResult.toString();
+    }
+
+    private String readResponse(HttpURLConnection conn) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        StringBuilder result = new StringBuilder();
+        String line;
+        while ((line = br.readLine()) != null) {
+            result.append(line);
+        }
+        br.close();
+        return result.toString();
+    }
+
+    private String parseKakaoAccessToken(HttpURLConnection conn) throws IOException {
+        String result = readResponse(conn);
+        JsonParser parser = new JsonParser();
+        JsonElement element = parser.parse(result);
+        return element.getAsJsonObject().get("access_token").getAsString();
+    }
+
+    private void revokeAppleToken(String accessToken) {
+        RestTemplate restTemplate = new RestTemplateBuilder().build();
+        String revokeUrl = authConfig.APPLE_REQUEST_URL + "/auth/oauth2/v2/revoke";
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        params.add("grant_type", "authorization_code");
+        params.add("client_id", authConfig.APPLE_CLIENT_ID);
+        try {
+            params.add("client_secret", createClientSecret());
+        } catch (IOException e) {
+            throw new GeneralException(ErrorStatus.AUTHORIZATION_CODE_UNAUTHORIZED);
+        }
+        params.add("token", accessToken);
+
+        HttpHeaders headers = createJsonHeaders();
+        HttpEntity<MultiValueMap<String, String>> httpEntity = new HttpEntity<>(params, headers);
+
+        restTemplate.postForEntity(revokeUrl, httpEntity, String.class);
+    }
+
+    private MultiValueMap<String, String> createAppleTokenParams(String code) throws IOException {
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("grant_type", GRANT_TYPE_AUTHORIZATION_CODE);
         params.add("client_id", authConfig.APPLE_CLIENT_ID);
         params.add("client_secret", createClientSecret());
         params.add("code", code);
         params.add("redirect_uri", authConfig.APPLE_REDIRECT_URL);
+        return params;
+    }
 
-        RestTemplate restTemplate = new RestTemplate();
-
+    private HttpHeaders createJsonHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-        HttpEntity<MultiValueMap<String, String>> httpEntity = new HttpEntity<>(params, headers);
-
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    authConfig.APPLE_REQUEST_URL + "/auth/token",
-                    HttpMethod.POST,
-                    httpEntity,
-                    String.class
-            );
-
-            return response.getBody();
-        } catch (HttpClientErrorException e) {
-            throw new GeneralException(ErrorStatus.AUTHORIZATION_CODE_UNAUTHORIZED);
-        }
+        return headers;
     }
 
     private String createClientSecret() throws IOException {
-        Date expirationDate = Date.from(LocalDateTime.now().plusDays(30).atZone(ZoneId.systemDefault()).toInstant());
+        Date expirationDate = Date.from(
+                LocalDateTime.now()
+                        .plusDays(CLIENT_SECRET_EXPIRATION_DAYS)
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant()
+        );
+
         Map<String, Object> jwtHeader = new HashMap<>();
         jwtHeader.put("kid", authConfig.APPLE_KEY_ID);
-        jwtHeader.put("alg", "ES256"); // alg
+        jwtHeader.put("alg", APPLE_ALGORITHM);
 
         return Jwts.builder()
                 .setHeaderParams(jwtHeader)
-                .setIssuer(authConfig.APPLE_TEAM_ID) // iss
-                .setIssuedAt(new Date(System.currentTimeMillis())) // 발행 시간
-                .setExpiration(expirationDate) // 만료 시간
-                .setAudience(authConfig.APPLE_REQUEST_URL) // aud
-                .setSubject(authConfig.APPLE_CLIENT_ID) // sub
+                .setIssuer(authConfig.APPLE_TEAM_ID)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(expirationDate)
+                .setAudience(authConfig.APPLE_REQUEST_URL)
+                .setSubject(authConfig.APPLE_CLIENT_ID)
                 .signWith(SignatureAlgorithm.ES256, getPrivateKey())
                 .compact();
     }
