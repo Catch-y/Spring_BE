@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MemberSurveyService {
+
     private final MemberRepository memberRepository;
     private final CategoryRepository categoryRepository;
     private final MemberCategoryRepository memberCategoryRepository;
@@ -50,12 +51,16 @@ public class MemberSurveyService {
 
     public MemberCategoryCreatedResponse createMemberCategory(CategorySurveyRequest request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        Member currentMember = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
         List<Category> categories = categoryRepository.findAllByNameIn(request.categories());
-        List<MemberCategory> collect = categories.stream().map(category -> MemberCategory.createMemberCategory(currentMember, category)).collect(Collectors.toList());
-        memberCategoryRepository.saveAll(collect);
+        List<MemberCategory> memberCategories = categories.stream()
+                .map(category -> MemberCategory.createMemberCategory(currentMember, category))
+                .collect(Collectors.toList());
 
-        List<Long> memberCategoryIds = collect.stream()
+        List<MemberCategory> savedMemberCategories = memberCategoryRepository.saveAll(memberCategories);
+
+        List<Long> memberCategoryIds = savedMemberCategories.stream()
                 .map(MemberCategory::getId)
                 .toList();
 
@@ -64,23 +69,31 @@ public class MemberSurveyService {
 
     public StyleAndActiveTimeSurveyCreatedResponse createStyleAndActiveTimeSurvey(StyleAndActiveTimeSurveyRequest request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        Member currentMember = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
         List<Style> styleList = styleRepository.findAllByNameIn(request.styleNames());
 
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 
         List<ActiveTime> activeTimeList = request.activeTimes().stream().map(activeTime ->
-                activeTimeRepository.findByDayOfWeekAndStartTimeAndEndTime(activeTime.dayOfWeek(),
-                                LocalTime.parse(activeTime.startTime(),dateTimeFormatter),
+                activeTimeRepository.findByDayOfWeekAndStartTimeAndEndTime(
+                                activeTime.dayOfWeek(),
+                                LocalTime.parse(activeTime.startTime(), dateTimeFormatter),
                                 LocalTime.parse(activeTime.endTime(), dateTimeFormatter))
-                        .orElseGet(() -> activeTimeRepository.save(ActiveTime.createActiveTime(activeTime.dayOfWeek(),
-                                LocalTime.parse(activeTime.startTime(),dateTimeFormatter),
+                        .orElseGet(() -> activeTimeRepository.save(ActiveTime.createActiveTime(
+                                activeTime.dayOfWeek(),
+                                LocalTime.parse(activeTime.startTime(), dateTimeFormatter),
                                 LocalTime.parse(activeTime.endTime(), dateTimeFormatter)))
                         )).toList();
 
-        List<MemberStyle> memberStyleList = styleList.stream().map(style -> MemberStyle.createMemberStyle(currentMember, style)).collect(Collectors.toList());
+        List<MemberStyle> memberStyleList = styleList.stream()
+                .map(style -> MemberStyle.createMemberStyle(currentMember, style))
+                .collect(Collectors.toList());
         List<Long> memberStyleIds = saveMemberStyleAndReturnIds(memberStyleList);
-        List<MemberActiveTime> memberActiveTimeList = activeTimeList.stream().map(activeTime -> MemberActiveTime.createMemberActiveTime(currentMember, activeTime)).collect(Collectors.toList());
+
+        List<MemberActiveTime> memberActiveTimeList = activeTimeList.stream()
+                .map(activeTime -> MemberActiveTime.createMemberActiveTime(currentMember, activeTime))
+                .collect(Collectors.toList());
         List<Long> memberActiveTimeIds = saveMemberActiveTimeAndReturnIds(memberActiveTimeList);
 
         return new StyleAndActiveTimeSurveyCreatedResponse(memberStyleIds, memberActiveTimeIds);
@@ -90,7 +103,7 @@ public class MemberSurveyService {
         List<MemberStyle> savedEntities = memberStyleRepository.saveAll(memberStyleList);
 
         return savedEntities.stream()
-                .map(MemberStyle::getId) // 저장된 엔티티의 ID 값 추출
+                .map(MemberStyle::getId)
                 .collect(Collectors.toList());
     }
 
@@ -105,15 +118,20 @@ public class MemberSurveyService {
     public MemberLocationCreatedResponse createMemberLocation(List<LocationSurveyRequest> request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
 
-        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        List<Location> locationList = request.stream().map(r -> locationRepository.findByUpperLocationAndLowerLocation(r.upperLocation(), r.lowerLocation())
-                .orElseGet(() -> locationRepository.save(Location.createLocation(r.upperLocation(), r.lowerLocation())))
+        Member currentMember = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        List<Location> locationList = request.stream().map(r ->
+                locationRepository.findByUpperLocationAndLowerLocation(r.upperLocation(), r.lowerLocation())
+                        .orElseGet(() -> locationRepository.save(Location.createLocation(r.upperLocation(), r.lowerLocation())))
         ).toList();
 
-        List<MemberLocation> memberLocationList = locationList.stream().map(location -> MemberLocation.createMemberLocation(currentMember, location)).collect(Collectors.toList());
-        memberLocationRepository.saveAll(memberLocationList);
+        List<MemberLocation> memberLocationList = locationList.stream()
+                .map(location -> MemberLocation.createMemberLocation(currentMember, location))
+                .collect(Collectors.toList());
 
-        List<Long> memberLocationIds = memberLocationList.stream()
+        List<MemberLocation> savedMemberLocations = memberLocationRepository.saveAll(memberLocationList);
+
+        List<Long> memberLocationIds = savedMemberLocations.stream()
                 .map(MemberLocation::getId)
                 .collect(Collectors.toList());
 
