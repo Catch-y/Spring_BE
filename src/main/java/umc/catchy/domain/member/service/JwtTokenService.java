@@ -1,9 +1,7 @@
 package umc.catchy.domain.member.service;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.jwt.service.BlackTokenRedisService;
 import umc.catchy.domain.jwt.service.RedisTokenService;
 import umc.catchy.domain.member.dto.response.TokenPair;
@@ -12,16 +10,13 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.JwtUtil;
 
 @Service
-@Slf4j
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class JwtTokenService {
 
     private final JwtUtil jwtUtil;
     private final RedisTokenService redisTokenService;
     private final BlackTokenRedisService blackTokenRedisService;
 
-    @Transactional
     public TokenPair issueTokens(String email, Long memberId) {
         String accessToken = jwtUtil.createAccessToken(email, memberId);
         String refreshToken = jwtUtil.createRefreshToken(email, memberId);
@@ -31,7 +26,6 @@ public class JwtTokenService {
         return new TokenPair(accessToken, refreshToken);
     }
 
-    @Transactional
     public TokenPair reissueTokens(String accessToken, String refreshToken) {
         validateRefreshToken(refreshToken);
 
@@ -61,7 +55,6 @@ public class JwtTokenService {
         return redisTokenService.isRefreshTokenValid(refreshToken, memberId);
     }
 
-    @Transactional
     public void invalidateTokens(String accessToken, String refreshToken) {
         addAccessTokenToBlacklist(accessToken);
         deleteRefreshToken(refreshToken);
