@@ -3,6 +3,8 @@ package umc.catchy.domain.member.api;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,24 +31,31 @@ public class MemberSurveyController {
 
     @PostMapping("/category")
     @Operation(summary = "사용자 취향설문 카테고리 저장 API ", description = "사용자 취향설문 1,2단계를 저장")
-    public BaseResponse<MemberCategoryCreatedResponse> createMemberCategory(
+    public ResponseEntity<BaseResponse<MemberCategoryCreatedResponse>> createMemberCategory(
             @RequestBody CategorySurveyRequest request) {
         MemberCategoryCreatedResponse response = memberSurveyService.createMemberCategory(request);
-        return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.onSuccess(SuccessStatus._CREATED, response));
     }
 
     @PostMapping("/styletime")
     @Operation(summary = "사용자 취향설문 참여스타일 및 활동요일,시간 저장 API ", description = "사용자 취향설문 3,4단계를 저장")
-    public BaseResponse<StyleAndActiveTimeSurveyCreatedResponse> createMemberStyleTime(
+    public ResponseEntity<BaseResponse<StyleAndActiveTimeSurveyCreatedResponse>> createMemberStyleTime(
             @RequestBody StyleAndActiveTimeSurveyRequest request) {
         StyleAndActiveTimeSurveyCreatedResponse response = memberSurveyService.createStyleAndActiveTimeSurvey(request);
-        return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.onSuccess(SuccessStatus._CREATED, response));
     }
 
     @PostMapping("/location")
     @Operation(summary = "사용자 취향설문 선호지역 저장 API", description = "사용자 취향설문 5단계를 저장")
-    public BaseResponse<MemberLocationCreatedResponse> createMemberLocation(@RequestBody List<LocationSurveyRequest> request) {
+    public ResponseEntity<BaseResponse<MemberLocationCreatedResponse>> createMemberLocation(
+            @RequestBody List<LocationSurveyRequest> request) {
         MemberLocationCreatedResponse response = memberSurveyService.createMemberLocation(request);
-        return BaseResponse.onSuccess(SuccessStatus._CREATED, response);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(BaseResponse.onSuccess(SuccessStatus._CREATED, response));
     }
 }
