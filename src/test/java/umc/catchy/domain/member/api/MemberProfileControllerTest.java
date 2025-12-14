@@ -12,7 +12,7 @@ import umc.catchy.domain.member.dto.response.NicknameResponse;
 import umc.catchy.domain.member.dto.response.ProfileImageResponse;
 import umc.catchy.domain.member.dto.response.ProfileResponse;
 import umc.catchy.domain.member.service.MemberAccountService;
-import umc.catchy.domain.member.service.MemberProfileService;
+import umc.catchy.domain.member.service.MemberProfileFacade;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.support.ControllerTestSupport;
@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class MemberProfileControllerTest extends ControllerTestSupport {
 
     @MockitoBean
-    private MemberProfileService memberProfileService;
+    private MemberProfileFacade memberProfileFacade;
 
     @MockitoBean
     private MemberAccountService memberAccountService;
@@ -43,7 +43,7 @@ public class MemberProfileControllerTest extends ControllerTestSupport {
                 "테스트유저"
         );
 
-        when(memberProfileService.getCurrentMember())
+        when(memberProfileFacade.getCurrentMember())
                 .thenReturn(mockResponse);
 
         // when & then
@@ -87,7 +87,7 @@ public class MemberProfileControllerTest extends ControllerTestSupport {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("잘못된 요청입니다."))
-                .andExpect(jsonPath("$.result").value("변경할 닉네임을 입력해주세요."));
+                .andExpect(jsonPath("$.result").value("닉네임은 1자 이상 8자 이하여야합니다."));
     }
 
     @Test
@@ -113,7 +113,7 @@ public class MemberProfileControllerTest extends ControllerTestSupport {
         NicknameRequest request = new NicknameRequest("변경할닉네임");
 
         NicknameResponse response = new NicknameResponse(1L, "변경할닉네임");
-        when(memberProfileService.updateNickname(any(NicknameRequest.class))).thenReturn(response);
+        when(memberProfileFacade.updateNickname(any(NicknameRequest.class))).thenReturn(response);
 
         // when & then
         mockMvc.perform(patch("/member/mypage/nickname")
@@ -133,7 +133,7 @@ public class MemberProfileControllerTest extends ControllerTestSupport {
         NicknameRequest request = new NicknameRequest("중복된닉네임");
 
         doThrow(new GeneralException(ErrorStatus.NICKNAME_DUPLICATE))
-                .when(memberProfileService).updateNickname(any(NicknameRequest.class));
+                .when(memberProfileFacade).updateNickname(any(NicknameRequest.class));
 
         // when & then
         mockMvc.perform(patch("/member/mypage/nickname")
@@ -158,7 +158,7 @@ public class MemberProfileControllerTest extends ControllerTestSupport {
         );
 
         ProfileImageResponse response = new ProfileImageResponse(1L, "https://s3.aws.com/new-image.jpg");
-        when(memberProfileService.updateProfileImage(any())).thenReturn(response);
+        when(memberProfileFacade.updateProfileImage(any())).thenReturn(response);
 
         // when & then
         mockMvc.perform(multipart("/member/mypage/profileImage")

@@ -29,19 +29,19 @@ import umc.catchy.global.error.exception.GeneralException;
 @RequestMapping("/member")
 public class MemberProfileController {
 
-    private final MemberProfileService memberProfileService;
+    private final MemberProfileFacade memberProfileFacade;
     private final MemberAccountService memberAccountService;
 
     @GetMapping("/mypage")
     @Operation(summary = "프로필 조회 API", description = "현재 로그인된 사용자의 정보를 조회")
     public BaseResponse<ProfileResponse> getProfile() {
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberProfileService.getCurrentMember());
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberProfileFacade.getCurrentMember());
     }
 
     @PostMapping("/mypage/nickname")
     @Operation(summary = "닉네임 중복 검사 API", description = "변경하려는 닉네임이 중복인지 검사")
     public BaseResponse<Void> validateNickname(@RequestBody @Valid NicknameRequest request) {
-        memberProfileService.validateNickname(request);
+        memberProfileFacade.validateNickname(request);
 
         return BaseResponse.onSuccess(SuccessStatus.NICKNAME_AVAILABLE, null);
     }
@@ -49,7 +49,7 @@ public class MemberProfileController {
     @PatchMapping("/mypage/nickname")
     @Operation(summary = "닉네임 변경 API", description = "현재 로그인된 사용자의 닉네임 변경")
     public BaseResponse<NicknameResponse> updateNickname(@RequestBody @Valid NicknameRequest request) {
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberProfileService.updateNickname(request));
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberProfileFacade.updateNickname(request));
     }
 
     @PatchMapping(value = "/mypage/profileImage", consumes = "multipart/form-data")
@@ -59,7 +59,7 @@ public class MemberProfileController {
             throw new GeneralException(ErrorStatus.PROFILE_IMAGE_EMPTY);
         }
 
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberProfileService.updateProfileImage(profileImage));
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberProfileFacade.updateProfileImage(profileImage));
     }
 
     @Operation(summary = "알람 여부 변경", description = "기존 토글 값을 변경합니다.")
