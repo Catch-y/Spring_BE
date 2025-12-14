@@ -80,8 +80,12 @@ dependencies {
 
 	//Redis 관련
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
 	// firebase 관련
 	implementation 'com.google.firebase:firebase-admin:9.4.3'
+
+	// OpenFeign
+	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 }
 
 tasks.named('test') {

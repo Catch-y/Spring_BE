@@ -1,7 +1,5 @@
 package umc.catchy.domain.member.service;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,14 +11,18 @@ import umc.catchy.domain.member.service.OAuthService.SocialUserInfo;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.config.auth.AuthConfig;
 import umc.catchy.global.error.exception.GeneralException;
-
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.util.Date;
+import umc.catchy.infra.feign.AppleFeignClient;
+import umc.catchy.infra.feign.KakaoAuthClient;
+import umc.catchy.infra.feign.KakaoFeignClient;
+import umc.catchy.infra.feign.dto.KakaoInfoResponse;
+import umc.catchy.infra.feign.dto.KakaoInfoResponse.KakaoAccount;
+import umc.catchy.infra.feign.dto.KakaoTokenResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class OAuthServiceTest {
@@ -31,54 +33,75 @@ class OAuthServiceTest {
     @Mock
     private AuthConfig authConfig;
 
+    @Mock
+    private KakaoFeignClient kakaoFeignClient;
+
+    @Mock
+    private KakaoAuthClient kakaoAuthClient;
+
+    @Mock
+    private AppleFeignClient appleFeignClient;
+
     @Test
-    @DisplayName("Apple 유저 정보 조회 성공 - JWT 파싱 검증")
-    void getUserInfo_apple_success() throws Exception {
-        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-        keyGen.initialize(2048);
-        KeyPair keyPair = keyGen.generateKeyPair();
-
-        String providerId = "apple_12345";
-        String email = "apple@test.com";
-
-        String idToken = Jwts.builder()
-                .setHeaderParam("kid", "test-key-id")
-                .setSubject(providerId)
-                .claim("email", email)
-                .setIssuer("https://appleid.apple.com")
-                .setAudience("umc.catchy.client")
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 3600000))
-                .signWith(SignatureAlgorithm.RS256, keyPair.getPrivate())
-                .compact();
-
-        SocialUserInfo userInfo = oAuthService.getUserInfo(idToken, SocialType.APPLE);
-
-        assertAll(
-                () -> assertThat(userInfo).isNotNull(),
-                () -> assertThat(userInfo.providerId()).isEqualTo(providerId),
-                () -> assertThat(userInfo.email()).isEqualTo(email)
+    @DisplayName("Kakao 유저 정보 조회 성공")
+    void getUserInfo_kakao_success() {
+        // given
+        String accessToken = "kakao-access-token";
+        KakaoInfoResponse mockResponse = new KakaoInfoResponse(
+                12345L,
+                new KakaoAccount("kakao@test.com")
         );
+
+        when(kakaoFeignClient.getUserInfo(anyString()))
+                .thenReturn(mockResponse);
+
+        // when
+        SocialUserInfo userInfo = oAuthService.getUserInfo(accessToken, SocialType.KAKAO);
+
+        // then
+        assertThat(userInfo.providerId()).isEqualTo("12345");
+        assertThat(userInfo.email()).isEqualTo("kakao@test.com");
     }
 
     @Test
-    @DisplayName("Apple 유저 정보 조회 실패 - 잘못된 JWT 형식")
-    void getUserInfo_apple_fail_invalid_token() {
-        String invalidToken = "invalid-jwt-token-garbage-value";
+    @DisplayName("Kakao 유저 정보 조회 실패 - API 에러")
+    void getUserInfo_kakao_fail() {
+        // given
+        when(kakaoFeignClient.getUserInfo(anyString()))
+                .thenThrow(new RuntimeException("Kakao API Error"));
 
-        assertThatThrownBy(() -> oAuthService.getUserInfo(invalidToken, SocialType.APPLE))
+        // when & then
+        assertThatThrownBy(() -> oAuthService.getUserInfo("token", SocialType.KAKAO))
                 .isInstanceOf(GeneralException.class)
                 .extracting("code")
                 .isEqualTo(ErrorStatus.SOCIAL_MEMBER_NOT_FOUND);
     }
 
     @Test
-    @DisplayName("getUserInfo - KAKAO 분기 및 로직 호출 확인")
-    void getUserInfo_kakao_branch_test() {
-        String dummyToken = "kakao-dummy-token";
-        authConfig.KAKAO_INFO_URL = "http://localhost/dummy";
+    @DisplayName("Kakao 액세스 토큰 발급 성공")
+    void getKakaoAccessToken_success() {
+        // given
+        String authCode = "auth-code";
+        KakaoTokenResponse mockTokenResponse = new KakaoTokenResponse(
+                "access-token", "refresh-token", 3600
+        );
 
-        assertThatThrownBy(() -> oAuthService.getUserInfo(dummyToken, SocialType.KAKAO))
+        when(kakaoAuthClient.getAccessToken(any(), any(), any(), any(), any()))
+                .thenReturn(mockTokenResponse);
+
+        // when
+        String accessToken = oAuthService.getKakaoAccessToken(authCode);
+
+        // then
+        assertThat(accessToken).isEqualTo("access-token");
+    }
+
+    @Test
+    @DisplayName("Apple 유저 정보 조회 실패 - 토큰 형식 불일치")
+    void getUserInfo_apple_fail() {
+        String invalidToken = "invalid-token";
+
+        assertThatThrownBy(() -> oAuthService.getUserInfo(invalidToken, SocialType.APPLE))
                 .isInstanceOf(GeneralException.class)
                 .extracting("code")
                 .isEqualTo(ErrorStatus.SOCIAL_MEMBER_NOT_FOUND);
