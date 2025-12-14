@@ -10,7 +10,7 @@ import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.response.*;
-import umc.catchy.domain.member.service.MemberAccountService;
+import umc.catchy.domain.member.service.MemberAccountFacade;
 import umc.catchy.domain.member.service.OAuthService;
 import umc.catchy.support.ControllerTestSupport;
 
@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class AuthControllerTest extends ControllerTestSupport {
 
     @MockitoBean
-    private MemberAccountService memberAccountService;
+    private MemberAccountFacade memberAccountFacade;
 
     @MockitoBean
     private OAuthService oAuthService;
@@ -46,7 +46,7 @@ public class AuthControllerTest extends ControllerTestSupport {
                 LocalDateTime.now(), "new-access", "new-refresh"
         );
 
-        when(memberAccountService.login(any(LoginRequest.class), eq(SocialType.KAKAO)))
+        when(memberAccountFacade.login(any(LoginRequest.class), eq(SocialType.KAKAO)))
                 .thenReturn(response);
 
         // when & then
@@ -114,7 +114,7 @@ public class AuthControllerTest extends ControllerTestSupport {
                 null
         );
 
-        when(memberAccountService.signUp(any(SignUpRequest.class), any(), eq(SocialType.KAKAO)))
+        when(memberAccountFacade.signUp(any(SignUpRequest.class), any(), eq(SocialType.KAKAO)))
                 .thenReturn(response);
 
         // when & then
@@ -136,7 +136,7 @@ public class AuthControllerTest extends ControllerTestSupport {
         // given
         ReIssueTokenResponse response = new ReIssueTokenResponse("new-access-token", "new-refresh-token");
 
-        when(memberAccountService.reIssueRefreshToken()).thenReturn(response);
+        when(memberAccountFacade.reIssueRefreshToken()).thenReturn(response);
 
         // when & then
         mockMvc.perform(get("/member/reissue")

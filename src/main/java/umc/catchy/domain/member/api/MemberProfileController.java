@@ -30,7 +30,7 @@ import umc.catchy.global.error.exception.GeneralException;
 public class MemberProfileController {
 
     private final MemberProfileFacade memberProfileFacade;
-    private final MemberAccountService memberAccountService;
+    private final MemberAccountFacade memberAccountFacade;
 
     @GetMapping("/mypage")
     @Operation(summary = "프로필 조회 API", description = "현재 로그인된 사용자의 정보를 조회")
@@ -65,14 +65,14 @@ public class MemberProfileController {
     @Operation(summary = "알람 여부 변경", description = "기존 토글 값을 변경합니다.")
     @PatchMapping("/alarm")
     public ResponseEntity<BaseResponse<Void>> memberToggleAppAlarmStateUpdate() {
-        memberAccountService.toggleAppAlarm();
+        memberAccountFacade.toggleAppAlarm();
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 
     @Operation(summary = "FCM 토큰 갱신", description = "FCM 토큰을 갱신합니다.")
     @PatchMapping("/fcm-token")
     public ResponseEntity<BaseResponse<Void>> memberFcmTokenUpdate(@RequestBody UpdateFcmTokenRequest updateFcmTokenRequest) {
-        memberAccountService.updateFcmToken(updateFcmTokenRequest);
+        memberAccountFacade.updateFcmToken(updateFcmTokenRequest);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 }

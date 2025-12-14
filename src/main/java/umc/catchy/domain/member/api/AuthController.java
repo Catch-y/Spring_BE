@@ -14,7 +14,7 @@ import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
 import umc.catchy.domain.member.dto.response.*;
-import umc.catchy.domain.member.service.MemberAccountService;
+import umc.catchy.domain.member.service.MemberAccountFacade;
 import umc.catchy.domain.member.service.OAuthService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
@@ -29,7 +29,7 @@ import java.io.IOException;
 @RequestMapping("/member")
 public class AuthController {
 
-    private final MemberAccountService memberAccountService;
+    private final MemberAccountFacade memberAccountFacade;
     private final OAuthService oAuthService;
 
     @PostMapping(value = "/signup/{platform}", consumes = "multipart/form-data")
@@ -49,7 +49,7 @@ public class AuthController {
             return BaseResponse.onFailure(ErrorStatus.PLATFORM_BAD_REQUEST);
         }
 
-        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberAccountService.signUp(request, profileImage, socialType));
+        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberAccountFacade.signUp(request, profileImage, socialType));
     }
 
     @PostMapping("/login/{platform}")
@@ -68,7 +68,7 @@ public class AuthController {
             return BaseResponse.onFailure(ErrorStatus.PLATFORM_BAD_REQUEST);
         }
 
-        return BaseResponse.onSuccess(SuccessStatus._OK, memberAccountService.login(request, socialType));
+        return BaseResponse.onSuccess(SuccessStatus._OK, memberAccountFacade.login(request, socialType));
     }
 
     @PostMapping("/callback/apple")
@@ -100,7 +100,7 @@ public class AuthController {
     @GetMapping("/reissue")
     @Operation(summary = "토큰 검사 및 재발급 API", description = "refresh token 검사 후 accessToken 재발급, 만료되었다면 재로그인")
     public BaseResponse<ReIssueTokenResponse> reIssue() {
-        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberAccountService.reIssueRefreshToken());
+        return BaseResponse.onSuccess(SuccessStatus._CREATED, memberAccountFacade.reIssueRefreshToken());
     }
 
     @GetMapping("/token/kakao")
@@ -112,7 +112,7 @@ public class AuthController {
     @DeleteMapping("/withdraw")
     @Operation(summary = "회원 탈퇴 API ", description = "현재 로그인된 사용자 탈퇴 / 애플 탈퇴 시 인가 코드를 입력")
     public BaseResponse<Void> withdrawMember(@RequestParam(required = false) String authorizationCode) throws IOException, ParseException {
-        memberAccountService.withdraw(authorizationCode);
+        memberAccountFacade.withdraw(authorizationCode);
 
         return BaseResponse.onSuccess(SuccessStatus._OK, null);
     }
@@ -120,7 +120,7 @@ public class AuthController {
     @PostMapping("/mypage/logout")
     @Operation(summary = "로그아웃 API", description = "사용자의 토큰을 만료시킨다.")
     public BaseResponse<Void> logout() {
-        memberAccountService.logout();
+        memberAccountFacade.logout();
         return BaseResponse.onSuccess(SuccessStatus._OK, null);
     }
 }

@@ -11,7 +11,7 @@ import umc.catchy.domain.member.dto.request.UpdateFcmTokenRequest;
 import umc.catchy.domain.member.dto.response.NicknameResponse;
 import umc.catchy.domain.member.dto.response.ProfileImageResponse;
 import umc.catchy.domain.member.dto.response.ProfileResponse;
-import umc.catchy.domain.member.service.MemberAccountService;
+import umc.catchy.domain.member.service.MemberAccountFacade;
 import umc.catchy.domain.member.service.MemberProfileFacade;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
@@ -31,7 +31,7 @@ public class MemberProfileControllerTest extends ControllerTestSupport {
     private MemberProfileFacade memberProfileFacade;
 
     @MockitoBean
-    private MemberAccountService memberAccountService;
+    private MemberAccountFacade memberAccountFacade;
 
     @Test
     @DisplayName("프로필 조회 - 성공")
