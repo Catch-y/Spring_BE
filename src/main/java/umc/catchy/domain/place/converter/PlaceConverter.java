@@ -9,25 +9,13 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import umc.catchy.domain.category.domain.BigCategory;
-import umc.catchy.domain.course.dto.response.CourseInfoResponse;
+import umc.catchy.domain.course.dto.response.CourseDetailResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewResponse;
 import umc.catchy.domain.place.domain.Place;
 
 public class PlaceConverter {
-
-    public static CourseInfoResponse.getPlaceInfoOfCourseDTO toPlaceInfoOfCourseDTO(Place place, Boolean isVisited) {
-        return CourseInfoResponse.getPlaceInfoOfCourseDTO
-                .builder()
-                .placeId(place.getId())
-                .placeName(place.getPlaceName())
-                .category(place.getCategory().getBigCategory())
-                .placeLatitude(place.getLatitude())
-                .placeLongitude(place.getLongitude())
-                .isVisited(isVisited)
-                .build();
-    }
 
     public static PlaceInfoPreview toPlaceInfoPreview(Place place, Long reviewCount, Boolean isLiked) {
         String categoryName = null;

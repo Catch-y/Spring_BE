@@ -13,7 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
-import umc.catchy.domain.course.dto.response.CourseInfoResponse;
+import umc.catchy.domain.course.dto.response.CourseDetailResponse;
 import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
@@ -49,11 +49,11 @@ public class CourseController {
 
     @Operation(summary = "코스 상세정보 조회 API", description = "코스 상세 화면에서 코스에 대한 상세정보를 나타내기 위한 정보 조회 기능입니다.")
     @GetMapping("/detail/{courseId}")
-    public ResponseEntity<BaseResponse<CourseInfoResponse.getCourseInfoDTO>> getCourseInfo(
+    public ResponseEntity<BaseResponse<CourseDetailResponse>> getCourseInfo(
             @Parameter(description = "코스 ID", required = true)
             @PathVariable Long courseId
     ){
-        CourseInfoResponse.getCourseInfoDTO response= courseService.getCourseDetails(courseId);
+        CourseDetailResponse response = courseService.getCourseDetails(courseId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
@@ -71,23 +71,23 @@ public class CourseController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
-    @Operation(summary = "코스 생성(DIY) API", description = "사용자가 직접 생성하는 코스")
-    @PostMapping(value = "/in-person", consumes = "multipart/form-data")
-    public ResponseEntity<BaseResponse<CourseInfoResponse.getCourseInfoDTO>> createCourseByDIY(
+    @Operation(summary = "코스 생성 및 저장 API", description = "DIY 코스 또는 AI가 추천한 코스를 최종 저장합니다.")
+    @PostMapping(consumes = "multipart/form-data")
+    public ResponseEntity<BaseResponse<CourseDetailResponse>> createCourse(
             @Valid @ModelAttribute CourseCreateRequest request
     ) {
-        CourseInfoResponse.getCourseInfoDTO response = courseService.createCourseByDIY(request);
+        CourseDetailResponse response = courseService.createCourse(request);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
     @Operation(summary = "코스 수정 API", description = "사용자의 코스 수정")
     @PatchMapping(value = "/{courseId}", consumes = "multipart/form-data")
-    public ResponseEntity<BaseResponse<CourseInfoResponse.getCourseInfoDTO>> updateCourse(
+    public ResponseEntity<BaseResponse<CourseDetailResponse>> updateCourse(
             @Parameter(description = "코스 ID", required = true)
             @PathVariable Long courseId,
             @Valid @ModelAttribute CourseUpdateRequest request
     ) {
-        CourseInfoResponse.getCourseInfoDTO response = courseService.updateCourse(courseId, request);
+        CourseDetailResponse response = courseService.updateCourse(courseId, request);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
