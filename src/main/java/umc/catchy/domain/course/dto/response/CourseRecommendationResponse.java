@@ -19,14 +19,4 @@ public record CourseRecommendationResponse(
                 course.getCourseType()
         );
     }
-
-    public static CourseRecommendationResponse from(GptCourseInfoResponse gptResponse) {
-        return new CourseRecommendationResponse(
-                gptResponse.getCourseId(),
-                gptResponse.getCourseName(),
-                gptResponse.getCourseDescription(),
-                gptResponse.getCourseImage(),
-                CourseType.AI
-        );
-    }
 }
