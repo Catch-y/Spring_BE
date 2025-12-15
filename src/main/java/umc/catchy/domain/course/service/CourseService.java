@@ -169,7 +169,6 @@ public class CourseService {
         return MemberCourseSliceResponse.from(responses);
     }
 
-    // 코스 수정
     public CourseDetailResponse updateCourse(Long courseId, CourseUpdateRequest request) {
         Course course = getCourse(courseId);
         Long memberId = SecurityUtil.getCurrentMemberId();
@@ -180,16 +179,19 @@ public class CourseService {
             throw new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER);
         }
 
-        if (!request.courseName().isEmpty()) course.setCourseName(request.courseName());
-        if (!request.courseDescription().isEmpty()) course.setCourseDescription(request.courseDescription());
+        course.updateCourseName(request.courseName());
+        course.updateCourseDescription(request.courseDescription());
 
         if (request.courseImage() != null) {
             String originCourseImageUrl = course.getCourseImage();
-            if (!originCourseImageUrl.isEmpty()) amazonS3Manager.deleteImage(originCourseImageUrl);
+            if (originCourseImageUrl != null && !originCourseImageUrl.isEmpty()) {
+                amazonS3Manager.deleteImage(originCourseImageUrl);
+            }
 
             MultipartFile newCourseImage = request.courseImage();
             String keyName = "course-images/" + UUID.randomUUID();
-            course.setCourseImage(amazonS3Manager.uploadFile(keyName, newCourseImage));
+            String newImageUrl = amazonS3Manager.uploadFile(keyName, newCourseImage);
+            course.updateCourseImage(newImageUrl);
         }
 
         if (!request.placeIds().isEmpty()) {
@@ -212,11 +214,10 @@ public class CourseService {
         }
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-        if (!request.recommendTimeStart().isEmpty()) {
-            course.setRecommendTimeStart(LocalTime.parse(request.recommendTimeStart(), formatter));
-        }
-        if (!request.recommendTimeEnd().isEmpty()) {
-            course.setRecommendTimeEnd(LocalTime.parse(request.recommendTimeEnd(), formatter));
+        if (!request.recommendTimeStart().isEmpty() && !request.recommendTimeEnd().isEmpty()) {
+            LocalTime startTime = LocalTime.parse(request.recommendTimeStart(), formatter);
+            LocalTime endTime = LocalTime.parse(request.recommendTimeEnd(), formatter);
+            course.updateRecommendTime(startTime, endTime);
         }
 
         List<CourseDetailResponse.CoursePlaceInfo> placeListOfCourse = getPlaceListOfCourse(course, member);
@@ -269,7 +270,7 @@ public class CourseService {
                 .average()
                 .orElse(0.0);
 
-        course.setRating(Math.round(averageRating * 10) / 10.0);
+        course.updateRating(averageRating);
 
         // 장소 매핑 저장
         courseRepository.save(course);
@@ -464,12 +465,9 @@ public class CourseService {
             }
         }
 
-        // 코스 평점 계산
+        // 코스 평점 계산 및 업데이트
         double courseRating = placeCount > 0 ? totalRating / placeCount : 0.0;
-        courseRating = Math.round(courseRating * 10) / 10.0;
-
-        // 평점 저장
-        savedCourse.setRating(courseRating);
+        savedCourse.updateRating(courseRating);
         courseRepository.saveAndFlush(savedCourse);
 
         // 홈 추천 AI 코스가 아니라면 MemberCourse에 저장

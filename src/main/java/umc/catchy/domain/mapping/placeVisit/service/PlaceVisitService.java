@@ -76,7 +76,7 @@ public class PlaceVisitService {
         if (visitNum == Math.round((double) placeNum / 2)) {
             memberCourse.setVisited(true);
             memberCourse.setVisitedDate(LocalDate.now());
-            course.setParticipantsNumber(course.getParticipantsNumber() + 1);
+            course.increaseParticipants();
         }
 
         return PlaceVisitConverter.toPlaceVisitResponse(placeVisit);
