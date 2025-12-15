@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseDetailResponse;
@@ -61,13 +62,14 @@ public class CourseController {
     @GetMapping("/search")
     public ResponseEntity<BaseResponse<MemberCourseSliceResponse>> getMemberCourses(
             @Parameter(description = "AI/DIY 선택", required = true)
-            @RequestParam(value = "type") String type,
+            @RequestParam(value = "type") CourseType type,
+
             @RequestParam(value = "upperLocation", defaultValue = "all") String upperLocation,
             @RequestParam(value = "lowerLocation", defaultValue = "all") String lowerLocation,
             @RequestParam(required = false) Long lastId
     ) {
+        MemberCourseSliceResponse response = courseService.getMemberCourses(type, upperLocation, lowerLocation, lastId);
 
-        MemberCourseSliceResponse response = courseService.getMemberCourses(type.toUpperCase(), upperLocation, lowerLocation, lastId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 

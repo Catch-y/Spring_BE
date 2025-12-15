@@ -159,18 +159,7 @@ public class CourseService {
         return CourseDetailResponse.from(course, calculateNumberOfReviews(course), getBookmarks(course, member), placeListOfCourse);
     }
 
-    // 현재 사용자의 코스를 불러옴
-    public MemberCourseSliceResponse getMemberCourses(String type, String upperLocation, String lowerLocation, Long lastId) {
-        CourseType courseType;
-
-        if ("AI".equals(type)) {
-            courseType = CourseType.AI;
-        } else if ("DIY".equals(type)) {
-            courseType = CourseType.DIY;
-        } else {
-            throw new GeneralException(ErrorStatus.INVALID_COURSE_TYPE);
-        }
-
+    public MemberCourseSliceResponse getMemberCourses(CourseType courseType, String upperLocation, String lowerLocation, Long lastId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -191,20 +180,20 @@ public class CourseService {
             throw new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER);
         }
 
-        if (!request.getCourseName().isEmpty()) course.setCourseName(request.getCourseName());
-        if (!request.getCourseDescription().isEmpty()) course.setCourseDescription(request.getCourseDescription());
+        if (!request.courseName().isEmpty()) course.setCourseName(request.courseName());
+        if (!request.courseDescription().isEmpty()) course.setCourseDescription(request.courseDescription());
 
-        if (request.getCourseImage() != null) {
+        if (request.courseImage() != null) {
             String originCourseImageUrl = course.getCourseImage();
             if (!originCourseImageUrl.isEmpty()) amazonS3Manager.deleteImage(originCourseImageUrl);
 
-            MultipartFile newCourseImage = request.getCourseImage();
+            MultipartFile newCourseImage = request.courseImage();
             String keyName = "course-images/" + UUID.randomUUID();
             course.setCourseImage(amazonS3Manager.uploadFile(keyName, newCourseImage));
         }
 
-        if (!request.getPlaceIds().isEmpty()) {
-            List<Long> placeIds = request.getPlaceIds();
+        if (!request.placeIds().isEmpty()) {
+            List<Long> placeIds = request.placeIds();
             List<PlaceCourse> originPlaces = placeCourseRepository.findAllByCourse(course);
             placeCourseRepository.deleteAll(originPlaces);
 
@@ -223,11 +212,11 @@ public class CourseService {
         }
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-        if (!request.getRecommendTimeStart().isEmpty()) {
-            course.setRecommendTimeStart(LocalTime.parse(request.getRecommendTimeStart(), formatter));
+        if (!request.recommendTimeStart().isEmpty()) {
+            course.setRecommendTimeStart(LocalTime.parse(request.recommendTimeStart(), formatter));
         }
-        if (!request.getRecommendTimeEnd().isEmpty()) {
-            course.setRecommendTimeEnd(LocalTime.parse(request.getRecommendTimeEnd(), formatter));
+        if (!request.recommendTimeEnd().isEmpty()) {
+            course.setRecommendTimeEnd(LocalTime.parse(request.recommendTimeEnd(), formatter));
         }
 
         List<CourseDetailResponse.CoursePlaceInfo> placeListOfCourse = getPlaceListOfCourse(course, member);
@@ -684,22 +673,17 @@ public class CourseService {
         int aiCourseCount = 5 - userCourseCount;
 
         List<CourseRecommendationResponse> recommendedCourses = new ArrayList<>();
+
         recommendedCourses.addAll(userCourses.stream()
-                .map(course -> CourseRecommendationResponse.fromEntity(course, "USER_CREATED"))
-                .collect(Collectors.toList()));
+                .map(CourseRecommendationResponse::from)
+                .toList());
 
         if (aiCourseCount > 0) {
             List<GptCourseInfoResponse> aiCourses = generateMultipleAICourses(memberId, aiCourseCount, true).join();
 
             recommendedCourses.addAll(aiCourses.stream()
-                    .map(response -> CourseRecommendationResponse.builder()
-                            .courseId(response.getCourseId())
-                            .courseName(response.getCourseName())
-                            .courseDescription(response.getCourseDescription())
-                            .courseImage(response.getCourseImage())
-                            .courseType("AI")
-                            .build())
-                    .collect(Collectors.toList()));
+                    .map(CourseRecommendationResponse::from)
+                    .toList());
         }
 
         return recommendedCourses;
