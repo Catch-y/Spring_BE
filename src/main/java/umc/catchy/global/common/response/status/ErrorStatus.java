@@ -18,6 +18,8 @@ public enum ErrorStatus implements BaseErrorCode {
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "COMMON405", "유효성 검증에 실패했습니다."),
     INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "COMMON405", "유효하지 않은 파라미터입니다."),
 
+    // 프로필 관련 에러
+    PROFILE_IMAGE_EMPTY(HttpStatus.BAD_REQUEST, "MEMBER400", "프로필 이미지를 첨부해주세요."),
 
     // 소셜 로그인 관련 에러
     PLATFORM_BAD_REQUEST(HttpStatus.BAD_REQUEST, "SOCIAL400", "유효하지 않은 소셜 플랫폼입니다. (KAKAO 또는 APPLE만 허용)"),

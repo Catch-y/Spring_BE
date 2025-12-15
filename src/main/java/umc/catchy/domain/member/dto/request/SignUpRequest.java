@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-
 public record SignUpRequest(
         @NotBlank(message = "accessToken은 필수 입력 항목입니다.")
         String accessToken,
@@ -16,5 +15,4 @@ public record SignUpRequest(
         @Size(min = 1, max = 8, message = "닉네임은 1자 이상 8자 이하여야합니다.")
         String nickname
 ) {
-
 }
