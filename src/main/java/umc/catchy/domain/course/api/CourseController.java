@@ -66,7 +66,7 @@ public class CourseController {
     @GetMapping("/search")
     public ResponseEntity<BaseResponse<MemberCourseSliceResponse>> getMemberCourses(
             @Parameter(description = "AI/DIY 선택", required = true)
-            @RequestParam(value = "type") CourseType type, // Enum 직접 바인딩
+            @RequestParam(value = "type") CourseType type,
 
             @RequestParam(value = "upperLocation", defaultValue = "all") String upperLocation,
             @RequestParam(value = "lowerLocation", defaultValue = "all") String lowerLocation,
