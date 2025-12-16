@@ -44,10 +44,9 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class CourseController {
 
-    private final CourseService courseService;                         // 기본 CRUD (상세 조회, 내 코스, 생성, 수정, 삭제)
-    private final AICourseGenerationService aiCourseGenerationService; // AI 생성 관련
-    private final CourseRecommendationService courseRecommendationService; // 추천 및 랭킹 관련
-
+    private final CourseService courseService;
+    private final AICourseGenerationService aiCourseGenerationService;
+    private final CourseRecommendationService courseRecommendationService;
     private final CourseReviewService courseReviewService;
     private final MemberCourseService memberCourseService;
     private final PlaceService placeService;
@@ -131,7 +130,10 @@ public class CourseController {
     @Operation(summary = "코스 생성(AI) API", description = "AI가 생성하는 코스")
     @PostMapping("/generate-ai")
     public CompletableFuture<ResponseEntity<BaseResponse<GptCourseInfoResponse>>> generateCourseWithAI() {
-        return aiCourseGenerationService.generateCourseAutomatically(false)
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        aiCourseGenerationService.increaseGptCount(memberId);
+
+        return aiCourseGenerationService.generateCourseAutomatically(memberId)
                 .thenApply(response -> ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response)));
     }
 

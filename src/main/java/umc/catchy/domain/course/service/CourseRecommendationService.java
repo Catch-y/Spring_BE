@@ -13,7 +13,12 @@ import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
+import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
+import umc.catchy.domain.member.dao.MemberRepository;
+import umc.catchy.domain.member.domain.Member;
+import umc.catchy.global.common.response.status.ErrorStatus;
+import umc.catchy.global.error.exception.GeneralException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +36,9 @@ public class CourseRecommendationService {
     private long CACHE_TTL;
 
     private final CourseRepository courseRepository;
-    private final AICourseGenerationService aiCourseGenerationService; // AI 서비스 주입
+    private final MemberRepository memberRepository;
+    private final CourseService courseService;
+    private final AICourseGenerationService aiCourseGenerationService;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
 
@@ -50,7 +57,7 @@ public class CourseRecommendationService {
         return recommendedCourses;
     }
 
-    @Transactional // AI 생성이 포함되므로 트랜잭션 필요
+    @Transactional
     public List<CourseRecommendationResponse> generateRecommendedCourses(Long memberId) {
         List<Course> userCourses = courseRepository.findTop2ByMemberIdAndCourseTypeOrderByCreatedDateDesc(
                 memberId, CourseType.DIY
@@ -60,17 +67,24 @@ public class CourseRecommendationService {
         int aiCourseCount = 5 - userCourseCount;
 
         List<CourseRecommendationResponse> recommendedCourses = new ArrayList<>();
-
-        // 1. DIY 코스
         recommendedCourses.addAll(userCourses.stream()
                 .map(CourseRecommendationResponse::from)
                 .toList());
 
         if (aiCourseCount > 0) {
-            // 2. AI 코스 부족 시 생성 (AI 서비스 호출)
-            aiCourseGenerationService.generateMultipleAICourses(memberId, aiCourseCount, true).join();
+            // 1. AI에게 생성 요청 (데이터만 받아옴)
+            List<GptCourseInfoResponse> gptResponses = aiCourseGenerationService
+                    .generateMultipleAICourses(memberId, aiCourseCount).join();
 
-            // 저장된 AI 코스 DB 조회
+            Member member = memberRepository.findById(memberId)
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+            // 2. 받은 데이터를 CourseService를 통해 DB에 저장
+            for (GptCourseInfoResponse gptResponse : gptResponses) {
+                courseService.saveCourseAndPlaces(gptResponse, member);
+            }
+
+            // 3. 저장된 데이터 다시 조회 (기존 로직 유지 - ID 및 생성일자 기준 정렬 보장)
             List<Course> aiCourses = courseRepository.findTopNByMemberIdAndCourseTypeOrderByCreatedDateDesc(
                     memberId,
                     CourseType.AI,

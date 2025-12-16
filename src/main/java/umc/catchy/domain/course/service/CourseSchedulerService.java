@@ -8,7 +8,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
-import umc.catchy.global.common.constants.FcmConstants;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.infra.config.fcm.FCMService;
@@ -41,7 +40,7 @@ public class CourseSchedulerService {
 
         List<CompletableFuture<Void>> futures = allMemberIds.stream()
                 .map(memberId -> CompletableFuture.runAsync(() -> processMemberRecommendation(memberId)))
-                .collect(Collectors.toList());
+                .toList();
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
