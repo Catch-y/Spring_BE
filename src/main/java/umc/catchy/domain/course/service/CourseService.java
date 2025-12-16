@@ -1,16 +1,13 @@
 package umc.catchy.domain.course.service;
 
 import java.time.LocalTime;
-import java.util.UUID;
-import java.util.stream.IntStream;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.time.format.DateTimeParseException;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.data.domain.Slice;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,20 +37,12 @@ import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
 
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @EnableAsync
-@Transactional
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CourseService {
-
-    @Value("${cache.recommended-courses.key}")
-    private String CACHE_KEY;
-
-    @Value("${cache.recommended-courses.ttl}")
-    private long CACHE_TTL;
 
     private final CourseRepository courseRepository;
     private final CourseReviewRepository courseReviewRepository;
@@ -63,9 +52,6 @@ public class CourseService {
     private final MemberCourseRepository memberCourseRepository;
     private final AmazonS3Manager amazonS3Manager;
     private final PlaceRepository placeRepository;
-
-    @PersistenceContext
-    private EntityManager entityManager;
 
     public List<Long> getAllMemberIds() {
         return memberRepository.findAll().stream()
@@ -78,6 +64,7 @@ public class CourseService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
     }
 
+    @Transactional
     public void saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Member member) {
         Pair<LocalTime, LocalTime> recommendTime = parseRecommendTime(parsedResponse.recommendTime());
 
@@ -94,30 +81,11 @@ public class CourseService {
 
         Course savedCourse = courseRepository.save(course);
 
-        int order = 1;
-        double totalRating = 0.0;
-        int placeCount = 0;
+        List<Long> placeIds = parsedResponse.placeInfos().stream()
+                .map(GptPlaceInfoResponse::placeId)
+                .toList();
 
-        for (GptPlaceInfoResponse placeInfo : parsedResponse.placeInfos()) {
-            Place place = placeRepository.findById(placeInfo.placeId())
-                    .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
-
-            PlaceCourse placeCourse = PlaceCourse.builder()
-                    .course(savedCourse)
-                    .place(place)
-                    .placeOrder(order++)
-                    .build();
-
-            placeCourseRepository.save(placeCourse);
-
-            if (place.getRating() != null && place.getRating() > 0) {
-                totalRating += place.getRating();
-                placeCount++;
-            }
-        }
-
-        double courseRating = placeCount > 0 ? totalRating / placeCount : 0.0;
-        savedCourse.updateRating(courseRating);
+        registerPlacesToCourse(savedCourse, placeIds);
 
         MemberCourse memberCourse = MemberCourse.builder()
                 .course(savedCourse)
@@ -126,38 +94,34 @@ public class CourseService {
         memberCourseRepository.save(memberCourse);
     }
 
-    private Pair<LocalTime, LocalTime> parseRecommendTime(String recommendTime) {
-        try {
-            String[] times = recommendTime.split("~");
-            LocalTime startTime = LocalTime.parse(times[0].trim());
-            LocalTime endTime = times[1].equals("24:00") ? LocalTime.MIDNIGHT : LocalTime.parse(times[1].trim());
-            return Pair.of(startTime, endTime);
-        } catch (DateTimeParseException e) {
-            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
+    @Transactional
+    public CourseDetailResponse createCourse(CourseCreateRequest request) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        String courseImageUrl = null;
+        if (request.courseImage() != null) {
+            String keyName = "course-images/" + UUID.randomUUID();
+            courseImageUrl = amazonS3Manager.uploadFile(keyName, request.courseImage());
         }
+
+        Course course = request.toEntity(member, courseImageUrl);
+        Course savedCourse = courseRepository.save(course);
+
+        registerPlacesToCourse(savedCourse, request.placeIds());
+
+        MemberCourse memberCourse = MemberCourse.builder()
+                .course(savedCourse)
+                .member(member)
+                .build();
+        memberCourseRepository.save(memberCourse);
+
+        List<CourseDetailResponse.CoursePlaceInfo> placeListOfCourse = getPlaceListOfCourse(savedCourse, member);
+        return CourseDetailResponse.from(savedCourse, calculateNumberOfReviews(savedCourse), false, placeListOfCourse);
     }
 
-    public CourseDetailResponse getCourseDetails(Long courseId) {
-        Course course = getCourse(courseId);
-        Long memberId = SecurityUtil.getCurrentMemberId();
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-
-        List<CourseDetailResponse.CoursePlaceInfo> placeListOfCourse = getPlaceListOfCourse(course, member);
-
-        return CourseDetailResponse.from(course, calculateNumberOfReviews(course), getBookmarks(course, member), placeListOfCourse);
-    }
-
-    public MemberCourseSliceResponse getMemberCourses(CourseType courseType, String upperLocation, String lowerLocation, Long lastId) {
-        Long memberId = SecurityUtil.getCurrentMemberId();
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-
-        Slice<MemberCourseResponse> responses = memberCourseRepository.findCourseByFilters(courseType, upperLocation, lowerLocation, memberId, lastId);
-
-        return MemberCourseSliceResponse.from(responses);
-    }
-
+    @Transactional
     public CourseDetailResponse updateCourse(Long courseId, CourseUpdateRequest request) {
         Course course = getCourse(courseId);
         Long memberId = SecurityUtil.getCurrentMemberId();
@@ -184,22 +148,11 @@ public class CourseService {
         }
 
         if (!request.placeIds().isEmpty()) {
-            List<Long> placeIds = request.placeIds();
             List<PlaceCourse> originPlaces = placeCourseRepository.findAllByCourse(course);
             placeCourseRepository.deleteAll(originPlaces);
+            placeCourseRepository.flush();
 
-            IntStream.range(0, placeIds.size()).forEach(index -> {
-                Long placeId = placeIds.get(index);
-                Place place = placeRepository.findById(placeId)
-                        .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
-
-                PlaceCourse newPlaceCourse = PlaceCourse.builder()
-                        .course(course)
-                        .place(place)
-                        .placeOrder(index + 1)
-                        .build();
-                placeCourseRepository.save(newPlaceCourse);
-            });
+            registerPlacesToCourse(course, request.placeIds());
         }
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
@@ -213,6 +166,46 @@ public class CourseService {
         return CourseDetailResponse.from(course, calculateNumberOfReviews(course), getBookmarks(course, member), placeListOfCourse);
     }
 
+    private void registerPlacesToCourse(Course course, List<Long> placeIds) {
+        List<Place> places = placeRepository.findAllById(placeIds);
+
+        Map<Long, Place> placeMap = places.stream()
+                .collect(Collectors.toMap(Place::getId, p -> p));
+
+        List<Place> sortedPlaces = placeIds.stream()
+                .map(placeMap::get)
+                .filter(Objects::nonNull)
+                .toList();
+
+        List<PlaceCourse> placeCourses = new ArrayList<>();
+        double totalRating = 0.0;
+        int validRatingCount = 0;
+
+        for (int i = 0; i < sortedPlaces.size(); i++) {
+            Place place = sortedPlaces.get(i);
+
+            placeCourses.add(PlaceCourse.builder()
+                    .course(course)
+                    .place(place)
+                    .placeOrder(i + 1)
+                    .build());
+
+            if (place.getRating() != null && place.getRating() > 0) {
+                totalRating += place.getRating();
+                validRatingCount++;
+            }
+        }
+
+        placeCourseRepository.saveAll(placeCourses);
+
+        double averageRating = 0.0;
+        if (validRatingCount > 0) {
+            averageRating = totalRating / validRatingCount;
+        }
+        course.updateRating(averageRating);
+    }
+
+    @Transactional
     public void deleteCourse(Long courseId) {
         Course course = getCourse(courseId);
 
@@ -229,54 +222,43 @@ public class CourseService {
         courseRepository.delete(course);
     }
 
-    public CourseDetailResponse createCourse(CourseCreateRequest request) {
+    public CourseDetailResponse getCourseDetails(Long courseId) {
+        Course course = getCourse(courseId);
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        String courseImageUrl = null;
-        if (request.courseImage() != null) {
-            String keyName = "course-images/" + UUID.randomUUID();
-            courseImageUrl = amazonS3Manager.uploadFile(keyName, request.courseImage());
-        }
-
-        Course course = request.toEntity(member, courseImageUrl);
-
-        List<Long> placeIds = request.placeIds();
-        Double averageRating = placeIds.stream()
-                .map(placeId -> placeRepository.findById(placeId)
-                        .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND))
-                        .getRating())
-                .filter(rating -> rating != null && rating > 0)
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0);
-
-        course.updateRating(averageRating);
-        courseRepository.save(course);
-
-        Course finalCourse = course;
-        IntStream.range(0, placeIds.size()).forEach(index -> {
-            Long placeId = placeIds.get(index);
-            Place place = placeRepository.findById(placeId)
-                    .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
-
-            PlaceCourse newPlaceCourse = PlaceCourse.builder()
-                    .course(finalCourse)
-                    .place(place)
-                    .placeOrder(index + 1)
-                    .build();
-            placeCourseRepository.save(newPlaceCourse);
-        });
-
-        MemberCourse memberCourse = MemberCourse.builder()
-                .course(course)
-                .member(member)
-                .build();
-        memberCourseRepository.save(memberCourse);
-
         List<CourseDetailResponse.CoursePlaceInfo> placeListOfCourse = getPlaceListOfCourse(course, member);
-        return CourseDetailResponse.from(course, calculateNumberOfReviews(course), false, placeListOfCourse);
+
+        return CourseDetailResponse.from(course, calculateNumberOfReviews(course), getBookmarks(course, member), placeListOfCourse);
+    }
+
+    public MemberCourseSliceResponse getMemberCourses(CourseType courseType, String upperLocation, String lowerLocation, Long lastId) {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        Slice<MemberCourseResponse> responses = memberCourseRepository.findCourseByFilters(courseType, upperLocation, lowerLocation, memberId, lastId);
+
+        return MemberCourseSliceResponse.from(responses);
+    }
+
+    private Pair<LocalTime, LocalTime> parseRecommendTime(String recommendTime) {
+        try {
+            String[] times = recommendTime.split("~");
+            LocalTime startTime = LocalTime.parse(times[0].trim());
+            LocalTime endTime;
+
+            if (times[1].equals("24:00")) {
+                endTime = LocalTime.MIDNIGHT;
+            } else {
+                endTime = LocalTime.parse(times[1].trim());
+            }
+
+            return Pair.of(startTime, endTime);
+        } catch (DateTimeParseException e) {
+            throw new GeneralException(ErrorStatus.INVALID_REQUEST_INFO);
+        }
     }
 
     private List<CourseDetailResponse.CoursePlaceInfo> getPlaceListOfCourse(Course course, Member member) {
@@ -291,7 +273,10 @@ public class CourseService {
     }
 
     private Integer calculateNumberOfReviews(Course course) {
-        return !course.isHasReview() ? 0 : courseReviewRepository.countAllByCourse(course);
+        if (!course.isHasReview()) {
+            return 0;
+        }
+        return courseReviewRepository.countAllByCourse(course);
     }
 
     private Boolean getBookmarks(Course course, Member member) {
@@ -299,5 +284,4 @@ public class CourseService {
                 .map(MemberCourse::isBookmark)
                 .orElse(false);
     }
-
 }
