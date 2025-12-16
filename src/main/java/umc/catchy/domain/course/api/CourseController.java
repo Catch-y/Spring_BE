@@ -18,6 +18,8 @@ import umc.catchy.domain.course.dto.response.CourseDetailResponse;
 import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
+import umc.catchy.domain.course.service.AICourseGenerationService;
+import umc.catchy.domain.course.service.CourseRecommendationService;
 import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
@@ -42,7 +44,10 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class CourseController {
 
-    private final CourseService courseService;
+    private final CourseService courseService;                         // 기본 CRUD (상세 조회, 내 코스, 생성, 수정, 삭제)
+    private final AICourseGenerationService aiCourseGenerationService; // AI 생성 관련
+    private final CourseRecommendationService courseRecommendationService; // 추천 및 랭킹 관련
+
     private final CourseReviewService courseReviewService;
     private final MemberCourseService memberCourseService;
     private final PlaceService placeService;
@@ -62,7 +67,7 @@ public class CourseController {
     @GetMapping("/search")
     public ResponseEntity<BaseResponse<MemberCourseSliceResponse>> getMemberCourses(
             @Parameter(description = "AI/DIY 선택", required = true)
-            @RequestParam(value = "type") CourseType type,
+            @RequestParam(value = "type") CourseType type, // Enum 직접 바인딩
 
             @RequestParam(value = "upperLocation", defaultValue = "all") String upperLocation,
             @RequestParam(value = "lowerLocation", defaultValue = "all") String lowerLocation,
@@ -102,14 +107,13 @@ public class CourseController {
         courseService.deleteCourse(courseId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
-      
+
     @Operation(summary = "코스 리뷰 작성 API", description = "코스 리뷰 작성을 위한 API, 멤버가 해당 코스의 과반수 이상의 장소에 방문 체크를 성공하였을 때 리뷰 작성 권한이 주어집니다.")
     @PostMapping(value = "/{courseId}/review", consumes = "multipart/form-data")
     public ResponseEntity<BaseResponse<PostCourseReviewResponse.newCourseReviewResponseDTO>> postCourseReview(
             @PathVariable Long courseId,
             @Valid @ModelAttribute PostCourseReviewRequest request
-        ){
-        //빈 이미지 리스트 처리
+    ){
         if (request.getImages() == null || request.getImages().isEmpty()) {
             request.setImages(Collections.emptyList());
         }
@@ -127,7 +131,7 @@ public class CourseController {
     @Operation(summary = "코스 생성(AI) API", description = "AI가 생성하는 코스")
     @PostMapping("/generate-ai")
     public CompletableFuture<ResponseEntity<BaseResponse<GptCourseInfoResponse>>> generateCourseWithAI() {
-        return courseService.generateCourseAutomatically(false)
+        return aiCourseGenerationService.generateCourseAutomatically(false)
                 .thenApply(response -> ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response)));
     }
 
@@ -148,7 +152,6 @@ public class CourseController {
             @PathVariable("placeId") Long placeId
     ) {
         PlaceVisitedResponse response = placeVisitService.check(courseId, placeId);
-
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
@@ -156,14 +159,14 @@ public class CourseController {
     @GetMapping("/home/personal-courses")
     public ResponseEntity<BaseResponse<List<CourseRecommendationResponse>>> getHomeRecommendedCourses(@AuthenticationPrincipal UserDetails userDetails) {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        List<CourseRecommendationResponse> recommendedCourses = courseService.getHomeRecommendedCourses(memberId);
+        List<CourseRecommendationResponse> recommendedCourses = courseRecommendationService.getHomeRecommendedCourses(memberId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, recommendedCourses));
     }
 
     @Operation(summary = "인기 코스 조회 API", description = "전체 사용자 데이터를 기반으로 상위 10개의 인기 코스를 조회하는 API입니다.")
     @GetMapping("/top10")
     public ResponseEntity<BaseResponse<List<PopularCourseInfoResponse>>> getPopularCourse(){
-        List<PopularCourseInfoResponse> response = courseService.getPopularCourses();
+        List<PopularCourseInfoResponse> response = courseRecommendationService.getPopularCourses();
         return  ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 

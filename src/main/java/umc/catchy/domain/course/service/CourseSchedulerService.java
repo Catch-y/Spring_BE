@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.global.common.constants.FcmConstants;
@@ -24,9 +23,13 @@ import static umc.catchy.global.common.constants.FcmConstants.*;
 @Service
 @RequiredArgsConstructor
 public class CourseSchedulerService {
+
     @Value("${cache.recommended-courses.key}")
     private String CACHE_KEY;
+
     private final CourseService courseService;
+    private final CourseRecommendationService courseRecommendationService;
+
     private final RedisTemplate<String, String> redisTemplate;
     private final MemberRepository memberRepository;
     private final FCMService fcmService;
@@ -47,8 +50,12 @@ public class CourseSchedulerService {
         try {
             String userSpecificCacheKey = CACHE_KEY + ":" + memberId;
             redisTemplate.delete(userSpecificCacheKey);
-            courseService.getHomeRecommendedCourses(memberId);
-            Member member = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+            courseRecommendationService.getHomeRecommendedCourses(memberId);
+
+            Member member = memberRepository.findById(memberId)
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
             if (member.getFcmInfo().getAppAlarm()) {
                 fcmService.sendMessageSync(member.getFcmInfo().getFcmToken(), COURSE_UPDATED_MESSAGE_TITLE, COURSE_UPDATED_MESSAGE_CONTENT);
             }
