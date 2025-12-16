@@ -10,6 +10,9 @@ import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.place.domain.Place;
 
 @Entity
+@Table(name = "place_course", indexes = {
+        @Index(name = "idx_place_course_id_order", columnList = "course_id, place_order")
+})
 @Getter
 @Builder
 @NoArgsConstructor
