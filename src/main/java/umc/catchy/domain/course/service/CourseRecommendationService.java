@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 @Transactional(readOnly = true)
 public class CourseRecommendationService {
 
+    private static final int TOTAL_RECOMMENDATION_COUNT = 5;
+
     @Value("${cache.recommended-courses.key}")
     private String CACHE_KEY;
 
@@ -64,7 +66,7 @@ public class CourseRecommendationService {
         );
 
         int userCourseCount = userCourses.size();
-        int aiCourseCount = 5 - userCourseCount;
+        int aiCourseCount = TOTAL_RECOMMENDATION_COUNT - userCourseCount;
 
         List<CourseRecommendationResponse> recommendedCourses = new ArrayList<>();
         recommendedCourses.addAll(userCourses.stream()
@@ -72,19 +74,16 @@ public class CourseRecommendationService {
                 .toList());
 
         if (aiCourseCount > 0) {
-            // 1. AI에게 생성 요청 (데이터만 받아옴)
             List<GptCourseInfoResponse> gptResponses = aiCourseGenerationService
                     .generateMultipleAICourses(memberId, aiCourseCount).join();
 
             Member member = memberRepository.findById(memberId)
                     .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-            // 2. 받은 데이터를 CourseService를 통해 DB에 저장
             for (GptCourseInfoResponse gptResponse : gptResponses) {
                 courseService.saveCourseAndPlaces(gptResponse, member);
             }
 
-            // 3. 저장된 데이터 다시 조회 (기존 로직 유지 - ID 및 생성일자 기준 정렬 보장)
             List<Course> aiCourses = courseRepository.findTopNByMemberIdAndCourseTypeOrderByCreatedDateDesc(
                     memberId,
                     CourseType.AI,

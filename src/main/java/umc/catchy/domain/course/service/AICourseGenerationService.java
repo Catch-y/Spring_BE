@@ -28,12 +28,18 @@ import umc.catchy.global.error.exception.GeneralException;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AICourseGenerationService {
+
+    private static final int MAX_PLACE_CANDIDATES = 100;
+    private static final int GPT_MAX_TOKENS = 500;
+    private static final double GPT_TEMPERATURE = 0.7;
+    private static final String DEFAULT_COURSE_NAME = "AI 추천 코스";
+    private static final String DEFAULT_COURSE_DESCRIPTION = "AI가 추천한 여행 코스입니다.";
+    private static final String DEFAULT_TIME_RANGE = "09:00~21:00";
 
     private final WebClient gptWebClient;
 
@@ -73,7 +79,7 @@ public class AICourseGenerationService {
                 .toList();
 
         List<Long> preferredCategoryIds = categoryRepository.findIdsByNames(preferredCategories);
-        List<Place> places = getRecommendedPlacesForPrompt(regionList, preferredCategoryIds, memberId, 100);
+        List<Place> places = getRecommendedPlacesForPrompt(regionList, preferredCategoryIds, memberId, MAX_PLACE_CANDIDATES);
 
         String gptPrompt = buildGptPrompt(regionList, places, preferredCategories, userStyles, activeTimes);
 
@@ -109,8 +115,8 @@ public class AICourseGenerationService {
                 "messages", List.of(
                         Map.of("role", "user", "content", prompt)
                 ),
-                "max_tokens", 1000,
-                "temperature", 0.7
+                "max_tokens", GPT_MAX_TOKENS,
+                "temperature", GPT_TEMPERATURE
         );
 
         return gptWebClient.post()
@@ -205,9 +211,9 @@ public class AICourseGenerationService {
 
                 JsonNode contentNode = objectMapper.readTree(content);
 
-                String courseName = contentNode.path("courseName").asText("AI 추천 코스");
-                String courseDescription = contentNode.path("courseDescription").asText("AI가 추천한 여행 코스입니다.");
-                String recommendTime = contentNode.path("recommendTime").asText("09:00~21:00");
+                String courseName = contentNode.path("courseName").asText(DEFAULT_COURSE_NAME);
+                String courseDescription = contentNode.path("courseDescription").asText(DEFAULT_COURSE_DESCRIPTION);
+                String recommendTime = contentNode.path("recommendTime").asText(DEFAULT_TIME_RANGE);
 
                 List<Long> placeIds = new ArrayList<>();
                 JsonNode placesNode = contentNode.path("places");

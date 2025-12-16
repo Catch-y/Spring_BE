@@ -14,7 +14,6 @@ import umc.catchy.infra.config.fcm.FCMService;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 import static umc.catchy.global.common.constants.FcmConstants.*;
 
@@ -22,6 +21,8 @@ import static umc.catchy.global.common.constants.FcmConstants.*;
 @Service
 @RequiredArgsConstructor
 public class CourseSchedulerService {
+
+    private static final String KEY_DELIMITER = ":";
 
     @Value("${cache.recommended-courses.key}")
     private String CACHE_KEY;
@@ -47,7 +48,7 @@ public class CourseSchedulerService {
 
     private void processMemberRecommendation(Long memberId) {
         try {
-            String userSpecificCacheKey = CACHE_KEY + ":" + memberId;
+            String userSpecificCacheKey = CACHE_KEY + KEY_DELIMITER + memberId;
             redisTemplate.delete(userSpecificCacheKey);
 
             courseRecommendationService.getHomeRecommendedCourses(memberId);

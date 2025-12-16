@@ -44,6 +44,11 @@ import java.time.format.DateTimeFormatter;
 @Transactional(readOnly = true)
 public class CourseService {
 
+    private static final String COURSE_IMAGE_PREFIX = "course-images/";
+    private static final String TIME_FORMAT = "HH:mm";
+    private static final String MIDNIGHT_STRING = "24:00";
+    private static final String TIME_RANGE_DELIMITER = "~";
+
     private final CourseRepository courseRepository;
     private final CourseReviewRepository courseReviewRepository;
     private final PlaceCourseRepository placeCourseRepository;
@@ -102,7 +107,7 @@ public class CourseService {
 
         String courseImageUrl = null;
         if (request.courseImage() != null) {
-            String keyName = "course-images/" + UUID.randomUUID();
+            String keyName = COURSE_IMAGE_PREFIX + UUID.randomUUID();
             courseImageUrl = amazonS3Manager.uploadFile(keyName, request.courseImage());
         }
 
@@ -142,7 +147,7 @@ public class CourseService {
             }
 
             MultipartFile newCourseImage = request.courseImage();
-            String keyName = "course-images/" + UUID.randomUUID();
+            String keyName = COURSE_IMAGE_PREFIX + UUID.randomUUID();
             String newImageUrl = amazonS3Manager.uploadFile(keyName, newCourseImage);
             course.updateCourseImage(newImageUrl);
         }
@@ -155,7 +160,7 @@ public class CourseService {
             registerPlacesToCourse(course, request.placeIds());
         }
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(TIME_FORMAT);
         if (!request.recommendTimeStart().isEmpty() && !request.recommendTimeEnd().isEmpty()) {
             LocalTime startTime = LocalTime.parse(request.recommendTimeStart(), formatter);
             LocalTime endTime = LocalTime.parse(request.recommendTimeEnd(), formatter);
@@ -245,11 +250,11 @@ public class CourseService {
 
     private Pair<LocalTime, LocalTime> parseRecommendTime(String recommendTime) {
         try {
-            String[] times = recommendTime.split("~");
+            String[] times = recommendTime.split(TIME_RANGE_DELIMITER);
             LocalTime startTime = LocalTime.parse(times[0].trim());
             LocalTime endTime;
 
-            if (times[1].equals("24:00")) {
+            if (times[1].equals(MIDNIGHT_STRING)) {
                 endTime = LocalTime.MIDNIGHT;
             } else {
                 endTime = LocalTime.parse(times[1].trim());
