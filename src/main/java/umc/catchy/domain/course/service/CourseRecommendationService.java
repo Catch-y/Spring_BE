@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -24,12 +25,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CourseRecommendationService {
 
     private static final int TOTAL_RECOMMENDATION_COUNT = 5;
+    private static final int MAX_DIY_COURSE_COUNT = 2;
+    private static final String KEY_DELIMITER = ":";
 
     @Value("${cache.recommended-courses.key}")
     private String CACHE_KEY;
@@ -45,57 +49,46 @@ public class CourseRecommendationService {
     private final ObjectMapper objectMapper;
 
     public List<CourseRecommendationResponse> getHomeRecommendedCourses(Long memberId) {
-        String userSpecificCacheKey = CACHE_KEY + ":" + memberId;
-        String cachedData = redisTemplate.opsForValue().get(userSpecificCacheKey);
+        String userSpecificCacheKey = CACHE_KEY + KEY_DELIMITER + memberId;
 
+        String cachedData = redisTemplate.opsForValue().get(userSpecificCacheKey);
         if (cachedData != null) {
-            return deserializeCourseRecommendations(cachedData);
+            List<CourseRecommendationResponse> cachedResponse = deserializeCourseRecommendations(cachedData);
+            if (cachedResponse != null) {
+                return cachedResponse;
+            }
         }
 
         List<CourseRecommendationResponse> recommendedCourses = generateRecommendedCourses(memberId);
+
         String serializedData = serializeCourseRecommendations(recommendedCourses);
-        redisTemplate.opsForValue().set(userSpecificCacheKey, serializedData, CACHE_TTL, TimeUnit.SECONDS);
+        if (serializedData != null) {
+            redisTemplate.opsForValue().set(userSpecificCacheKey, serializedData, CACHE_TTL, TimeUnit.SECONDS);
+        }
 
         return recommendedCourses;
     }
 
     @Transactional
     public List<CourseRecommendationResponse> generateRecommendedCourses(Long memberId) {
-        List<Course> userCourses = courseRepository.findTop2ByMemberIdAndCourseTypeOrderByCreatedDateDesc(
-                memberId, CourseType.DIY
+        List<Course> userCourses = courseRepository.findTopNByMemberIdAndCourseTypeOrderByCreatedDateDesc(
+                memberId,
+                CourseType.DIY,
+                PageRequest.of(0, MAX_DIY_COURSE_COUNT)
         );
 
-        int userCourseCount = userCourses.size();
-        int aiCourseCount = TOTAL_RECOMMENDATION_COUNT - userCourseCount;
+        int neededAiCount = TOTAL_RECOMMENDATION_COUNT - userCourses.size();
+        List<Course> aiCourses = List.of();
 
-        List<CourseRecommendationResponse> recommendedCourses = new ArrayList<>();
-        recommendedCourses.addAll(userCourses.stream()
-                .map(CourseRecommendationResponse::from)
-                .toList());
-
-        if (aiCourseCount > 0) {
-            List<GptCourseInfoResponse> gptResponses = aiCourseGenerationService
-                    .generateMultipleAICourses(memberId, aiCourseCount).join();
-
-            Member member = memberRepository.findById(memberId)
-                    .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-
-            for (GptCourseInfoResponse gptResponse : gptResponses) {
-                courseService.saveCourseAndPlaces(gptResponse, member);
-            }
-
-            List<Course> aiCourses = courseRepository.findTopNByMemberIdAndCourseTypeOrderByCreatedDateDesc(
-                    memberId,
-                    CourseType.AI,
-                    PageRequest.of(0, aiCourseCount)
-            );
-
-            recommendedCourses.addAll(aiCourses.stream()
-                    .map(CourseRecommendationResponse::from)
-                    .toList());
+        if (neededAiCount > 0) {
+            aiCourses = createAndFetchAiCourses(memberId, neededAiCount);
         }
 
-        return recommendedCourses;
+        List<CourseRecommendationResponse> result = new ArrayList<>();
+        result.addAll(toResponseList(userCourses));
+        result.addAll(toResponseList(aiCourses));
+
+        return result;
     }
 
     public List<PopularCourseInfoResponse> getPopularCourses() {
@@ -104,20 +97,45 @@ public class CourseRecommendationService {
                 .toList();
     }
 
+    private List<Course> createAndFetchAiCourses(Long memberId, int count) {
+        List<GptCourseInfoResponse> gptResponses = aiCourseGenerationService
+                .generateMultipleAICourses(memberId, count).join();
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+
+        for (GptCourseInfoResponse gptResponse : gptResponses) {
+            courseService.saveCourseAndPlaces(gptResponse, member);
+        }
+
+        return courseRepository.findTopNByMemberIdAndCourseTypeOrderByCreatedDateDesc(
+                memberId,
+                CourseType.AI,
+                PageRequest.of(0, count)
+        );
+    }
+
+    private List<CourseRecommendationResponse> toResponseList(List<Course> courses) {
+        return courses.stream()
+                .map(CourseRecommendationResponse::from)
+                .toList();
+    }
+
     private String serializeCourseRecommendations(List<CourseRecommendationResponse> courses) {
         try {
             return objectMapper.writeValueAsString(courses);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to serialize course recommendations", e);
+            log.error("[Cache Error] 추천 코스 직렬화 실패: {}", e.getMessage());
+            return null;
         }
     }
 
     private List<CourseRecommendationResponse> deserializeCourseRecommendations(String cachedData) {
         try {
-            return objectMapper.readValue(cachedData, new TypeReference<List<CourseRecommendationResponse>>() {
-            });
+            return objectMapper.readValue(cachedData, new TypeReference<List<CourseRecommendationResponse>>() {});
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to deserialize course recommendations", e);
+            log.error("[Cache Error] 추천 코스 역직렬화 실패 (Data: {}): {}", cachedData, e.getMessage());
+            return null;
         }
     }
 }
