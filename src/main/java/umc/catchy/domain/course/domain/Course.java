@@ -12,6 +12,9 @@ import umc.catchy.domain.member.domain.Member;
 import java.time.LocalTime;
 
 @Entity
+@Table(name = "course", indexes = {
+        @Index(name = "idx_course_member_type_date", columnList = "member_id, course_type, created_date desc")
+})
 @Getter
 @Builder
 @AllArgsConstructor
