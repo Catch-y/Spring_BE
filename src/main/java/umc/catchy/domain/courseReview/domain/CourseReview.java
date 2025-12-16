@@ -9,6 +9,9 @@ import umc.catchy.domain.member.domain.Member;
 import java.time.LocalDate;
 
 @Entity
+@Table(name = "course_review", indexes = {
+        @Index(name = "idx_course_review_id_date", columnList = "course_id, createdAt DESC")
+})
 @Getter
 @Builder
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
