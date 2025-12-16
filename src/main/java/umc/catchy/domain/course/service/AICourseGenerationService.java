@@ -37,9 +37,21 @@ public class AICourseGenerationService {
     private static final int MAX_PLACE_CANDIDATES = 100;
     private static final int GPT_MAX_TOKENS = 500;
     private static final double GPT_TEMPERATURE = 0.7;
+    private static final int RANDOM_POOL_MULTIPLIER = 3;
+
     private static final String DEFAULT_COURSE_NAME = "AI 추천 코스";
     private static final String DEFAULT_COURSE_DESCRIPTION = "AI가 추천한 여행 코스입니다.";
     private static final String DEFAULT_TIME_RANGE = "09:00~21:00";
+    private static final String LOCATION_ALL = "전체";
+
+    private static final String KEY_COURSE_NAME = "courseName";
+    private static final String KEY_COURSE_DESC = "courseDescription";
+    private static final String KEY_RECOMMEND_TIME = "recommendTime";
+    private static final String KEY_PLACES = "places";
+    private static final String KEY_PLACE_ID = "placeId";
+    private static final String KEY_PLACE_NAME = "name";
+    private static final String KEY_PLACE_ADDRESS = "roadAddress";
+    private static final String KEY_PLACE_HOURS = "operatingHours";
 
     private final WebClient gptWebClient;
 
@@ -68,14 +80,7 @@ public class AICourseGenerationService {
         }
 
         List<String> regionList = memberLocations.stream()
-                .map(memberLocation -> {
-                    Location location = memberLocation.getLocation();
-                    String upper = location.getUpperLocation();
-                    String lower = location.getLowerLocation();
-                    upper = (upper != null && !upper.equals("전체")) ? upper : null;
-                    lower = (lower != null && !lower.equals("전체")) ? lower : null;
-                    return upper + (lower != null ? " " + lower : " 전체");
-                })
+                .map(this::formatRegionString)
                 .toList();
 
         List<Long> preferredCategoryIds = categoryRepository.findIdsByNames(preferredCategories);
@@ -143,34 +148,58 @@ public class AICourseGenerationService {
                 .toList();
 
         List<Place> recommendedPlaces = placeRepository.findRecommendedPlaces(preferredCategoryIds, upperRegions, lowerRegions, memberId, maxPlaces);
-        int subsetSize = Math.min(3 * maxPlaces, recommendedPlaces.size());
+
+        int subsetSize = Math.min(RANDOM_POOL_MULTIPLIER * maxPlaces, recommendedPlaces.size());
         List<Place> topPlaces = recommendedPlaces.subList(0, subsetSize);
         Collections.shuffle(topPlaces);
 
         return topPlaces.stream().limit(maxPlaces).toList();
     }
 
+    private String formatRegionString(MemberLocation memberLocation) {
+        Location location = memberLocation.getLocation();
+        String upper = location.getUpperLocation();
+        String lower = location.getLowerLocation();
+
+        if (lower == null || lower.equals(LOCATION_ALL)) {
+            return upper + " " + LOCATION_ALL;
+        }
+        return upper + " " + lower;
+    }
+
     private String buildGptPrompt(List<String> regionList, List<Place> places, List<String> preferredCategories, List<String> userStyles, List<String> activeTimes) {
         StringBuilder prompt = new StringBuilder();
 
-        prompt.append("Create a unique and creative itinerary for the following regions: ");
-        prompt.append(String.join(", ", regionList)).append(".\n");
-        prompt.append("Randomly select **2 to 5** unique places from the list below to create a diverse and interesting itinerary.\n");
-        prompt.append("Do not include all places in the itinerary.\n");
+        appendIntroAndRegions(prompt, regionList);
+        appendUserPreferences(prompt, preferredCategories, userStyles, activeTimes);
+        appendPlaceCandidates(prompt, places);
+        appendJsonOutputFormat(prompt);
 
-        prompt.append("The user's preferred categories are: ");
-        prompt.append(String.join(", ", preferredCategories)).append(".\n");
+        return prompt.toString();
+    }
+
+    private void appendIntroAndRegions(StringBuilder prompt, List<String> regionList) {
+        String introTemplate = """
+                Create a unique and creative itinerary for the following regions: %s.
+                Randomly select **2 to 5** unique places from the list below to create a diverse and interesting itinerary.
+                Do not include all places in the itinerary.
+                """;
+        prompt.append(introTemplate.formatted(String.join(", ", regionList)));
+    }
+
+    private void appendUserPreferences(StringBuilder prompt, List<String> preferredCategories, List<String> userStyles, List<String> activeTimes) {
+        prompt.append("The user's preferred categories are: ").append(String.join(", ", preferredCategories)).append(".\n");
 
         if (!userStyles.isEmpty()) {
-            prompt.append("The user prefers the following styles: ");
-            prompt.append(String.join(", ", userStyles)).append(".\n");
+            prompt.append("The user prefers the following styles: ").append(String.join(", ", userStyles)).append(".\n");
         }
 
         if (!activeTimes.isEmpty()) {
-            prompt.append("The user's preferred active times are: ");
-            prompt.append(String.join(", ", activeTimes)).append(".\n");
+            prompt.append("The user's preferred active times are: ").append(String.join(", ", activeTimes)).append(".\n");
         }
+    }
 
+    private void appendPlaceCandidates(StringBuilder prompt, List<Place> places) {
         prompt.append("Here are the places to choose from:\n");
         for (Place place : places) {
             prompt.append(String.format(
@@ -178,25 +207,44 @@ public class AICourseGenerationService {
                     place.getId(), place.getPlaceName(), place.getRoadAddress(), place.getActiveTime(), place.getCategory().getName(), place.getPlaceDescription()
             ));
         }
+    }
 
-        prompt.append("\nThe course name and description must be written in Korean.\n");
-        prompt.append("The course description should be concise, no more than 80 characters.\n");
-        prompt.append("The response should include a course name, course description, recommended visit time.\n");
-        prompt.append("Please return only the JSON structure below without any additional text, comments, or markdown formatting (e.g., no ```json). Return only the raw JSON structure:\n");
-        prompt.append("{\n");
-        prompt.append("  \"courseName\": \"string (in Korean)\",\n");
-        prompt.append("  \"courseDescription\": \"string (in Korean)\",\n");
-        prompt.append("  \"recommendTime\": \"HH:mm~HH:mm\",\n");
-        prompt.append("  \"places\": [\n");
-        prompt.append("    {\n");
-        prompt.append("      \"placeId\": \"numeric\",\n");
-        prompt.append("      \"name\": \"string\",\n");
-        prompt.append("      \"roadAddress\": \"string\",\n");
-        prompt.append("      \"operatingHours\": \"HH:mm-HH:mm\"\n");
-        prompt.append("    }\n");
-        prompt.append("  ]\n");
-        prompt.append("}\n");
-        return prompt.toString();
+    private void appendJsonOutputFormat(StringBuilder prompt) {
+        String jsonInstructions = """
+                
+                The course name and description must be written in Korean.
+                The course description should be concise, no more than 80 characters.
+                The response should include a course name, course description, recommended visit time.
+                Please return only the JSON structure below without any additional text, comments, or markdown formatting (e.g., no ```json). Return only the raw JSON structure:
+                """;
+
+        String jsonStructure = """
+                {
+                  "%s": "string (in Korean)",
+                  "%s": "string (in Korean)",
+                  "%s": "HH:mm~HH:mm",
+                  "%s": [
+                    {
+                      "%s": "numeric",
+                      "%s": "string",
+                      "%s": "string",
+                      "%s": "HH:mm-HH:mm"
+                    }
+                  ]
+                }
+                """;
+
+        prompt.append(jsonInstructions);
+        prompt.append(jsonStructure.formatted(
+                KEY_COURSE_NAME,
+                KEY_COURSE_DESC,
+                KEY_RECOMMEND_TIME,
+                KEY_PLACES,
+                KEY_PLACE_ID,
+                KEY_PLACE_NAME,
+                KEY_PLACE_ADDRESS,
+                KEY_PLACE_HOURS
+        ));
     }
 
     private GptCourseInfoResponse parseGptResponseToDto(String gptResponse) {
@@ -211,15 +259,15 @@ public class AICourseGenerationService {
 
                 JsonNode contentNode = objectMapper.readTree(content);
 
-                String courseName = contentNode.path("courseName").asText(DEFAULT_COURSE_NAME);
-                String courseDescription = contentNode.path("courseDescription").asText(DEFAULT_COURSE_DESCRIPTION);
-                String recommendTime = contentNode.path("recommendTime").asText(DEFAULT_TIME_RANGE);
+                String courseName = contentNode.path(KEY_COURSE_NAME).asText(DEFAULT_COURSE_NAME);
+                String courseDescription = contentNode.path(KEY_COURSE_DESC).asText(DEFAULT_COURSE_DESCRIPTION);
+                String recommendTime = contentNode.path(KEY_RECOMMEND_TIME).asText(DEFAULT_TIME_RANGE);
 
                 List<Long> placeIds = new ArrayList<>();
-                JsonNode placesNode = contentNode.path("places");
+                JsonNode placesNode = contentNode.path(KEY_PLACES);
                 if (placesNode.isArray()) {
                     for (JsonNode placeNode : placesNode) {
-                        placeIds.add(placeNode.path("placeId").asLong());
+                        placeIds.add(placeNode.path(KEY_PLACE_ID).asLong());
                     }
                 }
 
