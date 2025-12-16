@@ -267,12 +267,24 @@ public class CourseService {
     }
 
     private List<CourseDetailResponse.CoursePlaceInfo> getPlaceListOfCourse(Course course, Member member) {
-        return placeCourseRepository.findAllByCourse(course).stream()
-                .map(placeCourse -> {
-                    Boolean isVisited = placeVisitRepository.findByPlaceAndMember(placeCourse.getPlace(), member)
-                            .map(PlaceVisit::isVisited)
-                            .orElse(false);
-                    return CourseDetailResponse.CoursePlaceInfo.of(placeCourse.getPlace(), isVisited);
+        List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourseWithPlace(course);
+
+        List<Long> placeIds = placeCourses.stream()
+                .map(pc -> pc.getPlace().getId())
+                .toList();
+
+        Map<Long, Boolean> visitMap = placeVisitRepository
+                .findAllByPlaceIdsAndMember(placeIds, member)
+                .stream()
+                .collect(Collectors.toMap(
+                        pv -> pv.getPlace().getId(),
+                        PlaceVisit::isVisited
+                ));
+
+        return placeCourses.stream()
+                .map(pc -> {
+                    Boolean isVisited = visitMap.getOrDefault(pc.getPlace().getId(), false);
+                    return CourseDetailResponse.CoursePlaceInfo.of(pc.getPlace(), isVisited);
                 })
                 .toList();
     }
