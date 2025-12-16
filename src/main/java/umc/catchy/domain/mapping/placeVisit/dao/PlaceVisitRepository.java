@@ -36,4 +36,12 @@ public interface PlaceVisitRepository extends JpaRepository<PlaceVisit, Long> {
             @Param("placeIds") List<Long> placeIds,
             @Param("member") Member member
     );
+
+    @Query("SELECT pv FROM PlaceVisit pv " +
+            "WHERE pv.course = :course " +
+            "AND pv.member = :member")
+    List<PlaceVisit> findAllByCourseAndMember(
+            @Param("course") Course course,
+            @Param("member") Member member
+    );
 }
