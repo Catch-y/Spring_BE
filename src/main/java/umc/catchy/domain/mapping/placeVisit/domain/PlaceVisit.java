@@ -14,6 +14,9 @@ import umc.catchy.domain.place.domain.Place;
 import java.time.LocalDate;
 
 @Entity
+@Table(name = "place_visit", indexes = {
+        @Index(name = "idx_place_visit_member_course", columnList = "member_id, course_id")
+})
 @Getter
 @Builder
 @RequiredArgsConstructor
