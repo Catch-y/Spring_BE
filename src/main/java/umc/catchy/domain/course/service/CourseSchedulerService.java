@@ -2,6 +2,7 @@ package umc.catchy.domain.course.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -14,6 +15,7 @@ import umc.catchy.infra.config.fcm.FCMService;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 import static umc.catchy.global.common.constants.FcmConstants.*;
 
@@ -33,17 +35,26 @@ public class CourseSchedulerService {
     private final MemberRepository memberRepository;
     private final FCMService fcmService;
 
-    // 매주 월요일 00시 00분 00초
+    @Qualifier("schedulerExecutor")
+    private final Executor schedulerExecutor;
+
     @Scheduled(cron = "0 0 0 * * MON", zone = "Asia/Seoul")
     public void scheduledCourseGeneration() {
-        // 회원 수가 엄청 많아졌을 때, OOM 발생 가능성 존재 (추후 리팩토링 필요)
+        log.info("[Scheduler] 주간 코스 추천 캐시 갱신 시작");
+
+        // TODO: 회원 1만명 이상 시 배치 처리로 전환 필요
         List<Long> allMemberIds = courseService.getAllMemberIds();
 
         List<CompletableFuture<Void>> futures = allMemberIds.stream()
-                .map(memberId -> CompletableFuture.runAsync(() -> processMemberRecommendation(memberId)))
+                .map(memberId -> CompletableFuture.runAsync(
+                        () -> processMemberRecommendation(memberId),
+                        schedulerExecutor
+                ))
                 .toList();
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        log.info("[Scheduler] 주간 코스 추천 캐시 갱신 완료. 총 {}명 처리", allMemberIds.size());
     }
 
     private void processMemberRecommendation(Long memberId) {
@@ -60,7 +71,6 @@ public class CourseSchedulerService {
     private void refreshCourseCache(Long memberId) {
         String userSpecificCacheKey = CACHE_KEY + KEY_DELIMITER + memberId;
         redisTemplate.delete(userSpecificCacheKey);
-
         courseRecommendationService.getHomeRecommendedCourses(memberId);
     }
 
