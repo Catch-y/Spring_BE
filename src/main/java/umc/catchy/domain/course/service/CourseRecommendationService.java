@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.course.domain.CourseType;
@@ -28,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class CourseRecommendationService {
 
     private static final int TOTAL_RECOMMENDATION_COUNT = 5;
@@ -69,7 +67,6 @@ public class CourseRecommendationService {
         return recommendedCourses;
     }
 
-    @Transactional
     public List<CourseRecommendationResponse> generateRecommendedCourses(Long memberId) {
         List<Course> userCourses = courseRepository.findTopNByMemberIdAndCourseTypeOrderByCreatedDateDesc(
                 memberId,
