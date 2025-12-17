@@ -32,6 +32,7 @@ import umc.catchy.domain.mapping.placeVisit.service.PlaceVisitService;
 import umc.catchy.domain.place.dto.request.SetCategoryRequest;
 import umc.catchy.domain.place.service.PlaceService;
 import umc.catchy.global.common.response.BaseResponse;
+import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.common.response.status.SuccessStatus;
 import umc.catchy.global.util.SecurityUtil;
 
@@ -131,10 +132,19 @@ public class CourseController {
     @PostMapping("/generate-ai")
     public CompletableFuture<ResponseEntity<BaseResponse<GptCourseInfoResponse>>> generateCourseWithAI() {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        aiCourseGenerationService.increaseGptCount(memberId);
 
         return aiCourseGenerationService.generateCourseAutomatically(memberId)
-                .thenApply(response -> ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response)));
+                .thenApply(response -> {
+                    aiCourseGenerationService.increaseGptCount(memberId);
+                    return ResponseEntity.ok(
+                            BaseResponse.onSuccess(SuccessStatus._OK, response)
+                    );
+                })
+                .exceptionally(e -> {
+                    return ResponseEntity.status(500).body(
+                            BaseResponse.onFailure(ErrorStatus.GPT_API_CALL_FAILED)
+                    );
+                });
     }
 
     @Operation(summary = "장소 카테고리 선택 API", description = "새로운 장소에 대한 1개 이상의 소카테고리를 선택합니다.")

@@ -1,6 +1,7 @@
 package umc.catchy.domain.course.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.category.dao.CategoryRepository;
@@ -24,6 +25,8 @@ import umc.catchy.infra.openai.OpenAiClient;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +49,9 @@ public class AICourseGenerationService {
     private final MemberActiveTimeRepository memberActiveTimeRepository;
     private final CategoryRepository categoryRepository;
     private final PlaceRepository placeRepository;
+
+    @Qualifier("gptExecutor")
+    private final Executor gptExecutor;
 
     public CompletableFuture<GptCourseInfoResponse> generateCourseAutomatically(Long memberId) {
         Member member = memberRepository.findById(memberId)
@@ -75,10 +81,12 @@ public class AICourseGenerationService {
                 activeTimes
         );
 
-        return CompletableFuture.supplyAsync(() -> callGpt(prompt).join())
-                .thenApply(gptResponseParser::parse)
+        return callGpt(prompt)
+                .thenApplyAsync(gptResponseParser::parse, gptExecutor)
                 .exceptionally(e -> {
-                    throw new GeneralException(ErrorStatus.GPT_API_CALL_FAILED);
+                    throw new CompletionException(
+                            new GeneralException(ErrorStatus.GPT_API_CALL_FAILED)
+                    );
                 });
     }
 
