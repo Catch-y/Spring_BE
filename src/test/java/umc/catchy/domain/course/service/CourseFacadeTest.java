@@ -21,6 +21,8 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
+import umc.catchy.support.fixture.CourseFixture;
+import umc.catchy.support.fixture.MemberFixture;
 
 import java.time.LocalTime;
 import java.util.List;
@@ -57,8 +59,8 @@ class CourseFacadeTest {
 
     @BeforeEach
     void setUp() {
-        testMember = createTestMember();
-        testCourse = createTestCourse(testMember);
+        testMember = MemberFixture.createTestMember();
+        testCourse = CourseFixture.createTestCourse(testMember);
     }
 
     private void mockSecurityUtil(MockedStatic<SecurityUtil> mockedSecurityUtil) {

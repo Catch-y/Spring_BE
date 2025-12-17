@@ -23,6 +23,7 @@ import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.infra.openai.OpenAiClient;
+import umc.catchy.support.fixture.MemberFixture;
 
 import java.util.List;
 import java.util.Optional;
@@ -80,7 +81,7 @@ class AICourseGenerationServiceTest {
 
     @BeforeEach
     void setUp() {
-        testMember = createTestMember();
+        testMember = MemberFixture.createTestMember();
 
         // 스레드 풀
         lenient().doAnswer(invocation -> {
