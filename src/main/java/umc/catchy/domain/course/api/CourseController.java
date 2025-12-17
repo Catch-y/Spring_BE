@@ -3,9 +3,7 @@ package umc.catchy.domain.course.api;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,12 +17,13 @@ import umc.catchy.domain.course.dto.response.CourseRecommendationResponse;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.dto.response.PopularCourseInfoResponse;
 import umc.catchy.domain.course.service.AICourseGenerationService;
+import umc.catchy.domain.course.service.CourseFacade;
 import umc.catchy.domain.course.service.CourseRecommendationService;
 import umc.catchy.domain.course.service.CourseService;
-import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReview.service.CourseReviewService;
+import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedResponse;
@@ -37,6 +36,7 @@ import umc.catchy.global.common.response.status.SuccessStatus;
 import umc.catchy.global.util.SecurityUtil;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Tag(name = "Course", description = "코스 관련 API")
@@ -46,6 +46,7 @@ import java.util.concurrent.CompletableFuture;
 public class CourseController {
 
     private final CourseService courseService;
+    private final CourseFacade courseFacade;
     private final AICourseGenerationService aiCourseGenerationService;
     private final CourseRecommendationService courseRecommendationService;
     private final CourseReviewService courseReviewService;
@@ -68,13 +69,11 @@ public class CourseController {
     public ResponseEntity<BaseResponse<MemberCourseSliceResponse>> getMemberCourses(
             @Parameter(description = "AI/DIY 선택", required = true)
             @RequestParam(value = "type") CourseType type,
-
             @RequestParam(value = "upperLocation", defaultValue = "all") String upperLocation,
             @RequestParam(value = "lowerLocation", defaultValue = "all") String lowerLocation,
             @RequestParam(required = false) Long lastId
     ) {
         MemberCourseSliceResponse response = courseService.getMemberCourses(type, upperLocation, lowerLocation, lastId);
-
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
@@ -83,7 +82,7 @@ public class CourseController {
     public ResponseEntity<BaseResponse<CourseDetailResponse>> createCourse(
             @Valid @ModelAttribute CourseCreateRequest request
     ) {
-        CourseDetailResponse response = courseService.createCourse(request);
+        CourseDetailResponse response = courseFacade.createCourse(request);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
@@ -94,7 +93,7 @@ public class CourseController {
             @PathVariable Long courseId,
             @Valid @ModelAttribute CourseUpdateRequest request
     ) {
-        CourseDetailResponse response = courseService.updateCourse(courseId, request);
+        CourseDetailResponse response = courseFacade.updateCourse(courseId, request);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
@@ -104,7 +103,7 @@ public class CourseController {
             @Parameter(description = "코스 ID", required = true)
             @PathVariable Long courseId
     ) {
-        courseService.deleteCourse(courseId);
+        courseFacade.deleteCourse(courseId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 
@@ -136,9 +135,7 @@ public class CourseController {
         return aiCourseGenerationService.generateCourseAutomatically(memberId)
                 .thenApply(response -> {
                     aiCourseGenerationService.increaseGptCount(memberId);
-                    return ResponseEntity.ok(
-                            BaseResponse.onSuccess(SuccessStatus._OK, response)
-                    );
+                    return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
                 })
                 .exceptionally(e -> {
                     return ResponseEntity.status(500).body(

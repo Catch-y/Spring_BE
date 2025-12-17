@@ -1,5 +1,6 @@
 package umc.catchy.domain.member.dao;
 
+import java.util.List;
 import java.util.Optional;
 
 import feign.Param;
@@ -32,4 +33,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
                     DELETE FROM place_like WHERE member_id = :memberId;
             """, nativeQuery = true)
     void deleteAllRelatedEntities(@Param("memberId") Long memberId);
+
+    @Query("SELECT m.id FROM Member m")
+    List<Long> findAllMemberIds();
 }
