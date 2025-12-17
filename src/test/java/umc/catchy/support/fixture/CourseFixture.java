@@ -56,6 +56,22 @@ public class CourseFixture {
                 .build();
     }
 
+    public static Course createTestCourseWithReviewStatus(Member member, boolean hasReview) {
+        return Course.builder()
+                .id(1L)
+                .courseName("테스트 코스")
+                .courseDescription("테스트 설명")
+                .courseType(CourseType.DIY)
+                .recommendTimeStart(LocalTime.of(9, 0))
+                .recommendTimeEnd(LocalTime.of(18, 0))
+                .courseImage("https://s3.aws.com/course.jpg")
+                .participantsNumber(0L)
+                .rating(0.0)
+                .hasReview(hasReview)
+                .member(member)
+                .build();
+    }
+
     public static Course createAiCourse(Member member) {
         return Course.builder()
                 .id(2L)
