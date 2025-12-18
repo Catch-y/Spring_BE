@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
@@ -43,6 +44,18 @@ public class MemberCourseService {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Slice<MemberCourseResponse> courseByBookmarks = memberCourseRepository.findCourseByBookmarks(memberId, pageSize, lastCourseId);
         return MemberCourseSliceResponse.from(courseByBookmarks);
+    }
+
+    @Transactional(readOnly = true)
+    public MemberCourseSliceResponse getMemberCourses(CourseType courseType, String upperLocation,
+                                                      String lowerLocation, Long lastId) {
+        Member member = getCurrentMember();
+
+        Slice<MemberCourseResponse> responses = memberCourseRepository.findCourseByFilters(
+                courseType, upperLocation, lowerLocation, member.getId(), lastId
+        );
+
+        return MemberCourseSliceResponse.from(responses);
     }
 
     private Member getCurrentMember() {
