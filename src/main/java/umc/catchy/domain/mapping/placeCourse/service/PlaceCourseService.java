@@ -23,21 +23,20 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoDetail;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewResponse;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoSliceResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceDto;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceDetailResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlacePreviewResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceResponse;
 import umc.catchy.domain.mapping.placeLike.dao.PlaceLikeRepository;
 import umc.catchy.domain.mapping.placeLike.domain.PlaceLike;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
-import umc.catchy.domain.place.converter.PlaceConverter;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
+import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
@@ -63,7 +62,8 @@ public class PlaceCourseService {
     private final PlaceReviewRepository placeReviewRepository;
     private final PlaceCourseRepository placeCourseRepository;
 
-    public CompletableFuture<PlaceInfoPreviewResponse> getPlacesByLocation(String searchKeyword, Double latitude, Double longitude, Integer page) {
+    public CompletableFuture<SliceResponse<PlacePreviewResponse>> getPlacesByLocation(
+            String searchKeyword, Double latitude, Double longitude, Integer page) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -82,28 +82,30 @@ public class PlaceCourseService {
                     List<Long> poiIds = pair.getFirst();
                     Boolean isLast = pair.getSecond();
 
-                    List<CompletableFuture<PlaceInfoPreview>> placeInfoPreviewFutures = poiIds.stream()
+                    List<CompletableFuture<PlacePreviewResponse>> placePreviewFutures = poiIds.stream()
                             .map(poiId -> CompletableFuture.supplyAsync(() -> {
                                 Optional<Place> place = placeRepository.findByPoiId(poiId);
                                 if (place.isPresent()) {
                                     Long reviewCount = placeReviewRepository.countByPlaceId(place.get().getId());
                                     Boolean isLiked = placeLikeRepository.findByPlaceAndMember(place.get(), member).isPresent();
-                                    return PlaceConverter.toPlaceInfoPreview(place.get(), reviewCount, isLiked);
+                                    return PlacePreviewResponse.from(place.get(), reviewCount, isLiked);
                                 } else {
                                     return createPlace(poiId);
                                 }
                             }))
                             .toList();
 
-                    return CompletableFuture.allOf(placeInfoPreviewFutures.toArray(new CompletableFuture[0]))
-                            .thenApply(unused -> placeInfoPreviewFutures.stream()
-                                    .map(CompletableFuture::join)
-                                    .toList())
-                            .thenApply(placeInfoPreviews -> PlaceConverter.toPlaceInfoPreviewResponse(placeInfoPreviews, isLast));
+                    return CompletableFuture.allOf(placePreviewFutures.toArray(new CompletableFuture[0]))
+                            .thenApply(unused -> {
+                                List<PlacePreviewResponse> responses = placePreviewFutures.stream()
+                                        .map(CompletableFuture::join)
+                                        .toList();
+                                return new SliceResponse<>(responses, isLast);
+                            });
                 });
     }
 
-    public PlaceInfoDetail getPlaceDetailByPlaceId(Long placeId) {
+    public PlaceDetailResponse getPlaceDetailByPlaceId(Long placeId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -119,7 +121,7 @@ public class PlaceCourseService {
         Optional<PlaceLike> placeLike = placeLikeRepository.findByPlaceAndMember(place, member);
         Boolean isLiked = placeLike.map(PlaceLike::isLiked).orElse(false);
 
-        return PlaceConverter.toPlaceInfoDetail(place, reviewCount, isVisited, isLiked);
+        return PlaceDetailResponse.from(place, reviewCount, isVisited, isLiked);
     }
 
     private StringBuilder getSearchResponse(String keyword, Double latitude, Double longitude, Integer page) {
@@ -217,14 +219,15 @@ public class PlaceCourseService {
         return (page == Math.ceil((double) totalCount / count));
     }
 
-    private PlaceInfoPreview createPlace(Long poiId) {
+    private PlacePreviewResponse createPlace(Long poiId) {
         Map<String, String> placeInfo = getPlaceInfo(poiId);
 
-        Place place = PlaceConverter.toPlace(placeInfo);
+        Place place = Place.fromTmapInfo(placeInfo);
+
 
         placeRepository.save(place);
 
-        return PlaceConverter.toPlaceInfoPreview(place, 0L, false);
+        return PlacePreviewResponse.from(place, 0L, false);
     }
 
     private Map<String, String> getPlaceInfo(Long poiId) {
@@ -377,9 +380,15 @@ public class PlaceCourseService {
         return GOOGLE_API_URL + query;
     }
 
-    public PlaceInfoSliceResponse searchLikedPlace(int pageSize, Long lastPlaceId) {
+    public SliceResponse<PlaceResponse> searchLikedPlace(int pageSize, Long lastPlaceId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        Slice<PlaceInfoResponse> placeInfoResponses = placeCourseRepository.searchPlaceByLiked(memberId, pageSize, lastPlaceId);
-        return PlaceInfoSliceResponse.from(placeInfoResponses);
+        Slice<PlaceDto> placeDtos = placeCourseRepository.searchPlaceByLiked(memberId, pageSize, lastPlaceId);
+
+        List<PlaceResponse> responses = placeDtos.getContent()
+                .stream()
+                .map(PlaceResponse::from)
+                .toList();
+
+        return new SliceResponse<>(responses, placeDtos.isLast());
     }
 }

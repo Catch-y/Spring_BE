@@ -1,8 +1,8 @@
 package umc.catchy.domain.mapping.placeCourse.dao;
 
 import org.springframework.data.domain.Slice;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceDto;
 
 public interface PlaceCourseRepositoryCustom {
-    Slice<PlaceInfoResponse> searchPlaceByLiked(Long memberId, int pageSize, Long lastPlaceId);
+    Slice<PlaceDto> searchPlaceByLiked(Long memberId, int pageSize, Long lastPlaceId);
 }

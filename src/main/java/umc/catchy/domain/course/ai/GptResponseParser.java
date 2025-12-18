@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
-import umc.catchy.domain.course.dto.response.GptPlaceInfoDto;
+import umc.catchy.domain.course.dto.query.GptPlaceInfoDto;
 import umc.catchy.domain.course.dto.response.GptPlaceInfoResponse;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.global.common.response.status.ErrorStatus;
@@ -79,7 +79,7 @@ public class GptResponseParser {
     private List<GptPlaceInfoResponse> fetchPlaceInfos(List<Long> placeIds) {
         List<GptPlaceInfoDto> placeInfoDtos = placeRepository.findPlacesWithCategoryAndReviewCount(placeIds);
         return placeInfoDtos.stream()
-                .map(GptPlaceInfoDto::toResponse)
+                .map(GptPlaceInfoResponse::from)
                 .toList();
     }
 }

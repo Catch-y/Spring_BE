@@ -27,12 +27,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.category.domain.BigCategory;
-import umc.catchy.domain.course.dto.response.GptPlaceInfoDto;
-import umc.catchy.domain.course.dto.response.GptPlaceInfoResponse;
+import umc.catchy.domain.course.dto.query.GptPlaceInfoDto;
 import umc.catchy.domain.course.util.LocationUtils;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoContainRelevance;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.query.PlacePreviewDto;
+import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceSearchDto;
 import umc.catchy.domain.mapping.placeLike.domain.QPlaceLike;
 import umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit;
 import umc.catchy.domain.place.domain.Place;
@@ -127,12 +125,12 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
     }
 
     @Override
-    public Slice<PlaceInfoPreview> recommendPlacesByActivityData(Long memberId, Double latitude, Double longitude,
-                                                                 List<Long> categoryIds,
-                                                                 Map<Long, Integer> hourMap,
-                                                                 int pageSize, int page) {
+    public Slice<PlacePreviewDto> recommendPlacesByActivityData(Long memberId, Double latitude, Double longitude,
+                                                                     List<Long> categoryIds,
+                                                                     Map<Long, Integer> hourMap,
+                                                                     int pageSize, int page) {
         // 모든 카테고리에 대한 데이터를 한 번에 가져옴
-        List<PlaceInfoPreview> results = getPlaceInfoPreview(memberId, categoryIds, hourMap, latitude, longitude, pageSize, page - 1);
+        List<PlacePreviewDto> results = getPlaceInfoPreview(memberId, categoryIds, hourMap, latitude, longitude, pageSize, page - 1);
 
         // 페이징 처리
         boolean hasNext = results.size() > pageSize;
@@ -143,8 +141,8 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         return new SliceImpl<>(results, PageRequest.of(page, pageSize), hasNext);
     }
 
-    private List<PlaceInfoPreview> getPlaceInfoPreview(Long memberId, List<Long> categoryIds, Map<Long, Integer> hourMap,
-                                                       Double userLatitude, Double userLongitude, int pageSize, int page) {
+    private List<PlacePreviewDto> getPlaceInfoPreview(Long memberId, List<Long> categoryIds, Map<Long, Integer> hourMap,
+                                                      Double userLatitude, Double userLongitude, int pageSize, int page) {
 
         // 사용자 위치와 장소 거리 계산(가까운 순으로 정렬)
         NumberExpression<Double> distance = Expressions.numberTemplate(Double.class,
@@ -173,30 +171,33 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         }
 
         // 쿼리 생성
-        JPQLQuery<PlaceInfoPreview> query = queryFactory.select(Projections.fields(PlaceInfoPreview.class,
-                        place.id.as("placeId"),
-                        place.placeName.as("placeName"),
-                        place.imageUrl.as("placeImage"),
-                        place.category.name.as("category"),
-                        place.roadAddress.as("roadAddress"),
-                        place.activeTime.as("activeTime"),
-                        placeReview.rating.avg().coalesce(0.0).as("rating"),
-                        placeReview.count().as("reviewCount"),
-                        placeLike.isLiked.as("isLiked")
-                ))
+        JPQLQuery<PlacePreviewDto> query = queryFactory.select(
+                        Projections.constructor(PlacePreviewDto.class,
+                                place.id,
+                                place.placeName,
+                                place.imageUrl,
+                                place.category.name,
+                                place.roadAddress,
+                                place.activeTime,
+                                placeReview.rating.avg().coalesce(0.0),
+                                place.latitude,
+                                place.longitude,
+                                placeReview.count(),
+                                placeLike.isLiked
+                        ))
                 .from(place)
                 .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
                 .leftJoin(placeVisit).on(place.id.eq(placeVisit.place.id).and(placeVisit.member.id.eq(memberId)))
                 .leftJoin(placeLike).on(place.id.eq(placeLike.place.id).and(placeLike.member.id.eq(memberId)))
                 .where(
-                        place.category.id.in(categoryIds), // 카테고리 필터링
-                        ExpressionUtils.anyOf(hourConditions.toArray(new BooleanExpression[0])), // 시간 조건 적용
-                        notContainVisited(memberId) // 이미 방문했던 장소 필터링
+                        place.category.id.in(categoryIds),
+                        ExpressionUtils.anyOf(hourConditions.toArray(new BooleanExpression[0])),
+                        notContainVisited(memberId)
                 )
                 .groupBy(place.id)
                 .orderBy(categoryOrder.asc(), distance.asc())
-                .offset((long) page * pageSize) // 페이징 offset
-                .limit(pageSize + 1); // pageSize + 1로 다음 페이지 존재 여부 확인
+                .offset((long) page * pageSize)
+                .limit(pageSize + 1);
 
         return query.fetch();
     }
@@ -307,46 +308,37 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
     }
 
     @Override
-    public Slice<PlaceInfoContainRelevance> searchPlace(int pageSize, String keyword, Integer lastRelevanceScore, Long lastPlaceId) {
-
-        /*
-        NumberExpression<Double> distance = Expressions.numberTemplate(Double.class,
-                "(6371 * ACOS(COS(RADIANS({0})) * COS(RADIANS({1})) * COS(RADIANS({2}) - RADIANS({3})) + SIN(RADIANS({0})) * SIN(RADIANS({1}))))",
-                latitude, place.latitude, place.longitude, longitude);
-         */
-
-        // 키워드가 없으면 바로 빈 리스트 반환
+    public Slice<PlaceSearchDto> searchPlace(int pageSize, String keyword, Integer lastRelevanceScore, Long lastPlaceId) {
         if (keyword == null || keyword.trim().isEmpty()) {
             return new SliceImpl<>(Collections.emptyList(), PageRequest.of(0, pageSize), false);
         }
 
         NumberExpression<Integer> relevanceScore = getRelevanceScore(keyword);
 
-        List<PlaceInfoContainRelevance> results = queryFactory.select(
-                Projections.fields(PlaceInfoContainRelevance.class,
-                        Projections.fields(PlaceInfoResponse.class,
-                        place.id.as("placeId"),
-                        place.imageUrl.as("imageUrl"),
-                        place.placeName.as("placeName"),
-                        place.category.bigCategory.stringValue().as("categoryName"),
-                        place.roadAddress.as("roadAddress"),
-                        place.activeTime.as("activeTime"),
-                        placeReview.rating.avg().coalesce(0.0).as("rating"),
-                        placeReview.count().as("reviewCount")
-                        ).as("placeInfoResponse")
-                        ,relevanceScore.as("relevanceScore")))
+        List<PlaceSearchDto> results = queryFactory.select(
+                        Projections.constructor(PlaceSearchDto.class,
+                                place.id,
+                                place.imageUrl,
+                                place.placeName,
+                                place.category.bigCategory.stringValue(),
+                                place.roadAddress,
+                                place.activeTime,
+                                placeReview.rating.avg().coalesce(0.0),
+                                placeReview.count(),
+                                relevanceScore
+                        ))
                 .from(place)
                 .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
                 .where(
                         keywordContains(keyword),
-                        cursorCondition(relevanceScore,lastRelevanceScore, lastPlaceId)
+                        cursorCondition(relevanceScore, lastRelevanceScore, lastPlaceId)
                 )
                 .groupBy(place.id)
-                .orderBy(relevanceScore.desc(),place.id.desc())
+                .orderBy(relevanceScore.desc(), place.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
 
-        return checkLastPage(pageSize,results);
+        return checkLastPage(pageSize, results);
     }
 
     private static NumberExpression<Integer> getRelevanceScore(String keyword) {
@@ -380,7 +372,7 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         return lowerScore.or(sameScoreLargerId);
     }
 
-    private Slice<PlaceInfoContainRelevance> checkLastPage(int pageSize, List<PlaceInfoContainRelevance> results) {
+    private Slice<PlaceSearchDto> checkLastPage(int pageSize, List<PlaceSearchDto> results) {
         if (results.isEmpty()) {
             return new SliceImpl<>(Collections.emptyList(), PageRequest.of(0, pageSize), false);
         }
@@ -392,7 +384,6 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
             results.remove(pageSize);
         }
 
-        return new SliceImpl<>(results, PageRequest.of(0,pageSize), hasNext);
+        return new SliceImpl<>(results, PageRequest.of(0, pageSize), hasNext);
     }
-
 }

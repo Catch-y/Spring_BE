@@ -2,6 +2,14 @@ package umc.catchy.domain.place.domain;
 
 import jakarta.persistence.*;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -64,5 +72,40 @@ public class Place extends BaseTimeEntity {
 
     public void updateRating(Double newRating) {
         this.rating = newRating;
+    }
+
+    public static Place fromTmapInfo(Map<String, String> placeInfo) {
+        List<String> parsedTime = parsingTime(placeInfo.get("additionalInfo"));
+
+        return Place.builder()
+                .poiId(Long.parseLong(placeInfo.get("id")))
+                .placeName(placeInfo.get("name"))
+                .imageUrl(placeInfo.get("image"))
+                .placeDescription(placeInfo.get("desc"))
+                .roadAddress(placeInfo.get("bldAddr"))
+                .numberAddress(placeInfo.get("address"))
+                .latitude(Double.parseDouble(placeInfo.get("lat")))
+                .longitude(Double.parseDouble(placeInfo.get("lon")))
+                .activeTime(placeInfo.get("additionalInfo"))
+                .startTime(parsedTime.isEmpty() ? null : formatTime(parsedTime.get(0)))
+                .endTime(parsedTime.isEmpty() ? null : formatTime(parsedTime.get(1)))
+                .placeSite(placeInfo.get("homepageURL"))
+                .build();
+    }
+
+    private static List<String> parsingTime(String activeTime) {
+        List<String> timeRange = new ArrayList<>();
+        Pattern pattern = Pattern.compile("\\b\\d{2}:\\d{2}~\\d{2}:\\d{2}\\b");
+        Matcher matcher = pattern.matcher(activeTime);
+
+        while (matcher.find()) {
+            timeRange = Arrays.stream(matcher.group().split("~")).toList();
+        }
+        return timeRange;
+    }
+
+    private static LocalTime formatTime(String time) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        return LocalTime.parse(time, formatter);
     }
 }

@@ -10,9 +10,9 @@ import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
-import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
+import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
@@ -40,22 +40,22 @@ public class MemberCourseService {
     }
 
     @Transactional(readOnly = true)
-    public MemberCourseSliceResponse findAllCourseByBookmarked(int pageSize, Long lastCourseId) {
+    public SliceResponse<MemberCourseResponse> findAllCourseByBookmarked(int pageSize, Long lastCourseId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Slice<MemberCourseResponse> courseByBookmarks = memberCourseRepository.findCourseByBookmarks(memberId, pageSize, lastCourseId);
-        return MemberCourseSliceResponse.from(courseByBookmarks);
+        return SliceResponse.of(courseByBookmarks);
     }
 
     @Transactional(readOnly = true)
-    public MemberCourseSliceResponse getMemberCourses(CourseType courseType, String upperLocation,
-                                                      String lowerLocation, Long lastId) {
+    public SliceResponse<MemberCourseResponse> getMemberCourses(CourseType courseType, String upperLocation,
+                                                                String lowerLocation, Long lastId) {
         Member member = getCurrentMember();
 
         Slice<MemberCourseResponse> responses = memberCourseRepository.findCourseByFilters(
                 courseType, upperLocation, lowerLocation, member.getId(), lastId
         );
 
-        return MemberCourseSliceResponse.from(responses);
+        return SliceResponse.of(responses);
     }
 
     private Member getCurrentMember() {

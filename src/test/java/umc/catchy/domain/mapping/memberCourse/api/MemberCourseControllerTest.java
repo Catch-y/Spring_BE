@@ -7,8 +7,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
-import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
+import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.support.ControllerTestSupport;
 
 import java.util.List;
@@ -39,7 +39,7 @@ class MemberCourseControllerTest extends ControllerTestSupport {
                 List.of("음식점", "카페")
         );
 
-        MemberCourseSliceResponse response = new MemberCourseSliceResponse(List.of(content), true);
+        SliceResponse<MemberCourseResponse> response = new SliceResponse<>(List.of(content), true);
 
         CourseType type = CourseType.DIY;
         String upperLoc = "서울시";
@@ -97,7 +97,7 @@ class MemberCourseControllerTest extends ControllerTestSupport {
                 List.of("관광지", "음식점")
         );
 
-        MemberCourseSliceResponse response = new MemberCourseSliceResponse(List.of(content), false);
+        SliceResponse<MemberCourseResponse> response = new SliceResponse<>(List.of(content), false);
 
         when(memberCourseService.findAllCourseByBookmarked(eq(10), eq(null)))
                 .thenReturn(response);

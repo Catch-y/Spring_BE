@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
+import umc.catchy.domain.mapping.placeCourse.dto.query.PlacePreviewDto;
+import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceSearchDto;
 import umc.catchy.domain.mapping.placeCourse.dto.response.*;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
@@ -22,6 +24,7 @@ import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.place.dto.request.SetCategoryRequest;
+import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
@@ -42,17 +45,16 @@ public class PlaceService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
         // 대카테고리 검증
-        BigCategory bigCategory = BigCategory.findByName(request.getBigCategory());
+        BigCategory bigCategory = BigCategory.findByName(request.bigCategory());
 
-        Category category = categoryRepository.findByBigCategoryAndName(bigCategory, request.getSmallCategory())
+        Category category = categoryRepository.findByBigCategoryAndName(bigCategory, request.smallCategory())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.INVALID_CATEGORY));
 
         // 장소에 카테고리 설정
         place.assignCategory(category);
     }
 
-    // 사용자 맞춤 장소 추천 37.5837064 127.21166595
-    public PlaceInfoPreviewSliceResponse recommendPlaces(Double latitude, Double longitude, int pageSize, int page) {
+    public SliceResponse<PlacePreviewResponse> recommendPlaces(Double latitude, Double longitude, int pageSize, int page) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -66,14 +68,26 @@ public class PlaceService {
         // 카테고리별 방문 시간대 평균
         Map<Long, Integer> categoryAverageHour = getCategoryAverageHour(placeVisits);
 
-        Slice<PlaceInfoPreview> placeInfoPreviews = placeRepository.recommendPlacesByActivityData(memberId, latitude, longitude, sortedVisitCategories, categoryAverageHour, pageSize, page);
+        Slice<PlacePreviewDto> placePreviewDtos = placeRepository.recommendPlacesByActivityData(
+                memberId, latitude, longitude, sortedVisitCategories, categoryAverageHour, pageSize, page);
 
-        return PlaceInfoPreviewSliceResponse.from(placeInfoPreviews);
+        List<PlacePreviewResponse> responses = placePreviewDtos.getContent()
+                .stream()
+                .map(PlacePreviewResponse::from)
+                .toList();
+
+        return new SliceResponse<>(responses, placePreviewDtos.isLast());
     }
 
-    public PlaceInfoContainRelevanceScoreSliceResponse searchPlaceByCategoryOrName(int pageSize, String keyword, Integer lastRelevanceScore, Long lastPlaceId) {
-        Slice<PlaceInfoContainRelevance> responses = placeRepository.searchPlace(pageSize, keyword, lastRelevanceScore ,lastPlaceId);
-        return PlaceInfoContainRelevanceScoreSliceResponse.from(responses);
+    public SliceResponse<PlaceSearchResponse> searchPlaceByCategoryOrName(int pageSize, String keyword, Integer lastRelevanceScore, Long lastPlaceId) {
+        Slice<PlaceSearchDto> searchDtos = placeRepository.searchPlace(pageSize, keyword, lastRelevanceScore, lastPlaceId);
+
+        List<PlaceSearchResponse> responses = searchDtos.getContent()
+                .stream()
+                .map(PlaceSearchResponse::from)
+                .toList();
+
+        return new SliceResponse<>(responses, searchDtos.isLast());
     }
 
     private Map<Long, Integer> getCategoryAverageHour(List<PlaceVisit> placeVisits) {

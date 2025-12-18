@@ -8,7 +8,6 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MvcResult;
-import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseDetailResponse;
@@ -17,9 +16,6 @@ import umc.catchy.domain.course.service.*;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReview.service.CourseReviewService;
-import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
-import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
-import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
 import umc.catchy.domain.mapping.placeVisit.service.PlaceVisitService;
 import umc.catchy.domain.place.dto.request.SetCategoryRequest;
@@ -238,9 +234,10 @@ class CourseControllerTest extends ControllerTestSupport {
         // given
         Long placeId = 10L;
 
-        SetCategoryRequest request = new SetCategoryRequest();
-        request.setBigCategory("음식점");
-        request.setSmallCategory("한식");
+        SetCategoryRequest request = new SetCategoryRequest(
+                "음식점",
+                "한식"
+        );
 
         // when & then
         mockMvc.perform(post("/course/{placeId}", placeId)

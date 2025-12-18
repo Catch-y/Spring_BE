@@ -6,9 +6,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoContainRelevanceScoreSliceResponse;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreviewSliceResponse;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoSliceResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlacePreviewResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceSearchResponse;
 import umc.catchy.domain.mapping.placeLike.dto.response.PlaceLikedResponse;
 import umc.catchy.domain.mapping.placeLike.service.PlaceLikeService;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedDateResponse;
@@ -17,6 +16,7 @@ import umc.catchy.domain.place.service.PlaceService;
 import umc.catchy.domain.placeReview.dto.request.PostPlaceReviewRequest;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
 import umc.catchy.domain.placeReview.service.PlaceReviewService;
+import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
 
@@ -81,25 +81,25 @@ public class PlaceController {
 
     @Operation(summary = "사용자 장소 추천 API", description = "사용자의 행동데이터 기반으로 장소를 추천")
     @GetMapping("/home/recommend-places")
-    public ResponseEntity<BaseResponse<PlaceInfoPreviewSliceResponse>> getRecommendPlaces(
+    public ResponseEntity<BaseResponse<SliceResponse<PlacePreviewResponse>>> getRecommendPlaces(
             @RequestParam Double latitude,
             @RequestParam Double longitude,
             @RequestParam int pageSize,
             @RequestParam int page
     ) {
-        PlaceInfoPreviewSliceResponse response = placeService.recommendPlaces(latitude, longitude, pageSize, page);
+        SliceResponse<PlacePreviewResponse> response = placeService.recommendPlaces(latitude, longitude, pageSize, page);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
     @Operation(summary = "장소 검색 API", description = "장소이름/카테고리를 통해 장소 리스트 반환")
     @GetMapping("/home/search")
-    public ResponseEntity<BaseResponse<PlaceInfoContainRelevanceScoreSliceResponse>> getSearchPlaces(
+    public ResponseEntity<BaseResponse<SliceResponse<PlaceSearchResponse>>> getSearchPlaces(
             @RequestParam(required = false) String keyword,
             @RequestParam int pageSize,
             @RequestParam(required = false) Integer relevanceScore,
             @RequestParam(required = false) Long lastPlaceId
     ) {
-        PlaceInfoContainRelevanceScoreSliceResponse response = placeService.searchPlaceByCategoryOrName(pageSize,keyword,relevanceScore,lastPlaceId);
+        SliceResponse<PlaceSearchResponse> response = placeService.searchPlaceByCategoryOrName(pageSize, keyword, relevanceScore, lastPlaceId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }
