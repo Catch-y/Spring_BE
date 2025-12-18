@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ import umc.catchy.global.util.SecurityUtil;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional
 public class PlaceService {
 
@@ -67,6 +69,9 @@ public class PlaceService {
 
         // 카테고리별 방문 시간대 평균
         Map<Long, Integer> categoryAverageHour = getCategoryAverageHour(placeVisits);
+
+        log.info("Before repository call - sortedVisitCategories: {}", sortedVisitCategories);
+        log.info("Before repository call - categoryAverageHour: {}", categoryAverageHour);
 
         Slice<PlacePreviewDto> placePreviewDtos = placeRepository.recommendPlacesByActivityData(
                 memberId, latitude, longitude, sortedVisitCategories, categoryAverageHour, pageSize, page);
@@ -126,13 +131,18 @@ public class PlaceService {
     }
 
     private List<Long> sortVisitCategories(List<Category> visitCategories) {
-        Map<Category, Integer> categoryMap = new HashMap<>();
+        Map<Long, Integer> categoryCountMap = new HashMap<>();
 
-        visitCategories.forEach(category -> categoryMap.put(category, categoryMap.getOrDefault(category, 0) + 1));
-        List<Entry<Category, Integer>> entries = new ArrayList<>(categoryMap.entrySet());
+        visitCategories.forEach(category ->
+                categoryCountMap.put(
+                        category.getId(),
+                        categoryCountMap.getOrDefault(category.getId(), 0) + 1
+                )
+        );
 
-        entries.sort((o1, o2) -> o2.getValue() - o1.getValue());
-
-        return entries.stream().map(entry -> entry.getKey().getId()).toList();
+        return categoryCountMap.entrySet().stream()
+                .sorted((e1, e2) -> e2.getValue() - e1.getValue())
+                .map(Entry::getKey)
+                .toList();
     }
 }
