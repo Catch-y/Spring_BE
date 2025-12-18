@@ -64,7 +64,7 @@ public class PlaceReviewService {
                     .mapToDouble(PlaceReview::getRating)
                     .average()
                     .orElse(0.0);
-            place.setRating(averageRating);
+            place.updateRating(averageRating);
             placeRepository.save(place);
         }
         //장소를 포함하는 코스에 대한 평점 refresh

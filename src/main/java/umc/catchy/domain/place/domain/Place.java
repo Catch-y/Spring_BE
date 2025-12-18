@@ -6,9 +6,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.common.BaseTimeEntity;
+import umc.catchy.global.common.response.status.ErrorStatus;
+import umc.catchy.global.error.exception.GeneralException;
 
 @Entity
 @Getter
@@ -28,31 +29,40 @@ public class Place extends BaseTimeEntity {
     @Column(length = 50000)
     private String placeDescription;
 
-    private String roadAddress; //도로명 주소
+    private String roadAddress;
 
-    private String numberAddress; // 지번 주소
+    private String numberAddress;
 
-    private Double latitude; // 위도
+    private Double latitude;
 
-    private Double longitude; // 경도
+    private Double longitude;
 
-    private String activeTime; // 영업시간
+    private String activeTime;
 
     private LocalTime startTime;
 
     private LocalTime endTime;
 
-    private String placeSite; // 장소 사이트
+    private String placeSite;
 
     @Column(length = 50000)
-    private String imageUrl; // 장소 이미지
+    private String imageUrl;
 
-    @Setter
-    private Double rating; // 장소 총 평점 : 처음에 0으로 초기화해주세요
+    @Builder.Default
+    private Double rating = 0.0;
 
-    @Setter
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
 
+    public void assignCategory(Category category) {
+        if (this.category != null) {
+            throw new GeneralException(ErrorStatus.PLACE_CATEGORY_EXIST);
+        }
+        this.category = category;
+    }
+
+    public void updateRating(Double newRating) {
+        this.rating = newRating;
+    }
 }

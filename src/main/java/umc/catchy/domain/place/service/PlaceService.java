@@ -41,11 +41,6 @@ public class PlaceService {
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
-        // 이미 지정된 카테고리가 있으면 예외 처리
-        if (place.getCategory() != null) {
-            throw new GeneralException(ErrorStatus.PLACE_CATEGORY_EXIST);
-        }
-
         // 대카테고리 검증
         BigCategory bigCategory = BigCategory.findByName(request.getBigCategory());
 
@@ -53,7 +48,7 @@ public class PlaceService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.INVALID_CATEGORY));
 
         // 장소에 카테고리 설정
-        place.setCategory(category);
+        place.assignCategory(category);
     }
 
     // 사용자 맞춤 장소 추천 37.5837064 127.21166595
