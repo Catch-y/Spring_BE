@@ -68,15 +68,16 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
     @Override
     public Slice<MemberCourseResponse> findCourseByFilters(CourseType courseType, String upperLocation,
                                                            String lowerLocation, Long memberId, Long lastCourseId) {
-        List<MemberCourseResponse> results = queryFactory.selectDistinct(Projections.constructor(MemberCourseResponse.class,
+        List<MemberCourseResponse> results = queryFactory
+                .select(Projections.constructor(MemberCourseResponse.class,
                         course.id,
                         course.courseType,
                         course.courseImage,
                         course.courseName,
                         course.courseDescription))
                 .from(memberCourse)
-                .leftJoin(memberCourse.course,course).on(memberCourse.course.id.eq(course.id))
-                .leftJoin(memberCourse.member,member).on(memberCourse.member.id.eq(member.id))
+                .leftJoin(memberCourse.course, course).on(memberCourse.course.id.eq(course.id))
+                .leftJoin(memberCourse.member, member).on(memberCourse.member.id.eq(member.id))
                 .leftJoin(placeCourse).on(course.id.eq(placeCourse.course.id))
                 .leftJoin(place).on(placeCourse.place.id.eq(place.id))
                 .where(
@@ -86,6 +87,7 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
                         upperLocationFilter(upperLocation),
                         lowerLocationFilter(lowerLocation)
                 )
+                .groupBy(memberCourse.id)
                 .orderBy(course.createdDate.desc())
                 .limit(11)
                 .fetch();

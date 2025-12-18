@@ -27,7 +27,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.category.domain.BigCategory;
-import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
+import umc.catchy.domain.course.dto.response.GptPlaceInfoDto;
+import umc.catchy.domain.course.dto.response.GptPlaceInfoResponse;
 import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoContainRelevance;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceInfoPreview;
@@ -285,9 +286,9 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
     }
 
     @Override
-    public List<GptCourseInfoResponse.GptPlaceInfoResponse> findPlacesWithCategoryAndReviewCount(List<Long> placeIds) {
+    public List<GptPlaceInfoDto> findPlacesWithCategoryAndReviewCount(List<Long> placeIds) {
         return queryFactory.select(Projections.constructor(
-                        GptCourseInfoResponse.GptPlaceInfoResponse.class,
+                        GptPlaceInfoDto.class,
                         place.id,
                         place.placeName,
                         place.imageUrl,

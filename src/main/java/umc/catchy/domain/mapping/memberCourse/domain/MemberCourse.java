@@ -14,6 +14,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "member_course", indexes = {
+        @Index(name = "idx_member_course_id", columnList = "member_id, course_id")
+})
 @Getter
 @Builder
 @AllArgsConstructor

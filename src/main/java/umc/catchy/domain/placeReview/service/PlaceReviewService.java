@@ -52,7 +52,7 @@ public class PlaceReviewService {
     private void refreshCourseRating(Course course){
         Double rating = placeCourseRepository.calculateAverageRatingByCourse(course);
         rating = (rating != null) ? rating : 0.0;
-        course.setRating(rating);
+        course.updateRating(rating);
         courseRepository.save(course);
     }
 

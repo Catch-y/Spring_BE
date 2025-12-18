@@ -17,4 +17,11 @@ public interface PlaceCourseRepository extends JpaRepository<PlaceCourse, Long>,
 
     @Query("SELECT AVG(pc.place.rating) FROM PlaceCourse pc WHERE pc.course = :course AND pc.place.rating > 0")
     Double calculateAverageRatingByCourse(@Param("course") Course course);
+
+    @Query("SELECT pc FROM PlaceCourse pc " +
+            "JOIN FETCH pc.place p " +
+            "LEFT JOIN FETCH p.category " +
+            "WHERE pc.course = :course " +
+            "ORDER BY pc.placeOrder")
+    List<PlaceCourse> findAllByCourseWithPlace(@Param("course") Course course);
 }

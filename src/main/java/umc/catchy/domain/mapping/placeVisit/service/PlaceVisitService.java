@@ -26,6 +26,8 @@ import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -67,16 +69,21 @@ public class PlaceVisitService {
         // 코스 내의 장소 방문이 과반수 이상이면 코스 방문 체크
         List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
         int placeNum = placeCourses.size();
+
+        // PlaceVisit 일괄 조회 후 Set으로 변환
+        List<PlaceVisit> visits = placeVisitRepository.findAllByCourseAndMember(course, member);
+        Set<Long> visitedPlaceIds = visits.stream()
+                .map(pv -> pv.getPlace().getId())
+                .collect(Collectors.toSet());
+
         int visitNum = (int) placeCourses.stream()
-                .filter(placeCourse -> {
-                    Optional<PlaceVisit> optionalVisit = placeVisitRepository.findByPlaceAndMemberAndCourse(placeCourse.getPlace(), member, course);
-                    return optionalVisit.isPresent();
-                }).count();
+                .filter(pc -> visitedPlaceIds.contains(pc.getPlace().getId()))
+                .count();
 
         if (visitNum == Math.round((double) placeNum / 2)) {
             memberCourse.setVisited(true);
             memberCourse.setVisitedDate(LocalDate.now());
-            course.setParticipantsNumber(course.getParticipantsNumber() + 1);
+            course.increaseParticipants();
         }
 
         return PlaceVisitConverter.toPlaceVisitResponse(placeVisit);

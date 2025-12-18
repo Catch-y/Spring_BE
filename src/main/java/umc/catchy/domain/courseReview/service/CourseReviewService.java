@@ -62,7 +62,7 @@ public class CourseReviewService {
         courseReviewRepository.save(newCourseReview);
         //Course::hasReview refresh
         if(!course.isHasReview()){
-            course.setHasReview(true);
+            course.markAsReviewed();
             courseRepository.save(course);
         }
 

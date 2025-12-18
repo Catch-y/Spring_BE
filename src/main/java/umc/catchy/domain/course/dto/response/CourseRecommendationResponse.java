@@ -1,31 +1,22 @@
 package umc.catchy.domain.course.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import umc.catchy.domain.course.domain.Course;
+import umc.catchy.domain.course.domain.CourseType;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class CourseRecommendationResponse {
-    private Long courseId;
-    private String courseName;
-    private String courseDescription;
-    private String courseImage;
-    private String courseType;
-
-    public static CourseRecommendationResponse fromEntity(Course course, String courseType) {
-        return CourseRecommendationResponse.builder()
-                .courseId(course.getId())
-                .courseName(course.getCourseName())
-                .courseDescription(course.getCourseDescription())
-                .courseImage(course.getCourseImage())
-                .courseType(course.getCourseType().name()) // Course 엔티티의 courseType을 매핑
-                .build();
+public record CourseRecommendationResponse(
+        Long courseId,
+        String courseName,
+        String courseDescription,
+        String courseImage,
+        CourseType courseType
+) {
+    public static CourseRecommendationResponse from(Course course) {
+        return new CourseRecommendationResponse(
+                course.getId(),
+                course.getCourseName(),
+                course.getCourseDescription(),
+                course.getCourseImage(),
+                course.getCourseType()
+        );
     }
 }

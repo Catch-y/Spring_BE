@@ -28,4 +28,20 @@ public interface PlaceVisitRepository extends JpaRepository<PlaceVisit, Long> {
     List<PlaceVisit> findAllByMemberAndPlaceAndCourseAndIsVisitedTrue(Member member, Place place, Course course);
     List<PlaceVisit> findAllByMemberOrderByVisitedDateDesc(Member member);
     Integer deleteAllByMember(Member member);
+
+    @Query("SELECT pv FROM PlaceVisit pv " +
+            "WHERE pv.place.id IN :placeIds " +
+            "AND pv.member = :member")
+    List<PlaceVisit> findAllByPlaceIdsAndMember(
+            @Param("placeIds") List<Long> placeIds,
+            @Param("member") Member member
+    );
+
+    @Query("SELECT pv FROM PlaceVisit pv " +
+            "WHERE pv.course = :course " +
+            "AND pv.member = :member")
+    List<PlaceVisit> findAllByCourseAndMember(
+            @Param("course") Course course,
+            @Param("member") Member member
+    );
 }

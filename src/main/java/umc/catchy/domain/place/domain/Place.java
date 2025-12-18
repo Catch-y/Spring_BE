@@ -51,7 +51,7 @@ public class Place extends BaseTimeEntity {
     private Double rating; // 장소 총 평점 : 처음에 0으로 초기화해주세요
 
     @Setter
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
 
