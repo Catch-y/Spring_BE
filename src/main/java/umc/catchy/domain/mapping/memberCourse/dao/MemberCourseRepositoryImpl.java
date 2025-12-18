@@ -11,13 +11,13 @@ import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.course.util.LocationUtils;
+import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseDto;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import umc.catchy.domain.place.domain.QPlace;
 
 import static umc.catchy.domain.course.domain.QCourse.course;
 import static umc.catchy.domain.mapping.memberCourse.domain.QMemberCourse.*;
@@ -32,44 +32,46 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
     @Override
     public Slice<MemberCourseResponse> findCourseByBookmarks(Long memberId, int pageSize, Long lastCourseId) {
 
-        List<MemberCourseResponse> results = queryFactory.select(Projections.constructor(MemberCourseResponse.class,
-                course.id,
-                course.courseType,
-                course.courseImage,
-                course.courseName,
-                course.courseDescription))
+        List<MemberCourseDto> dtos = queryFactory.select(Projections.constructor(MemberCourseDto.class,
+                        course.id,
+                        course.courseType,
+                        course.courseImage,
+                        course.courseName,
+                        course.courseDescription))
                 .from(memberCourse)
-                .leftJoin(memberCourse.course,course).on(memberCourse.course.id.eq(course.id))
-                .leftJoin(memberCourse.member,member).on(memberCourse.member.id.eq(member.id))
+                .leftJoin(memberCourse.course, course).on(memberCourse.course.id.eq(course.id))
+                .leftJoin(memberCourse.member, member).on(memberCourse.member.id.eq(member.id))
                 .where(
                         memberCourse.member.id.eq(memberId),
                         lastCourseId(lastCourseId),
                         markedCondition
                 )
                 .orderBy(course.createdDate.desc())
-                .limit(pageSize+1)
+                .limit(pageSize + 1)
                 .fetch();
 
-        for (MemberCourseResponse result : results) {
+        List<MemberCourseResponse> results = new ArrayList<>();
+        for (MemberCourseDto dto : dtos) {
             List<BigCategory> bigCategoriesDuplicates = queryFactory.select(placeCourse.place.category.bigCategory)
                     .from(placeCourse)
-                    .innerJoin(placeCourse.place,place).on(placeCourse.place.id.eq(place.id))
-                    .innerJoin(placeCourse.course,course).on(placeCourse.course.id.eq(course.id))
-                    .where(placeCourse.course.id.eq(result.getCourseId()))
+                    .innerJoin(placeCourse.place, place).on(placeCourse.place.id.eq(place.id))
+                    .innerJoin(placeCourse.course, course).on(placeCourse.course.id.eq(course.id))
+                    .where(placeCourse.course.id.eq(dto.courseId()))
                     .fetch();
             List<BigCategory> bigCategories = new ArrayList<>(new HashSet<>(bigCategoriesDuplicates));
             List<String> bigCategoryStrings = bigCategories.stream().map(BigCategory::getValue).toList();
-            result.setCategories(bigCategoryStrings);
+
+            results.add(dto.toResponse(bigCategoryStrings));
         }
 
-        return checkLastPage(pageSize,results);
+        return checkLastPage(pageSize, results);
     }
 
     @Override
     public Slice<MemberCourseResponse> findCourseByFilters(CourseType courseType, String upperLocation,
                                                            String lowerLocation, Long memberId, Long lastCourseId) {
-        List<MemberCourseResponse> results = queryFactory
-                .select(Projections.constructor(MemberCourseResponse.class,
+        List<MemberCourseDto> dtos = queryFactory
+                .select(Projections.constructor(MemberCourseDto.class,
                         course.id,
                         course.courseType,
                         course.courseImage,
@@ -92,16 +94,18 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
                 .limit(11)
                 .fetch();
 
-        for (MemberCourseResponse result : results) {
+        List<MemberCourseResponse> results = new ArrayList<>();
+        for (MemberCourseDto dto : dtos) {
             List<BigCategory> bigCategoriesDuplicates = queryFactory.select(placeCourse.place.category.bigCategory)
                     .from(placeCourse)
-                    .innerJoin(placeCourse.place,place).on(placeCourse.place.id.eq(place.id))
-                    .innerJoin(placeCourse.course,course).on(placeCourse.course.id.eq(course.id))
-                    .where(placeCourse.course.id.eq(result.getCourseId()))
+                    .innerJoin(placeCourse.place, place).on(placeCourse.place.id.eq(place.id))
+                    .innerJoin(placeCourse.course, course).on(placeCourse.course.id.eq(course.id))
+                    .where(placeCourse.course.id.eq(dto.courseId()))
                     .fetch();
             List<BigCategory> bigCategories = new ArrayList<>(new HashSet<>(bigCategoriesDuplicates));
             List<String> bigCategoryStrings = bigCategories.stream().map(BigCategory::getValue).toList();
-            result.setCategories(bigCategoryStrings);
+
+            results.add(dto.toResponse(bigCategoryStrings));
         }
 
         return checkLastPage(10, results);

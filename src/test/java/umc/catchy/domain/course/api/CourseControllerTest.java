@@ -86,11 +86,14 @@ class CourseControllerTest extends ControllerTestSupport {
     @DisplayName("내 코스 조회 API (검색/필터링) - 성공")
     void getMemberCourses_success() throws Exception {
         // given
-        MemberCourseResponse content = MemberCourseResponse.builder()
-                .courseId(100L)
-                .courseName("테스트 코스")
-                .courseType(CourseType.DIY)
-                .build();
+        MemberCourseResponse content = new MemberCourseResponse(
+                100L,
+                CourseType.DIY,
+                null,
+                "테스트 코스",
+                null,
+                List.of("음식점", "카페")
+        );
 
         MemberCourseSliceResponse response = new MemberCourseSliceResponse(List.of(content), true);
 
@@ -242,10 +245,10 @@ class CourseControllerTest extends ControllerTestSupport {
         // given
         Long courseId = 1L;
 
-        CourseBookmarkResponse response = CourseBookmarkResponse.builder()
-                .memberCourseId(100L)
-                .bookmarked(false)
-                .build();
+        CourseBookmarkResponse response = new CourseBookmarkResponse(
+                100L,
+                false
+        );
 
         when(memberCourseService.toggleBookmark(courseId)).thenReturn(response);
 

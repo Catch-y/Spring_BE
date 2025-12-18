@@ -12,7 +12,6 @@ import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
-import umc.catchy.global.common.response.code.BaseErrorCode;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
@@ -22,18 +21,23 @@ import umc.catchy.global.util.SecurityUtil;
 @Transactional
 @Slf4j
 public class MemberCourseService {
+
     public final MemberCourseRepository memberCourseRepository;
     public final MemberRepository memberRepository;
 
     public CourseBookmarkResponse toggleBookmark(Long courseId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        Member currentMember = memberRepository.findById(memberId).orElseThrow(() ->new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        MemberCourse memberCourse = memberCourseRepository.findByCourseIdAndMemberId(courseId, currentMember.getId()).orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_MEMBER_NOT_FOUND));
+        Member currentMember = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        MemberCourse memberCourse = memberCourseRepository.findByCourseIdAndMemberId(courseId, currentMember.getId())
+                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_MEMBER_NOT_FOUND));
+
         MemberCourse.toggleBookmark(memberCourse);
-        return CourseBookmarkResponse.builder()
-                .memberCourseId(memberCourse.getId())
-                .bookmarked(memberCourse.isBookmark())
-                .build();
+
+        return new CourseBookmarkResponse(
+                memberCourse.getId(),
+                memberCourse.isBookmark()
+        );
     }
 
     @Transactional(readOnly = true)

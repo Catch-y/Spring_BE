@@ -163,14 +163,14 @@ class CourseServiceTest {
 
             when(memberRepository.findById(1L)).thenReturn(Optional.of(testMember));
 
-            MemberCourseResponse responseDto = MemberCourseResponse.builder()
-                    .courseId(100L)
-                    .courseName("테스트 코스")
-                    .courseDescription("설명")
-                    .courseType(CourseType.DIY)
-                    .courseImage("image.jpg")
-                    .categories(List.of("CAFE", "REST"))
-                    .build();
+            MemberCourseResponse responseDto = new MemberCourseResponse(
+                    100L,
+                    CourseType.DIY,
+                    null,
+                    "테스트 코스",
+                    "설명",
+                    List.of("음식점", "카페")
+            );
 
             Slice<MemberCourseResponse> slice = new SliceImpl<>(List.of(responseDto));
 
@@ -191,7 +191,7 @@ class CourseServiceTest {
             assertAll(
                     () -> assertThat(result).isNotNull(),
                     () -> assertThat(result.content()).hasSize(1),
-                    () -> assertThat(result.content().get(0).getCourseName()).isEqualTo("테스트 코스"),
+                    () -> assertThat(result.content().get(0).courseName()).isEqualTo("테스트 코스"),
                     () -> assertThat(result.isLast()).isTrue()
             );
 
