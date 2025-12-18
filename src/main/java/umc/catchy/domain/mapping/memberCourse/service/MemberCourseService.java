@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
@@ -12,7 +13,6 @@ import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
-import umc.catchy.global.common.response.code.BaseErrorCode;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
@@ -22,18 +22,21 @@ import umc.catchy.global.util.SecurityUtil;
 @Transactional
 @Slf4j
 public class MemberCourseService {
-    public final MemberCourseRepository memberCourseRepository;
-    public final MemberRepository memberRepository;
+
+    private final MemberCourseRepository memberCourseRepository;
+    private final MemberRepository memberRepository;
 
     public CourseBookmarkResponse toggleBookmark(Long courseId) {
-        Long memberId = SecurityUtil.getCurrentMemberId();
-        Member currentMember = memberRepository.findById(memberId).orElseThrow(() ->new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        MemberCourse memberCourse = memberCourseRepository.findByCourseIdAndMemberId(courseId, currentMember.getId()).orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_MEMBER_NOT_FOUND));
-        MemberCourse.toggleBookmark(memberCourse);
-        return CourseBookmarkResponse.builder()
-                .memberCourseId(memberCourse.getId())
-                .bookmarked(memberCourse.isBookmark())
-                .build();
+        Member currentMember = getCurrentMember();
+        MemberCourse memberCourse = memberCourseRepository.findByCourseIdAndMemberId(courseId, currentMember.getId())
+                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_MEMBER_NOT_FOUND));
+
+        memberCourse.toggleBookmark();
+
+        return new CourseBookmarkResponse(
+                memberCourse.getId(),
+                memberCourse.isBookmark()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -41,5 +44,23 @@ public class MemberCourseService {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Slice<MemberCourseResponse> courseByBookmarks = memberCourseRepository.findCourseByBookmarks(memberId, pageSize, lastCourseId);
         return MemberCourseSliceResponse.from(courseByBookmarks);
+    }
+
+    @Transactional(readOnly = true)
+    public MemberCourseSliceResponse getMemberCourses(CourseType courseType, String upperLocation,
+                                                      String lowerLocation, Long lastId) {
+        Member member = getCurrentMember();
+
+        Slice<MemberCourseResponse> responses = memberCourseRepository.findCourseByFilters(
+                courseType, upperLocation, lowerLocation, member.getId(), lastId
+        );
+
+        return MemberCourseSliceResponse.from(responses);
+    }
+
+    private Member getCurrentMember() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
     }
 }

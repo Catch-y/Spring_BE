@@ -1,5 +1,6 @@
 package umc.catchy.domain.mapping.memberCourse.dao;
 
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -7,69 +8,62 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
-
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.course.util.LocationUtils;
+import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseDto;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 
+import java.util.*;
+import java.util.stream.Collectors;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import umc.catchy.domain.place.domain.QPlace;
-
+import static umc.catchy.domain.category.domain.QCategory.category;
 import static umc.catchy.domain.course.domain.QCourse.course;
-import static umc.catchy.domain.mapping.memberCourse.domain.QMemberCourse.*;
-import static umc.catchy.domain.mapping.placeCourse.domain.QPlaceCourse.*;
-import static umc.catchy.domain.member.domain.QMember.*;
-import static umc.catchy.domain.place.domain.QPlace.*;
+import static umc.catchy.domain.mapping.memberCourse.domain.QMemberCourse.memberCourse;
+import static umc.catchy.domain.mapping.placeCourse.domain.QPlaceCourse.placeCourse;
+import static umc.catchy.domain.member.domain.QMember.member;
+import static umc.catchy.domain.place.domain.QPlace.place;
 
 @RequiredArgsConstructor
 public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
+    private static final String ALL_LOCATION = "all";
+    private static final String SPACE = " ";
+    private static final int FILTER_PAGE_SIZE = 10;
+    private static final int FILTER_FETCH_SIZE = FILTER_PAGE_SIZE + 1;
+
     @Override
     public Slice<MemberCourseResponse> findCourseByBookmarks(Long memberId, int pageSize, Long lastCourseId) {
 
-        List<MemberCourseResponse> results = queryFactory.select(Projections.constructor(MemberCourseResponse.class,
-                course.id,
-                course.courseType,
-                course.courseImage,
-                course.courseName,
-                course.courseDescription))
+        List<MemberCourseDto> dtos = queryFactory.select(Projections.constructor(MemberCourseDto.class,
+                        course.id,
+                        course.courseType,
+                        course.courseImage,
+                        course.courseName,
+                        course.courseDescription))
                 .from(memberCourse)
-                .leftJoin(memberCourse.course,course).on(memberCourse.course.id.eq(course.id))
-                .leftJoin(memberCourse.member,member).on(memberCourse.member.id.eq(member.id))
+                .leftJoin(memberCourse.course, course).on(memberCourse.course.id.eq(course.id))
+                .leftJoin(memberCourse.member, member).on(memberCourse.member.id.eq(member.id))
                 .where(
                         memberCourse.member.id.eq(memberId),
                         lastCourseId(lastCourseId),
                         markedCondition
                 )
                 .orderBy(course.createdDate.desc())
-                .limit(pageSize+1)
+                .limit(pageSize + 1)
                 .fetch();
 
-        for (MemberCourseResponse result : results) {
-            List<BigCategory> bigCategoriesDuplicates = queryFactory.select(placeCourse.place.category.bigCategory)
-                    .from(placeCourse)
-                    .innerJoin(placeCourse.place,place).on(placeCourse.place.id.eq(place.id))
-                    .innerJoin(placeCourse.course,course).on(placeCourse.course.id.eq(course.id))
-                    .where(placeCourse.course.id.eq(result.getCourseId()))
-                    .fetch();
-            List<BigCategory> bigCategories = new ArrayList<>(new HashSet<>(bigCategoriesDuplicates));
-            List<String> bigCategoryStrings = bigCategories.stream().map(BigCategory::getValue).toList();
-            result.setCategories(bigCategoryStrings);
-        }
+        List<MemberCourseResponse> results = fetchCategoriesAndBuildResponses(dtos);
 
-        return checkLastPage(pageSize,results);
+        return checkLastPage(pageSize, results);
     }
 
     @Override
     public Slice<MemberCourseResponse> findCourseByFilters(CourseType courseType, String upperLocation,
                                                            String lowerLocation, Long memberId, Long lastCourseId) {
-        List<MemberCourseResponse> results = queryFactory
-                .select(Projections.constructor(MemberCourseResponse.class,
+        List<MemberCourseDto> dtos = queryFactory
+                .select(Projections.constructor(MemberCourseDto.class,
                         course.id,
                         course.courseType,
                         course.courseImage,
@@ -89,25 +83,62 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
                 )
                 .groupBy(memberCourse.id)
                 .orderBy(course.createdDate.desc())
-                .limit(11)
+                .limit(FILTER_FETCH_SIZE)
                 .fetch();
 
-        for (MemberCourseResponse result : results) {
-            List<BigCategory> bigCategoriesDuplicates = queryFactory.select(placeCourse.place.category.bigCategory)
-                    .from(placeCourse)
-                    .innerJoin(placeCourse.place,place).on(placeCourse.place.id.eq(place.id))
-                    .innerJoin(placeCourse.course,course).on(placeCourse.course.id.eq(course.id))
-                    .where(placeCourse.course.id.eq(result.getCourseId()))
-                    .fetch();
-            List<BigCategory> bigCategories = new ArrayList<>(new HashSet<>(bigCategoriesDuplicates));
-            List<String> bigCategoryStrings = bigCategories.stream().map(BigCategory::getValue).toList();
-            result.setCategories(bigCategoryStrings);
-        }
+        List<MemberCourseResponse> results = fetchCategoriesAndBuildResponses(dtos);
 
-        return checkLastPage(10, results);
+        return checkLastPage(FILTER_PAGE_SIZE, results);
     }
 
-    private BooleanExpression markedCondition = memberCourse.bookmark.eq(true);
+    private List<MemberCourseResponse> fetchCategoriesAndBuildResponses(List<MemberCourseDto> dtos) {
+        if (dtos.isEmpty()) {
+            return List.of();
+        }
+
+        // 1. 모든 courseId 추출
+        List<Long> courseIds = dtos.stream()
+                .map(MemberCourseDto::courseId)
+                .toList();
+
+        // 2. IN 쿼리로 한 번에 조회
+        List<Tuple> categoryTuples = queryFactory
+                .select(
+                        placeCourse.course.id,
+                        placeCourse.place.category.bigCategory
+                )
+                .from(placeCourse)
+                .innerJoin(placeCourse.place, place)
+                .innerJoin(place.category, category)
+                .where(placeCourse.course.id.in(courseIds))
+                .fetch();
+
+        // 3. Map으로 그룹핑
+        Map<Long, List<BigCategory>> categoryMap = categoryTuples.stream()
+                .collect(Collectors.groupingBy(
+                        tuple -> tuple.get(placeCourse.course.id),
+                        Collectors.mapping(
+                                tuple -> tuple.get(placeCourse.place.category.bigCategory),
+                                Collectors.toList()
+                        )
+                ));
+
+        // 4. 결과 조합
+        List<MemberCourseResponse> results = new ArrayList<>();
+        for (MemberCourseDto dto : dtos) {
+            List<BigCategory> categories = categoryMap.getOrDefault(dto.courseId(), List.of());
+            List<BigCategory> uniqueCategories = new ArrayList<>(new HashSet<>(categories));
+            List<String> categoryStrings = uniqueCategories.stream()
+                    .map(BigCategory::getValue)
+                    .toList();
+
+            results.add(dto.toResponse(categoryStrings));
+        }
+
+        return results;
+    }
+
+    private final BooleanExpression markedCondition = memberCourse.bookmark.eq(true);
 
     private BooleanExpression lastCourseId(Long courseId) {
         if (courseId == null) {
@@ -124,21 +155,20 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
             results.remove(pageSize);
         }
 
-        return new SliceImpl<>(results, PageRequest.of(0,pageSize), hasNext);
+        return new SliceImpl<>(results, PageRequest.of(0, pageSize), hasNext);
     }
 
     private BooleanExpression upperLocationFilter(String upperLocation) {
-        if ("all".equals(upperLocation)) {
+        if (ALL_LOCATION.equals(upperLocation)) {
             return null;
         }
-        return place.roadAddress.startsWith(LocationUtils.normalizeLocation(upperLocation) + " ");
+        return place.roadAddress.startsWith(LocationUtils.normalizeLocation(upperLocation) + SPACE);
     }
 
     private BooleanExpression lowerLocationFilter(String lowerLocation) {
-        if ("all".equals(lowerLocation)) {
+        if (ALL_LOCATION.equals(lowerLocation)) {
             return null;
         }
-        return place.roadAddress.contains(" " + lowerLocation);
+        return place.roadAddress.contains(SPACE + lowerLocation);
     }
-
 }

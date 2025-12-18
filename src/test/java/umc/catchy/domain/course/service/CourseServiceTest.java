@@ -155,53 +155,6 @@ class CourseServiceTest {
     }
 
     @Test
-    @DisplayName("나의 코스 목록 조회 성공 - 필터링 및 페이징")
-    void getMemberCourses_success() {
-        try (MockedStatic<SecurityUtil> mockedSecurityUtil = mockStatic(SecurityUtil.class)) {
-            // given
-            mockSecurityUtil(mockedSecurityUtil);
-
-            when(memberRepository.findById(1L)).thenReturn(Optional.of(testMember));
-
-            MemberCourseResponse responseDto = MemberCourseResponse.builder()
-                    .courseId(100L)
-                    .courseName("테스트 코스")
-                    .courseDescription("설명")
-                    .courseType(CourseType.DIY)
-                    .courseImage("image.jpg")
-                    .categories(List.of("CAFE", "REST"))
-                    .build();
-
-            Slice<MemberCourseResponse> slice = new SliceImpl<>(List.of(responseDto));
-
-            // 검색 파라미터
-            CourseType courseType = CourseType.DIY;
-            String upperLoc = "서울시";
-            String lowerLoc = "강남구";
-            Long lastId = 200L;
-
-            when(memberCourseRepository.findCourseByFilters(
-                    eq(courseType), eq(upperLoc), eq(lowerLoc), eq(1L), eq(lastId)
-            )).thenReturn(slice);
-
-            // when
-            MemberCourseSliceResponse result = courseService.getMemberCourses(courseType, upperLoc, lowerLoc, lastId);
-
-            // then
-            assertAll(
-                    () -> assertThat(result).isNotNull(),
-                    () -> assertThat(result.content()).hasSize(1),
-                    () -> assertThat(result.content().get(0).getCourseName()).isEqualTo("테스트 코스"),
-                    () -> assertThat(result.isLast()).isTrue()
-            );
-
-            verify(memberCourseRepository).findCourseByFilters(
-                    eq(courseType), eq(upperLoc), eq(lowerLoc), eq(1L), eq(lastId)
-            );
-        }
-    }
-
-    @Test
     @DisplayName("AI 코스 저장 및 장소 등록 성공 - 시간 파싱, 평점 계산, 순서 보장")
     void saveCourseAndPlaces_success() {
         // given

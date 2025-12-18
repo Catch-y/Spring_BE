@@ -13,8 +13,6 @@ import umc.catchy.domain.course.dto.response.GptPlaceInfoResponse;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
 import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
-import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
-import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
 import umc.catchy.domain.mapping.placeCourse.domain.PlaceCourse;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
@@ -34,8 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import org.springframework.data.domain.Slice;
 
 @Service
 @RequiredArgsConstructor
@@ -74,17 +70,6 @@ public class CourseService {
                 getBookmarks(course, member),
                 placeListOfCourse
         );
-    }
-
-    public MemberCourseSliceResponse getMemberCourses(CourseType courseType, String upperLocation,
-                                                      String lowerLocation, Long lastId) {
-        Member member = getCurrentMember();
-
-        Slice<MemberCourseResponse> responses = memberCourseRepository.findCourseByFilters(
-                courseType, upperLocation, lowerLocation, member.getId(), lastId
-        );
-
-        return MemberCourseSliceResponse.from(responses);
     }
 
     @Transactional
