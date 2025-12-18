@@ -81,8 +81,7 @@ public class PlaceVisitService {
                 .count();
 
         if (visitNum == Math.round((double) placeNum / 2)) {
-            memberCourse.setVisited(true);
-            memberCourse.setVisitedDate(LocalDate.now());
+            memberCourse.markAsVisited(LocalDate.now());
             course.increaseParticipants();
         }
 

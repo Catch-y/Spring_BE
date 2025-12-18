@@ -32,7 +32,7 @@ public class MemberCourseService {
         MemberCourse memberCourse = memberCourseRepository.findByCourseIdAndMemberId(courseId, currentMember.getId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_MEMBER_NOT_FOUND));
 
-        MemberCourse.toggleBookmark(memberCourse);
+        memberCourse.toggleBookmark();
 
         return new CourseBookmarkResponse(
                 memberCourse.getId(),

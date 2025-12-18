@@ -5,13 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.member.domain.Member;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "member_course", indexes = {
@@ -28,10 +26,8 @@ public class MemberCourse extends BaseTimeEntity {
     @Column(name = "member_course_id")
     private Long id;
 
-    @Setter
     private boolean isVisited = false;
 
-    @Setter
     private LocalDate visitedDate;
 
     private boolean bookmark = false;
@@ -44,7 +40,12 @@ public class MemberCourse extends BaseTimeEntity {
     @JoinColumn(name = "course_id")
     private Course course;
 
-    public static void toggleBookmark(MemberCourse memberCourse) {
-        memberCourse.bookmark = !memberCourse.bookmark;
+    public void toggleBookmark() {
+        this.bookmark = !this.bookmark;
+    }
+
+    public void markAsVisited(LocalDate visitedDate) {
+        this.isVisited = true;
+        this.visitedDate = visitedDate;
     }
 }
