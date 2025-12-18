@@ -28,6 +28,11 @@ import static umc.catchy.domain.place.domain.QPlace.place;
 public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
+    private static final String ALL_LOCATION = "all";
+    private static final String SPACE = " ";
+    private static final int FILTER_PAGE_SIZE = 10;
+    private static final int FILTER_FETCH_SIZE = FILTER_PAGE_SIZE + 1;
+
     @Override
     public Slice<MemberCourseResponse> findCourseByBookmarks(Long memberId, int pageSize, Long lastCourseId) {
 
@@ -78,12 +83,12 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
                 )
                 .groupBy(memberCourse.id)
                 .orderBy(course.createdDate.desc())
-                .limit(11)
+                .limit(FILTER_FETCH_SIZE)
                 .fetch();
 
         List<MemberCourseResponse> results = fetchCategoriesAndBuildResponses(dtos);
 
-        return checkLastPage(10, results);
+        return checkLastPage(FILTER_PAGE_SIZE, results);
     }
 
     private List<MemberCourseResponse> fetchCategoriesAndBuildResponses(List<MemberCourseDto> dtos) {
@@ -91,10 +96,12 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
             return List.of();
         }
 
+        // 1. 모든 courseId 추출
         List<Long> courseIds = dtos.stream()
                 .map(MemberCourseDto::courseId)
                 .toList();
 
+        // 2. IN 쿼리로 한 번에 조회
         List<Tuple> categoryTuples = queryFactory
                 .select(
                         placeCourse.course.id,
@@ -106,6 +113,7 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
                 .where(placeCourse.course.id.in(courseIds))
                 .fetch();
 
+        // 3. Map으로 그룹핑
         Map<Long, List<BigCategory>> categoryMap = categoryTuples.stream()
                 .collect(Collectors.groupingBy(
                         tuple -> tuple.get(placeCourse.course.id),
@@ -115,6 +123,7 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
                         )
                 ));
 
+        // 4. 결과 조합
         List<MemberCourseResponse> results = new ArrayList<>();
         for (MemberCourseDto dto : dtos) {
             List<BigCategory> categories = categoryMap.getOrDefault(dto.courseId(), List.of());
@@ -129,7 +138,7 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
         return results;
     }
 
-    private BooleanExpression markedCondition = memberCourse.bookmark.eq(true);
+    private final BooleanExpression markedCondition = memberCourse.bookmark.eq(true);
 
     private BooleanExpression lastCourseId(Long courseId) {
         if (courseId == null) {
@@ -150,16 +159,16 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
     }
 
     private BooleanExpression upperLocationFilter(String upperLocation) {
-        if ("all".equals(upperLocation)) {
+        if (ALL_LOCATION.equals(upperLocation)) {
             return null;
         }
-        return place.roadAddress.startsWith(LocationUtils.normalizeLocation(upperLocation) + " ");
+        return place.roadAddress.startsWith(LocationUtils.normalizeLocation(upperLocation) + SPACE);
     }
 
     private BooleanExpression lowerLocationFilter(String lowerLocation) {
-        if ("all".equals(lowerLocation)) {
+        if (ALL_LOCATION.equals(lowerLocation)) {
             return null;
         }
-        return place.roadAddress.contains(" " + lowerLocation);
+        return place.roadAddress.contains(SPACE + lowerLocation);
     }
 }
