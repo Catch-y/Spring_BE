@@ -110,7 +110,7 @@ public class PlaceCourseService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        Place place = placeRepository.findById(placeId)
+        Place place = placeRepository.findByIdWithCategory(placeId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
         Long reviewCount = placeReviewRepository.countByPlaceId(placeId);

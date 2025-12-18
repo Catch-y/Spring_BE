@@ -25,8 +25,15 @@ public interface PlaceVisitRepository extends JpaRepository<PlaceVisit, Long> {
 
     @Query("SELECT pv FROM PlaceVisit pv JOIN FETCH pv.place p WHERE pv.member.id = :memberId AND p.id IN :placeIds")
     List<PlaceVisit> findPlaceVisitsByMemberAndPlaces(@Param("memberId") Long memberId, @Param("placeIds") List<Long> placeIds);
+
+    @Query("select pv from PlaceVisit pv " +
+            "join fetch pv.place p " +
+            "join fetch p.category " +
+            "where pv.member = :member " +
+            "order by pv.visitedDate desc")
+    List<PlaceVisit> findAllByMemberWithPlaceAndCategory(Member member);
+
     List<PlaceVisit> findAllByMemberAndPlaceAndCourseAndIsVisitedTrue(Member member, Place place, Course course);
-    List<PlaceVisit> findAllByMemberOrderByVisitedDateDesc(Member member);
     Integer deleteAllByMember(Member member);
 
     @Query("SELECT pv FROM PlaceVisit pv " +

@@ -20,4 +20,7 @@ public interface PlaceRepository extends JpaRepository<Place, Long>, PlaceCustom
             @Param("alternativeLocation") String alternativeLocation
     );
     Optional<Place> findByPoiId(Long poiId);
+
+    @Query("select p from Place p join fetch p.category where p.id = :placeId")
+    Optional<Place> findByIdWithCategory(@Param("placeId") Long placeId);
 }

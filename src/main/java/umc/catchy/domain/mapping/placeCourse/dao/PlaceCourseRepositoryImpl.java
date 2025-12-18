@@ -11,6 +11,7 @@ import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceDto;
 
 import java.util.List;
 
+import static umc.catchy.domain.category.domain.QCategory.category;
 import static umc.catchy.domain.mapping.placeLike.domain.QPlaceLike.placeLike;
 import static umc.catchy.domain.member.domain.QMember.member;
 import static umc.catchy.domain.place.domain.QPlace.*;
@@ -35,6 +36,7 @@ public class PlaceCourseRepositoryImpl implements PlaceCourseRepositoryCustom{
                                 placeReview.count()
                         ))
                 .from(place)
+                .leftJoin(place.category, category)
                 .leftJoin(placeLike).on(place.id.eq(placeLike.place.id))
                 .leftJoin(placeLike.member, member).on(placeLike.member.id.eq(member.id))
                 .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
@@ -43,7 +45,14 @@ public class PlaceCourseRepositoryImpl implements PlaceCourseRepositoryCustom{
                         lastPlaceId(lastPlaceId),
                         likedCondition
                 )
-                .groupBy(place.id)
+                .groupBy(
+                        place.id,
+                        place.imageUrl,
+                        place.placeName,
+                        category.bigCategory,
+                        place.roadAddress,
+                        place.activeTime
+                )
                 .orderBy(placeLike.place.createdDate.desc())
                 .limit(pageSize + 1)
                 .fetch();

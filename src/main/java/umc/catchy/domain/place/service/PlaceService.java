@@ -60,7 +60,7 @@ public class PlaceService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         // 최근 방문했던 장소를 기반으로 추천
-        List<PlaceVisit> placeVisits = placeVisitRepository.findAllByMemberOrderByVisitedDateDesc(member);
+        List<PlaceVisit> placeVisits = placeVisitRepository.findAllByMemberWithPlaceAndCategory(member);
 
         // 방문 카테고리가 많은 순으로 정렬
         List<Long> sortedVisitCategories = sortVisitCategories(getVisitCategories(placeVisits));

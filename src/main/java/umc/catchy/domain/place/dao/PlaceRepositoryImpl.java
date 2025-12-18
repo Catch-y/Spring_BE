@@ -15,7 +15,6 @@ import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.JPQLQuery;
-import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -31,8 +30,6 @@ import umc.catchy.domain.course.dto.query.GptPlaceInfoDto;
 import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.mapping.placeCourse.dto.query.PlacePreviewDto;
 import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceSearchDto;
-import umc.catchy.domain.mapping.placeLike.domain.QPlaceLike;
-import umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.place.domain.QPlace;
 
@@ -41,24 +38,41 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class PlaceRepositoryImpl implements PlaceCustomRepository {
+
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<Place> findPlacesByDynamicFilters(List<Long> categoryIds, List<String> upperRegions, List<String> lowerRegions) {
-        QPlace place = QPlace.place;
+    public List<Place> findRecommendedPlaces(List<Long> categoryIds, List<String> upperRegions, List<String> lowerRegions, Long memberId, int maxPlaces) {
+        List<Long> placeIds = findPlacesByDynamicFilters(categoryIds, upperRegions, lowerRegions);
 
-        JPAQuery<Place> query = queryFactory
+        if (placeIds.isEmpty()) {
+            return List.of();
+        }
+
+        return queryFactory
                 .selectFrom(place)
-                .where(
-                        place.category.id.in(categoryIds),  // 카테고리 조건
-                        upperRegionFilter(place, upperRegions), // 상위 지역 필터
-                        lowerRegionFilter(place, lowerRegions)  // 하위 지역 필터
-                );
-
-        return query.fetch();
+                .join(place.category, category).fetchJoin()
+                .leftJoin(placeVisit).on(place.id.eq(placeVisit.place.id).and(placeVisit.member.id.eq(memberId)))
+                .leftJoin(placeLike).on(place.id.eq(placeLike.place.id).and(placeLike.member.id.eq(memberId)))
+                .where(place.id.in(placeIds))
+                .orderBy(createWeightExpression().desc())
+                .limit(3L * maxPlaces)
+                .fetch();
     }
 
-    private BooleanExpression upperRegionFilter(QPlace place, List<String> upperRegions) {
+    private List<Long> findPlacesByDynamicFilters(List<Long> categoryIds, List<String> upperRegions, List<String> lowerRegions) {
+        return queryFactory
+                .select(place.id)
+                .from(place)
+                .where(
+                        place.category.id.in(categoryIds),
+                        upperRegionFilter(upperRegions),
+                        lowerRegionFilter(lowerRegions)
+                )
+                .fetch();
+    }
+
+    private BooleanExpression upperRegionFilter(List<String> upperRegions) {
         if (upperRegions == null || upperRegions.isEmpty()) {
             return null;
         }
@@ -72,7 +86,7 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         return condition;
     }
 
-    private BooleanExpression lowerRegionFilter(QPlace place, List<String> lowerRegions) {
+    private BooleanExpression lowerRegionFilter(List<String> lowerRegions) {
         if (lowerRegions == null || lowerRegions.isEmpty()) {
             return null;
         }
@@ -86,33 +100,9 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         return condition;
     }
 
-    @Override
-    public List<Place> findRecommendedPlaces(List<Long> categoryIds, List<String> upperRegions, List<String> lowerRegions, Long memberId, int maxPlaces) {
-        QPlace place = QPlace.place;
-        QPlaceVisit placeVisit = QPlaceVisit.placeVisit;
-        QPlaceLike placeLike = QPlaceLike.placeLike;
-
-        List<Place> filteredPlaces = findPlacesByDynamicFilters(categoryIds, upperRegions, lowerRegions);
-
-        List<Long> placeIds = filteredPlaces.stream().map(Place::getId).toList();
-
-        NumberExpression<Double> weightExpression = createWeightExpression(placeVisit);
-
-        // 쿼리 생성: 가중치 계산 및 정렬 추가
-        JPAQuery<Place> query = queryFactory
-                .selectFrom(place)
-                .leftJoin(placeVisit).on(place.id.eq(placeVisit.place.id).and(placeVisit.member.id.eq(memberId)))
-                .leftJoin(placeLike).on(place.id.eq(placeLike.place.id).and(placeLike.member.id.eq(memberId)))
-                .where(place.id.in(placeIds))
-                .orderBy(weightExpression.desc())
-                .limit(3L * maxPlaces);
-
-        return query.fetch();
-    }
-
-    private NumberExpression<Double> createWeightExpression(QPlaceVisit placeVisit) {
+    private NumberExpression<Double> createWeightExpression() {
         // 기본 가중치 = 1.0
-        NumberExpression<Double> baseWeight = com.querydsl.core.types.dsl.Expressions.asNumber(1.0);
+        NumberExpression<Double> baseWeight = Expressions.asNumber(1.0);
 
         // 좋아요 여부 가중치 = 0.5
         NumberExpression<Double> likedWeight = placeLike.isLiked.when(true).then(0.5).otherwise(0.0);
@@ -186,6 +176,7 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                                 placeLike.isLiked
                         ))
                 .from(place)
+                .leftJoin(place.category, category)
                 .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
                 .leftJoin(placeVisit).on(place.id.eq(placeVisit.place.id).and(placeVisit.member.id.eq(memberId)))
                 .leftJoin(placeLike).on(place.id.eq(placeLike.place.id).and(placeLike.member.id.eq(memberId)))
@@ -194,7 +185,18 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                         ExpressionUtils.anyOf(hourConditions.toArray(new BooleanExpression[0])),
                         notContainVisited(memberId)
                 )
-                .groupBy(place.id)
+                .groupBy(
+                        place.id,
+                        place.placeName,
+                        place.imageUrl,
+                        category.name,
+                        place.roadAddress,
+                        place.activeTime,
+                        place.latitude,
+                        place.longitude,
+                        placeLike.id,
+                        placeLike.isLiked
+                )
                 .orderBy(categoryOrder.asc(), distance.asc())
                 .offset((long) page * pageSize)
                 .limit(pageSize + 1);
@@ -252,6 +254,7 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         );
         List<Place> places = queryFactory
                 .selectFrom(place)
+                .join(place.category, category).fetchJoin()
                 .leftJoin(memberPlaceVote).on(memberPlaceVote.place.id.eq(place.id))
                 .join(place.category, category)
                 .where(
