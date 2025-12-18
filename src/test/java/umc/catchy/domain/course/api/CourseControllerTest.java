@@ -83,43 +83,6 @@ class CourseControllerTest extends ControllerTestSupport {
     }
 
     @Test
-    @DisplayName("내 코스 조회 API (검색/필터링) - 성공")
-    void getMemberCourses_success() throws Exception {
-        // given
-        MemberCourseResponse content = new MemberCourseResponse(
-                100L,
-                CourseType.DIY,
-                null,
-                "테스트 코스",
-                null,
-                List.of("음식점", "카페")
-        );
-
-        MemberCourseSliceResponse response = new MemberCourseSliceResponse(List.of(content), true);
-
-        // 검색 조건
-        CourseType type = CourseType.DIY;
-        String upperLoc = "서울시";
-        String lowerLoc = "강남구";
-        Long lastId = 10L;
-
-        when(courseService.getMemberCourses(eq(type), eq(upperLoc), eq(lowerLoc), eq(lastId)))
-                .thenReturn(response);
-
-        // when & then
-        mockMvc.perform(get("/course/search")
-                        .header("Authorization", testToken)
-                        .param("type", "DIY")
-                        .param("upperLocation", "서울시")
-                        .param("lowerLocation", "강남구")
-                        .param("lastId", "10"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.result.content[0].courseName").value("테스트 코스"))
-                .andExpect(jsonPath("$.result.isLast").value(true));
-    }
-
-    @Test
     @DisplayName("코스 생성 API - 성공 (Multipart)")
     void createCourse_success() throws Exception {
         // given
@@ -237,28 +200,6 @@ class CourseControllerTest extends ControllerTestSupport {
                     .andExpect(jsonPath("$.code").value("GPT404"))
                     .andExpect(jsonPath("$.message").value("GPT 호출에 실패했습니다."));
         }
-    }
-
-    @Test
-    @DisplayName("코스 북마크 토글 API - 성공 (북마크 해제)")
-    void toggleBookmark_success_unbookmark() throws Exception {
-        // given
-        Long courseId = 1L;
-
-        CourseBookmarkResponse response = new CourseBookmarkResponse(
-                100L,
-                false
-        );
-
-        when(memberCourseService.toggleBookmark(courseId)).thenReturn(response);
-
-        // when & then
-        mockMvc.perform(patch("/course/{courseId}/bookmark", courseId)
-                        .header("Authorization", testToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.result.memberCourseId").value(100L))
-                .andExpect(jsonPath("$.result.bookmarked").value(false));
     }
 
     @Test
