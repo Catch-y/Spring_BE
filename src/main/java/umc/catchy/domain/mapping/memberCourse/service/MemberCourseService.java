@@ -22,13 +22,11 @@ import umc.catchy.global.util.SecurityUtil;
 @Slf4j
 public class MemberCourseService {
 
-    public final MemberCourseRepository memberCourseRepository;
-    public final MemberRepository memberRepository;
+    private final MemberCourseRepository memberCourseRepository;
+    private final MemberRepository memberRepository;
 
     public CourseBookmarkResponse toggleBookmark(Long courseId) {
-        Long memberId = SecurityUtil.getCurrentMemberId();
-        Member currentMember = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        Member currentMember = getCurrentMember();
         MemberCourse memberCourse = memberCourseRepository.findByCourseIdAndMemberId(courseId, currentMember.getId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_MEMBER_NOT_FOUND));
 
@@ -45,5 +43,11 @@ public class MemberCourseService {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Slice<MemberCourseResponse> courseByBookmarks = memberCourseRepository.findCourseByBookmarks(memberId, pageSize, lastCourseId);
         return MemberCourseSliceResponse.from(courseByBookmarks);
+    }
+
+    private Member getCurrentMember() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
     }
 }
