@@ -26,7 +26,7 @@ import java.util.Map;
 public class GooglePlaceClient {
 
     private static final String SEARCH_TEXT_URL = "https://places.googleapis.com/v1/places:searchText";
-    private static final String FIELD_MASK = "places.displayName,places.formattedAddress,places.location,places.regularOpeningHours,places.websiteUri,places.internationalPhoneNumber,places.photos,places.editorialSummary";
+    private static final String FIELD_MASK = "places.displayName,places.formattedAddress,places.location,places.regularOpeningHours,places.websiteUri,places.internationalPhoneNumber,places.photos,places.editorialSummary,places.addressComponents";
 
     @Value("${map.google.api-key}")
     private String apiKey;
@@ -96,7 +96,7 @@ public class GooglePlaceClient {
         Map<String, String> details = new HashMap<>();
 
         details.put("name", result.path("displayName").path("text").asText(null));
-        details.put("address", result.path("formattedAddress").asText(null));
+        details.put("address", result.path("formattedAddress").asText(null).replaceFirst("^대한민국\\s+", ""));
         details.put("phone", result.path("internationalPhoneNumber").asText(null));
         details.put("website", result.path("websiteUri").asText(null));
 
@@ -106,6 +106,21 @@ public class GooglePlaceClient {
         JsonNode location = result.path("location");
         details.put("lat", String.valueOf(location.path("latitude").asDouble()));
         details.put("lon", String.valueOf(location.path("longitude").asDouble()));
+
+        JsonNode addressComponents = result.path("addressComponents");
+        if (addressComponents.isArray()) {
+            for (JsonNode component : addressComponents) {
+                JsonNode types = component.path("types");
+                for (JsonNode type : types) {
+                    String typeStr = type.asText();
+                    if ("administrative_area_level_1".equals(typeStr)) {
+                        details.put("sido", component.path("longText").asText(null));
+                    } else if ("sublocality_level_1".equals(typeStr)) {
+                        details.put("sigungu", component.path("longText").asText(null));
+                    }
+                }
+            }
+        }
 
         JsonNode openingHours = result.path("regularOpeningHours");
         if (!openingHours.isMissingNode()) {
