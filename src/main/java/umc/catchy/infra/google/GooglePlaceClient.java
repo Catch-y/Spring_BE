@@ -96,7 +96,10 @@ public class GooglePlaceClient {
         Map<String, String> details = new HashMap<>();
 
         details.put("name", result.path("displayName").path("text").asText(null));
-        details.put("address", result.path("formattedAddress").asText(null).replaceFirst("^대한민국\\s+", ""));
+
+        String rawAddress = result.path("formattedAddress").asText(null);
+        details.put("address", rawAddress != null ? rawAddress.replaceFirst("^대한민국\\s+", "") : null);
+
         details.put("phone", result.path("internationalPhoneNumber").asText(null));
         details.put("website", result.path("websiteUri").asText(null));
 
@@ -104,9 +107,11 @@ public class GooglePlaceClient {
         details.put("description", editorialSummary.isMissingNode() ? null : editorialSummary.path("text").asText(null));
 
         JsonNode location = result.path("location");
-        details.put("lat", String.valueOf(location.path("latitude").asDouble()));
-        details.put("lon", String.valueOf(location.path("longitude").asDouble()));
+        details.put("lat", location.isMissingNode() ? null : String.valueOf(location.path("latitude").asDouble()));
+        details.put("lon", location.isMissingNode() ? null : String.valueOf(location.path("longitude").asDouble()));
 
+        details.put("sido", null);
+        details.put("sigungu", null);
         JsonNode addressComponents = result.path("addressComponents");
         if (addressComponents.isArray()) {
             for (JsonNode component : addressComponents) {
@@ -136,7 +141,11 @@ public class GooglePlaceClient {
             String photoName = photos.get(0).path("name").asText(null);
             if (photoName != null) {
                 details.put("imageUrl", String.format("https://places.googleapis.com/v1/%s/media?maxHeightPx=400&key=%s", photoName, apiKey));
+            } else {
+                details.put("imageUrl", null);
             }
+        } else {
+            details.put("imageUrl", null);
         }
 
         return details;

@@ -2,6 +2,7 @@ package umc.catchy.domain.mapping.placeCourse.service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -61,11 +62,20 @@ public class PlaceCourseFacade {
                     Place p = existingPlaceMap.get(req.poiId());
                     if (p != null) return CompletableFuture.completedFuture(p);
 
-                    return CompletableFuture.supplyAsync(() -> createPlaceFromGoogle(req), googlePlaceExecutor);
+                    // 개별 비동기 작업에 handle을 추가하여 예외 발생 시 null을 반환하도록 처리
+                    return CompletableFuture.supplyAsync(() -> createPlaceFromGoogle(req), googlePlaceExecutor)
+                            .handle((result, ex) -> {
+                                if (ex != null) {
+                                    log.error("장소 생성 실패 (POI ID: {}): {}", req.poiId(), ex.getMessage());
+                                    return null;
+                                }
+                                return result;
+                            });
                 }).toList();
 
         List<Place> allPlaces = futures.stream()
                 .map(CompletableFuture::join)
+                .filter(Objects::nonNull) // 실패한(null) 장소는 결과 리스트에서 제외
                 .toList();
 
         List<Long> dbIds = allPlaces.stream().map(Place::getId).toList();
