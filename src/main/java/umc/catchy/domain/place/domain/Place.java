@@ -28,7 +28,8 @@ import umc.catchy.global.error.exception.GeneralException;
 @Table(
         name = "place",
         indexes = {
-                @Index(name = "idx_place_search", columnList = "category_id, sido, sigungu")
+                @Index(name = "idx_place_search", columnList = "category_id, sido, sigungu"),
+                @Index(name = "idx_place_recommendation", columnList = "category_id, latitude, longitude, start_time, end_time")
         }
 )
 public class Place extends BaseTimeEntity {

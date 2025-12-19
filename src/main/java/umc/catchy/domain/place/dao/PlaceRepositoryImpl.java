@@ -14,7 +14,6 @@ import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
-import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -32,7 +31,6 @@ import umc.catchy.domain.mapping.placeCourse.dto.query.PlacePreviewDto;
 import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceSearchDto;
 import umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit;
 import umc.catchy.domain.place.domain.Place;
-import umc.catchy.domain.place.domain.QPlace;
 
 import java.util.List;
 
@@ -109,93 +107,126 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
 
     @Override
     public Slice<PlacePreviewDto> recommendPlacesByActivityData(Long memberId, Double latitude, Double longitude,
-                                                                     List<Long> categoryIds,
-                                                                     Map<Long, Integer> hourMap,
-                                                                     int pageSize, int page) {
-        // 모든 카테고리에 대한 데이터를 한 번에 가져옴
-        List<PlacePreviewDto> results = getPlaceInfoPreview(memberId, categoryIds, hourMap, latitude, longitude, pageSize, page - 1);
+                                                                List<Long> categoryIds,
+                                                                Map<Long, Integer> hourMap,
+                                                                int pageSize, int page) {
+        // 1. 추천 장소 ID 리스트 추출 (필터링 및 정렬 로직 분리)
+        List<Long> targetIds = findTargetIds(memberId, categoryIds, hourMap, latitude, longitude, pageSize, page - 1);
 
-        // 페이징 처리
+        if (targetIds.isEmpty()) {
+            return new SliceImpl<>(Collections.emptyList(), PageRequest.of(page, pageSize), false);
+        }
+
+        // 2. 추출된 ID들에 대한 상세 정보 및 집계 조회
+        List<PlacePreviewDto> results = fetchPlacePreviewsByIds(memberId, targetIds, categoryIds, latitude, longitude);
+
         boolean hasNext = results.size() > pageSize;
         if (hasNext) {
-            results = results.subList(0, pageSize); // pageSize만큼만 잘라냄
+            results = results.subList(0, pageSize);
         }
 
         return new SliceImpl<>(results, PageRequest.of(page, pageSize), hasNext);
     }
 
-    private List<PlacePreviewDto> getPlaceInfoPreview(Long memberId, List<Long> categoryIds, Map<Long, Integer> hourMap,
-                                                      Double userLatitude, Double userLongitude, int pageSize, int page) {
+    private List<Long> findTargetIds(Long memberId, List<Long> categoryIds, Map<Long, Integer> hourMap,
+                                     Double userLat, Double userLon, int pageSize, int page) {
 
-        // 사용자 위치와 장소 거리 계산(가까운 순으로 정렬)
-        NumberExpression<Double> distance = Expressions.numberTemplate(Double.class,
-                "(6371 * ACOS(COS(RADIANS({0})) * COS(RADIANS({1})) * COS(RADIANS({2}) - RADIANS({3})) + SIN(RADIANS({0})) * SIN(RADIANS({1}))))",
-                userLatitude, place.latitude, place.longitude, userLongitude);
-
-        // 카테고리 정렬 순서 설정(사용자가 방문 빈도가 높은 순)
-        NumberExpression<Integer> categoryOrder = Expressions.asNumber(categoryIds.size());
-
-        for (int i = 0; i < categoryIds.size(); i++) {
-            Long categoryId = categoryIds.get(i);
-            NumberExpression<Integer> orderValue = Expressions.asNumber(i);
-
-            categoryOrder = new CaseBuilder()
-                    .when(place.category.id.eq(categoryId)).then(orderValue)
-                    .otherwise(categoryOrder);
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        // 카테고리별 평균 시간 조건을 적용
-        List<BooleanExpression> hourConditions = new ArrayList<>();
-        for (Long categoryId : categoryIds) {
-            Integer avgHour = hourMap.get(categoryId);
-            if (avgHour != null) {
-                hourConditions.add(hourCondition(avgHour).and(place.category.id.eq(categoryId)));
-            }
-        }
+        // 바운딩 박스 설정 (위경도 약 11km 반경)
+        double delta = 0.1;
+        double minLat = userLat - delta;
+        double maxLat = userLat + delta;
+        double minLon = userLon - delta;
+        double maxLon = userLon + delta;
 
-        // 쿼리 생성
-        JPQLQuery<PlacePreviewDto> query = queryFactory.select(
-                        Projections.constructor(PlacePreviewDto.class,
-                                place.id,
-                                place.placeName,
-                                place.imageUrl,
-                                place.category.name,
-                                place.roadAddress,
-                                place.activeTime,
-                                placeReview.rating.avg().coalesce(0.0),
-                                place.latitude,
-                                place.longitude,
-                                placeReview.count(),
-                                placeLike.isLiked
-                        ))
+        BooleanExpression[] hourConditions = buildHourConditions(categoryIds, hourMap);
+
+        var query = queryFactory
+                .select(place.id)
                 .from(place)
-                .leftJoin(place.category, category)
-                .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
-                .leftJoin(placeVisit).on(place.id.eq(placeVisit.place.id).and(placeVisit.member.id.eq(memberId)))
-                .leftJoin(placeLike).on(place.id.eq(placeLike.place.id).and(placeLike.member.id.eq(memberId)))
                 .where(
                         place.category.id.in(categoryIds),
-                        ExpressionUtils.anyOf(hourConditions.toArray(new BooleanExpression[0])),
+                        place.latitude.between(minLat, maxLat),
+                        place.longitude.between(minLon, maxLon),
                         notContainVisited(memberId)
+                );
+
+        if (hourConditions.length > 0) {
+            query.where(ExpressionUtils.anyOf(hourConditions));
+        }
+
+        return query
+                .orderBy(
+                        buildCategoryOrder(categoryIds).asc(),
+                        buildDistanceExpression(userLat, userLon).asc()
                 )
-                .groupBy(
+                .offset((long) page * pageSize)
+                .limit(pageSize + 1)
+                .fetch();
+    }
+
+    private List<PlacePreviewDto> fetchPlacePreviewsByIds(Long memberId, List<Long> targetIds,
+                                                          List<Long> categoryIds, Double userLat, Double userLon) {
+        return queryFactory
+                .select(Projections.constructor(PlacePreviewDto.class,
                         place.id,
                         place.placeName,
                         place.imageUrl,
                         category.name,
                         place.roadAddress,
                         place.activeTime,
+                        placeReview.rating.avg().coalesce(0.0),
                         place.latitude,
                         place.longitude,
-                        placeLike.id,
+                        placeReview.count(),
                         placeLike.isLiked
-                )
-                .orderBy(categoryOrder.asc(), distance.asc())
-                .offset((long) page * pageSize)
-                .limit(pageSize + 1);
-
-        return query.fetch();
+                ))
+                .from(place)
+                .leftJoin(place.category, category)
+                .leftJoin(placeReview).on(placeReview.place.id.eq(place.id))
+                .leftJoin(placeLike).on(place.id.eq(placeLike.place.id).and(placeLike.member.id.eq(memberId)))
+                .where(place.id.in(targetIds))
+                .groupBy(place.id, place.placeName, place.imageUrl, category.name,
+                        place.roadAddress, place.activeTime, place.latitude, place.longitude,
+                        placeLike.id, placeLike.isLiked)
+                .orderBy(buildCategoryOrder(categoryIds).asc(), buildDistanceExpression(userLat, userLon).asc())
+                .fetch();
     }
+
+    private NumberExpression<Double> buildDistanceExpression(Double lat, Double lon) {
+        return Expressions.numberTemplate(Double.class,
+                "(6371 * ACOS(COS(RADIANS({0})) * COS(RADIANS({1})) * COS(RADIANS({2}) - RADIANS({3})) + SIN(RADIANS({0})) * SIN(RADIANS({1}))))",
+                lat, place.latitude, place.longitude, lon);
+    }
+
+    private NumberExpression<Integer> buildCategoryOrder(List<Long> categoryIds) {
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return Expressions.asNumber(0);
+        }
+
+        CaseBuilder caseBuilder = new CaseBuilder();
+
+        CaseBuilder.Cases<Integer, ?> cases = caseBuilder.when(place.category.id.eq(categoryIds.get(0))).then(0);
+
+        for (int i = 1; i < categoryIds.size(); i++) {
+            cases = cases.when(place.category.id.eq(categoryIds.get(i))).then(i);
+        }
+
+        return Expressions.asNumber(cases.otherwise(categoryIds.size()));
+    }
+
+    private BooleanExpression[] buildHourConditions(List<Long> categoryIds, Map<Long, Integer> hourMap) {
+        List<BooleanExpression> conditions = new ArrayList<>();
+        for (Long id : categoryIds) {
+            Integer avgHour = hourMap.get(id);
+            if (avgHour != null) conditions.add(hourCondition(avgHour).and(place.category.id.eq(id)));
+        }
+        return conditions.toArray(new BooleanExpression[0]);
+    }
+
 
     private BooleanExpression hourCondition(Integer avgHour) {
         LocalTime targetTime = LocalTime.of(avgHour, 0);
