@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +31,6 @@ import umc.catchy.global.util.SecurityUtil;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 @Transactional
 public class PlaceService {
 
@@ -69,9 +67,6 @@ public class PlaceService {
 
         // 카테고리별 방문 시간대 평균
         Map<Long, Integer> categoryAverageHour = getCategoryAverageHour(placeVisits);
-
-        log.info("Before repository call - sortedVisitCategories: {}", sortedVisitCategories);
-        log.info("Before repository call - categoryAverageHour: {}", categoryAverageHour);
 
         Slice<PlacePreviewDto> placePreviewDtos = placeRepository.recommendPlacesByActivityData(
                 memberId, latitude, longitude, sortedVisitCategories, categoryAverageHour, pageSize, page);
