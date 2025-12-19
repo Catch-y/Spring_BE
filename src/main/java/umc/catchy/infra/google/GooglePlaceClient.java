@@ -2,6 +2,7 @@ package umc.catchy.infra.google;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,9 +13,10 @@ import umc.catchy.global.error.exception.GeneralException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,77 +25,49 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class GooglePlaceClient {
 
-    private static final String FIND_PLACE_URL = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json";
-    private static final String PLACE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json";
-    private static final String PLACE_PHOTO_URL = "https://maps.googleapis.com/maps/api/place/photo";
+    private static final String SEARCH_TEXT_URL = "https://places.googleapis.com/v1/places:searchText";
+    private static final String FIELD_MASK = "places.displayName,places.formattedAddress,places.location,places.regularOpeningHours,places.websiteUri,places.internationalPhoneNumber,places.photos,places.editorialSummary";
 
     @Value("${map.google.api-key}")
     private String apiKey;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public String findPlaceId(String placeName, String address, Double latitude, Double longitude) {
+    public Map<String, String> getPlaceInfo(String placeName, String address, Double latitude, Double longitude) {
         try {
-            String input = buildSearchInput(placeName, address);
-            String locationBias = String.format("point:%f,%f", latitude, longitude);
+            ObjectNode rootNode = objectMapper.createObjectNode();
+            rootNode.put("textQuery", (address != null ? address + " " : "") + placeName);
+            rootNode.put("languageCode", "ko");
 
-            String query = String.format(
-                    "?input=%s&inputtype=textquery&locationbias=%s&fields=place_id&language=ko&key=%s",
-                    URLEncoder.encode(input, "UTF-8"),
-                    URLEncoder.encode(locationBias, "UTF-8"),
-                    apiKey
-            );
+            ObjectNode locationBias = rootNode.putObject("locationBias");
+            ObjectNode circle = locationBias.putObject("circle");
+            ObjectNode center = circle.putObject("center");
+            center.put("latitude", latitude);
+            center.put("longitude", longitude);
+            circle.put("radius", 500.0);
 
-            String response = sendGetRequest(FIND_PLACE_URL + query);
-            return parsePlaceId(response);
+            String response = sendPostRequest(SEARCH_TEXT_URL, rootNode.toString());
+            return parseNewPlaceResponse(response);
 
         } catch (IOException e) {
-            log.error("Google Find Place API 호출 실패: placeName={}, address={}", placeName, address, e);
+            log.error("Google Places API (New) 호출 실패: placeName={}", placeName, e);
             throw new GeneralException(ErrorStatus.SEARCH_PLACE_NOT_FOUND);
         }
     }
 
-    public Map<String, String> getPlaceDetails(String placeId) {
-        try {
-            String query = String.format(
-                    "?place_id=%s&fields=name,formatted_address,geometry,opening_hours,website,formatted_phone_number,photos,editorial_summary&language=ko&key=%s",
-                    placeId,
-                    apiKey
-            );
-
-            String response = sendGetRequest(PLACE_DETAILS_URL + query);
-            return parsePlaceDetails(response);
-
-        } catch (IOException e) {
-            log.error("Google Place Details API 호출 실패: placeId={}", placeId, e);
-            throw new GeneralException(ErrorStatus._INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    public String getPhotoUrl(String photoReference) {
-        if (photoReference == null || photoReference.isBlank()) {
-            return null;
-        }
-
-        return String.format(
-                "%s?maxwidth=400&photoreference=%s&key=%s",
-                PLACE_PHOTO_URL,
-                photoReference,
-                apiKey
-        );
-    }
-
-    private String buildSearchInput(String placeName, String address) {
-        if (address != null && !address.isBlank()) {
-            return address + " " + placeName;
-        }
-        return placeName;
-    }
-
-    private String sendGetRequest(String urlString) throws IOException {
+    private String sendPostRequest(String urlString, String jsonBody) throws IOException {
         URL url = new URL(urlString);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setRequestMethod("GET");
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json; utf-8");
+        conn.setRequestProperty("X-Goog-Api-Key", apiKey);
+        conn.setRequestProperty("X-Goog-FieldMask", FIELD_MASK);
+        conn.setDoOutput(true);
+
+        try (OutputStream os = conn.getOutputStream()) {
+            byte[] input = jsonBody.getBytes(StandardCharsets.UTF_8);
+            os.write(input, 0, input.length);
+        }
 
         int responseCode = conn.getResponseCode();
         if (responseCode != HttpURLConnection.HTTP_OK) {
@@ -101,7 +75,7 @@ public class GooglePlaceClient {
         }
 
         StringBuilder response = new StringBuilder();
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
             String inputLine;
             while ((inputLine = in.readLine()) != null) {
                 response.append(inputLine);
@@ -110,44 +84,30 @@ public class GooglePlaceClient {
         return response.toString();
     }
 
-    private String parsePlaceId(String response) throws IOException {
+    private Map<String, String> parseNewPlaceResponse(String response) throws IOException {
         JsonNode root = objectMapper.readTree(response);
-        JsonNode candidates = root.path("candidates");
+        JsonNode places = root.path("places");
 
-        if (candidates.isEmpty()) {
+        if (places.isEmpty() || !places.isArray()) {
             throw new GeneralException(ErrorStatus.SEARCH_PLACE_NOT_FOUND);
         }
 
-        return candidates.get(0).path("place_id").asText();
-    }
-
-    private Map<String, String> parsePlaceDetails(String response) throws IOException {
-        JsonNode root = objectMapper.readTree(response);
-        JsonNode result = root.path("result");
-
+        JsonNode result = places.get(0);
         Map<String, String> details = new HashMap<>();
 
-        // 기본 정보
-        details.put("name", result.path("name").asText(null));
-        details.put("address", result.path("formatted_address").asText(null));
-        details.put("phone", result.path("formatted_phone_number").asText(null));
-        details.put("website", result.path("website").asText(null));
+        details.put("name", result.path("displayName").path("text").asText(null));
+        details.put("address", result.path("formattedAddress").asText(null));
+        details.put("phone", result.path("internationalPhoneNumber").asText(null));
+        details.put("website", result.path("websiteUri").asText(null));
 
-        // 설명
-        JsonNode editorialSummary = result.path("editorial_summary");
-        if (!editorialSummary.isMissingNode()) {
-            details.put("description", editorialSummary.path("overview").asText(null));
-        } else {
-            details.put("description", null);
-        }
+        JsonNode editorialSummary = result.path("editorialSummary");
+        details.put("description", editorialSummary.isMissingNode() ? null : editorialSummary.path("text").asText(null));
 
-        // 좌표
-        JsonNode location = result.path("geometry").path("location");
-        details.put("lat", String.valueOf(location.path("lat").asDouble()));
-        details.put("lon", String.valueOf(location.path("lng").asDouble()));
+        JsonNode location = result.path("location");
+        details.put("lat", String.valueOf(location.path("latitude").asDouble()));
+        details.put("lon", String.valueOf(location.path("longitude").asDouble()));
 
-        // 영업시간 파싱
-        JsonNode openingHours = result.path("opening_hours");
+        JsonNode openingHours = result.path("regularOpeningHours");
         if (!openingHours.isMissingNode()) {
             parseOpeningHours(openingHours, details);
         } else {
@@ -156,25 +116,17 @@ public class GooglePlaceClient {
             details.put("endTime", null);
         }
 
-        // 사진 (첫 번째만)
         JsonNode photos = result.path("photos");
         if (photos.isArray() && photos.size() > 0) {
-            String photoReference = photos.get(0).path("photo_reference").asText(null);
-            if (photoReference != null) {
-                details.put("photoReference", photoReference);
-                details.put("imageUrl", getPhotoUrl(photoReference));
+            String photoName = photos.get(0).path("name").asText(null);
+            if (photoName != null) {
+                details.put("imageUrl", String.format("https://places.googleapis.com/v1/%s/media?maxHeightPx=400&key=%s", photoName, apiKey));
             }
         }
 
         return details;
     }
 
-    /**
-     * 영업시간 파싱
-     * - activeTime: "매일 · 07:00 - 23:00" (표시용)
-     * - startTime: "07:00" (알고리즘용)
-     * - endTime: "23:00" (알고리즘용)
-     */
     private void parseOpeningHours(JsonNode openingHours, Map<String, String> details) {
         JsonNode periods = openingHours.path("periods");
 
@@ -185,10 +137,8 @@ public class GooglePlaceClient {
             return;
         }
 
-        // 가장 이른 오픈 시간 & 가장 늦은 마감 시간 찾기
         int earliestOpen = 2400;
         int latestClose = 0;
-
         String firstOpenTime = null;
         String firstCloseTime = null;
         boolean allSame = true;
@@ -199,8 +149,8 @@ public class GooglePlaceClient {
 
             if (open.isMissingNode()) continue;
 
-            String openTime = open.path("time").asText("2400");
-            String closeTime = close.isMissingNode() ? "2359" : close.path("time").asText("0000");
+            String openTime = String.format("%02d%02d", open.path("hour").asInt(), open.path("minute").asInt());
+            String closeTime = close.isMissingNode() ? "2359" : String.format("%02d%02d", close.path("hour").asInt(), close.path("minute").asInt());
 
             int openInt = Integer.parseInt(openTime);
             int closeInt = Integer.parseInt(closeTime);
@@ -216,27 +166,20 @@ public class GooglePlaceClient {
             latestClose = Math.max(latestClose, closeInt);
         }
 
-        // startTime, endTime 설정 (알고리즘용)
         details.put("startTime", formatTime(earliestOpen));
         details.put("endTime", formatTime(latestClose));
 
-        // activeTime 요약 (표시용)
         if (allSame && firstOpenTime != null) {
-            // 모든 요일 동일: "매일 · 07:00 - 23:00"
             details.put("activeTime", String.format("매일 · %s - %s",
                     formatTime(Integer.parseInt(firstOpenTime)),
                     formatTime(Integer.parseInt(firstCloseTime))));
         } else {
-            // 요일별 상이: "요일별 상이 (07:00 - 23:00)"
             details.put("activeTime", String.format("요일별 상이 (%s - %s)",
                     formatTime(earliestOpen),
                     formatTime(latestClose)));
         }
     }
 
-    /**
-     * 시간 포맷 변환: 0700 → 07:00
-     */
     private String formatTime(int time) {
         if (time >= 2400) return null;
         return String.format("%02d:%02d", time / 100, time % 100);

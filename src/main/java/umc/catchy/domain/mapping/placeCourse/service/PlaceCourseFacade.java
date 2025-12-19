@@ -3,9 +3,12 @@ package umc.catchy.domain.mapping.placeCourse.service;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,34 +46,38 @@ public class PlaceCourseFacade {
     private final PlaceCourseRepository placeCourseRepository;
     private final PlaceCourseCommandService placeCourseCommandService;
 
+    @Qualifier("googlePlaceExecutor")
+    private final Executor googlePlaceExecutor;
+
     public List<PlacePreviewResponse> getPlacesByFrontend(List<PlaceSearchRequest> placeRequests) {
         Member member = getCurrentMember();
 
-        List<Long> poiIds = placeRequests.stream()
-                .map(PlaceSearchRequest::poiId)
-                .toList();
-
+        List<Long> poiIds = placeRequests.stream().map(PlaceSearchRequest::poiId).toList();
         Map<Long, Place> existingPlaceMap = placeRepository.findAllByPoiIdIn(poiIds).stream()
-                .collect(Collectors.toMap(Place::getPoiId, place -> place));
+                .collect(Collectors.toMap(Place::getPoiId, p -> p));
 
-        List<Place> allPlaces = placeRequests.stream()
-                .map(request -> {
-                    Place place = existingPlaceMap.get(request.poiId());
-                    return (place != null) ? place : createPlaceFromGoogle(request);
-                })
+        List<CompletableFuture<Place>> futures = placeRequests.stream()
+                .map(req -> {
+                    Place p = existingPlaceMap.get(req.poiId());
+                    if (p != null) return CompletableFuture.completedFuture(p);
+
+                    return CompletableFuture.supplyAsync(() -> createPlaceFromGoogle(req), googlePlaceExecutor);
+                }).toList();
+
+        List<Place> allPlaces = futures.stream()
+                .map(CompletableFuture::join)
                 .toList();
 
-        List<Long> placeIds = allPlaces.stream().map(Place::getId).toList();
-        Map<Long, Long> reviewCountMap = placeReviewRepository.countReviewByPlaceIds(placeIds);
-        Set<Long> likedPlaceIds = placeLikeRepository.findLikedPlaceIdsByMemberAndPlaceIds(member.getId(), placeIds);
+        List<Long> dbIds = allPlaces.stream().map(Place::getId).toList();
+        Map<Long, Long> reviewCountMap = placeReviewRepository.countReviewByPlaceIds(dbIds);
+        Set<Long> likedPlaceIds = placeLikeRepository.findLikedPlaceIdsByMemberAndPlaceIds(member.getId(), dbIds);
 
         return allPlaces.stream()
                 .map(place -> PlacePreviewResponse.from(
                         place,
                         reviewCountMap.getOrDefault(place.getId(), 0L),
                         likedPlaceIds.contains(place.getId())
-                ))
-                .toList();
+                )).toList();
     }
 
     @Transactional(readOnly = true)
@@ -104,14 +111,13 @@ public class PlaceCourseFacade {
 
     private Place createPlaceFromGoogle(PlaceSearchRequest request) {
         try {
-            String googlePlaceId = googlePlaceClient.findPlaceId(
+            Map<String, String> placeDetails = googlePlaceClient.getPlaceInfo(
                     request.placeName(),
                     request.address(),
                     request.latitude(),
                     request.longitude()
             );
 
-            Map<String, String> placeDetails = googlePlaceClient.getPlaceDetails(googlePlaceId);
             return placeCourseCommandService.savePlaceFromGoogleInfo(request.poiId(), placeDetails);
         } catch (Exception e) {
             log.error("Google API processing failed: poiId={}, name={}", request.poiId(), request.placeName(), e);
