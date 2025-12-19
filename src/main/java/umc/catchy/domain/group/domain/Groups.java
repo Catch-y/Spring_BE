@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "groups", indexes = {
+@Table(name = "`groups`", indexes = {
         @Index(name = "idx_groups_region", columnList = "sido, sigungu")
 })
 public class Groups extends BaseTimeEntity {
