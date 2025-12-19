@@ -19,8 +19,9 @@ public interface PlaceRepository extends JpaRepository<Place, Long>, PlaceCustom
             @Param("groupLocation") String groupLocation,
             @Param("alternativeLocation") String alternativeLocation
     );
-    Optional<Place> findByPoiId(Long poiId);
 
-    @Query("select p from Place p join fetch p.category where p.id = :placeId")
+    List<Place> findAllByPoiIdIn(List<Long> poiIds);
+
+    @Query("SELECT p FROM Place p LEFT JOIN FETCH p.category WHERE p.id = :placeId")
     Optional<Place> findByIdWithCategory(@Param("placeId") Long placeId);
 }
