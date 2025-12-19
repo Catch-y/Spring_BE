@@ -66,38 +66,30 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                 .from(place)
                 .where(
                         place.category.id.in(categoryIds),
-                        upperRegionFilter(upperRegions),
-                        lowerRegionFilter(lowerRegions)
+                        sidoIn(upperRegions),
+                        sigunguIn(lowerRegions)
                 )
                 .fetch();
     }
 
-    private BooleanExpression upperRegionFilter(List<String> upperRegions) {
+    private BooleanExpression sidoIn(List<String> upperRegions) {
         if (upperRegions == null || upperRegions.isEmpty()) {
             return null;
         }
 
-        BooleanExpression condition = null;
-        for (String region : upperRegions) {
-            String normalizedRegion = LocationUtils.normalizeLocation(region);
-            BooleanExpression regionCondition = place.roadAddress.like("%" + normalizedRegion + "%");
-            condition = (condition == null) ? regionCondition : condition.or(regionCondition);
-        }
-        return condition;
+        List<String> normalizedUpper = upperRegions.stream()
+                .map(LocationUtils::normalizeLocation)
+                .toList();
+
+        return place.sido.in(normalizedUpper);
     }
 
-    private BooleanExpression lowerRegionFilter(List<String> lowerRegions) {
+    private BooleanExpression sigunguIn(List<String> lowerRegions) {
         if (lowerRegions == null || lowerRegions.isEmpty()) {
             return null;
         }
 
-        BooleanExpression condition = null;
-        for (String region : lowerRegions) {
-            String normalizedRegion = LocationUtils.normalizeLocation(region);
-            BooleanExpression regionCondition = place.roadAddress.like("%" + normalizedRegion + "%");
-            condition = (condition == null) ? regionCondition : condition.or(regionCondition);
-        }
-        return condition;
+        return place.sigungu.in(lowerRegions);
     }
 
     private NumberExpression<Double> createWeightExpression() {

@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.common.BaseTimeEntity;
+import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 
@@ -24,7 +25,14 @@ import umc.catchy.global.error.exception.GeneralException;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Table(
+        name = "place",
+        indexes = {
+                @Index(name = "idx_place_search", columnList = "category_id, sido, sigungu")
+        }
+)
 public class Place extends BaseTimeEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "place_id")
@@ -37,7 +45,14 @@ public class Place extends BaseTimeEntity {
     @Column(length = 50000)
     private String placeDescription;
 
+    @Column(length = 255)
     private String roadAddress;
+
+    @Column(length = 20)
+    private String sido;
+
+    @Column(length = 20)
+    private String sigungu;
 
     private String numberAddress;
 
@@ -62,6 +77,15 @@ public class Place extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @PrePersist
+    @PreUpdate
+    public void preUpdateAddress() {
+        if (this.roadAddress != null && !this.roadAddress.isEmpty()) {
+            this.sido = LocationUtils.extractUpperLocation(this.roadAddress); // "서울"
+            this.sigungu = LocationUtils.extractLowerLocation(this.roadAddress); // "강남구"
+        }
+    }
 
     public void assignCategory(Category category) {
         if (this.category != null) {
@@ -94,6 +118,7 @@ public class Place extends BaseTimeEntity {
     }
 
     private static List<String> parsingTime(String activeTime) {
+        if (activeTime == null) return new ArrayList<>();
         List<String> timeRange = new ArrayList<>();
         Pattern pattern = Pattern.compile("\\b\\d{2}:\\d{2}~\\d{2}:\\d{2}\\b");
         Matcher matcher = pattern.matcher(activeTime);
