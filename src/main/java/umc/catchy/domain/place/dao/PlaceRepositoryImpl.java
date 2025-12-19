@@ -30,6 +30,7 @@ import umc.catchy.domain.course.dto.query.GptPlaceInfoDto;
 import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.mapping.placeCourse.dto.query.PlacePreviewDto;
 import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceSearchDto;
+import umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.place.domain.QPlace;
 
@@ -208,11 +209,16 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
     }
 
     private BooleanExpression notContainVisited(Long memberId) {
-        return place.id.notIn(
-                JPAExpressions.select(placeVisit.place.id)
-                        .from(placeVisit)
-                        .where(placeVisit.member.id.eq(memberId))
-        );
+        QPlaceVisit subVisit = QPlaceVisit.placeVisit;
+
+        return JPAExpressions
+                .selectOne()
+                .from(subVisit)
+                .where(
+                        subVisit.member.id.eq(memberId),
+                        subVisit.place.id.eq(place.id)
+                )
+                .notExists();
     }
 
     public Slice<Place> getPlacesByCategoryWithPaging(

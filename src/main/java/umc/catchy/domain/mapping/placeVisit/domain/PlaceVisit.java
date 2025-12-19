@@ -14,13 +14,15 @@ import umc.catchy.domain.place.domain.Place;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "place_visit", indexes = {
-        @Index(name = "idx_place_visit_member_course", columnList = "member_id, course_id")
-})
+
 @Getter
 @Builder
 @RequiredArgsConstructor
 @AllArgsConstructor
+@Table(name = "place_visit", indexes = {
+        @Index(name = "idx_place_visit_member_course", columnList = "member_id, course_id"),
+        @Index(name = "idx_place_visit_member_place", columnList = "member_id, place_id")
+})
 public class PlaceVisit extends BaseTimeEntity {
 
     @Id
