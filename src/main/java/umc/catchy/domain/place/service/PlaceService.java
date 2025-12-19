@@ -1,12 +1,5 @@
 package umc.catchy.domain.place.service;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -16,7 +9,8 @@ import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.mapping.placeCourse.dto.query.PlacePreviewDto;
 import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceSearchDto;
-import umc.catchy.domain.mapping.placeCourse.dto.response.*;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlacePreviewResponse;
+import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceSearchResponse;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -24,120 +18,81 @@ import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.place.dto.request.SetCategoryRequest;
+import umc.catchy.domain.place.dto.response.RecommendationContext;
 import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class PlaceService {
 
     private final PlaceRepository placeRepository;
     private final CategoryRepository categoryRepository;
     private final MemberRepository memberRepository;
     private final PlaceVisitRepository placeVisitRepository;
+    private final PlaceRecommendationService recommendationService;
 
-    // 장소 카테고리 선택
+    @Transactional
     public void setCategories(Long placeId, SetCategoryRequest request) {
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
-        // 대카테고리 검증
         BigCategory bigCategory = BigCategory.findByName(request.bigCategory());
 
         Category category = categoryRepository.findByBigCategoryAndName(bigCategory, request.smallCategory())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.INVALID_CATEGORY));
 
-        // 장소에 카테고리 설정
         place.assignCategory(category);
     }
 
+    @Transactional(readOnly = true)
     public SliceResponse<PlacePreviewResponse> recommendPlaces(Double latitude, Double longitude, int pageSize, int page) {
-        Long memberId = SecurityUtil.getCurrentMemberId();
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        Member member = getCurrentMember();
 
-        // 최근 방문했던 장소를 기반으로 추천
         List<PlaceVisit> placeVisits = placeVisitRepository.findAllByMemberWithPlaceAndCategory(member);
 
-        // 방문 카테고리가 많은 순으로 정렬
-        List<Long> sortedVisitCategories = sortVisitCategories(getVisitCategories(placeVisits));
-
-        // 카테고리별 방문 시간대 평균
-        Map<Long, Integer> categoryAverageHour = getCategoryAverageHour(placeVisits);
+        RecommendationContext context = recommendationService.analyzeVisitHistory(placeVisits);
 
         Slice<PlacePreviewDto> placePreviewDtos = placeRepository.recommendPlacesByActivityData(
-                memberId, latitude, longitude, sortedVisitCategories, categoryAverageHour, pageSize, page);
+                member.getId(),
+                latitude,
+                longitude,
+                context.sortedCategories(),
+                context.averageHours(),
+                pageSize,
+                page
+        );
 
-        List<PlacePreviewResponse> responses = placePreviewDtos.getContent()
-                .stream()
+        List<PlacePreviewResponse> response = placePreviewDtos.getContent().stream()
                 .map(PlacePreviewResponse::from)
                 .toList();
 
-        return new SliceResponse<>(responses, placePreviewDtos.isLast());
+        return new SliceResponse<>(response, placePreviewDtos.isLast());
     }
 
+    @Transactional(readOnly = true)
     public SliceResponse<PlaceSearchResponse> searchPlaceByCategoryOrName(int pageSize, String keyword, Integer lastRelevanceScore, Long lastPlaceId) {
-        Slice<PlaceSearchDto> searchDtos = placeRepository.searchPlace(pageSize, keyword, lastRelevanceScore, lastPlaceId);
+        Slice<PlaceSearchDto> searchDtos = placeRepository.searchPlace(
+                pageSize,
+                keyword,
+                lastRelevanceScore,
+                lastPlaceId
+        );
 
-        List<PlaceSearchResponse> responses = searchDtos.getContent()
-                .stream()
+        List<PlaceSearchResponse> response = searchDtos.getContent().stream()
                 .map(PlaceSearchResponse::from)
                 .toList();
 
-        return new SliceResponse<>(responses, searchDtos.isLast());
+        return new SliceResponse<>(response,searchDtos.isLast());
     }
 
-    private Map<Long, Integer> getCategoryAverageHour(List<PlaceVisit> placeVisits) {
-        Map<Long, Integer> categoryAverageHour = new HashMap<>();
-        Map<Long, List<LocalDateTime>> categoryVisitTimes = new HashMap<>();
-
-        for (PlaceVisit visit : placeVisits) {
-            Category category = visit.getPlace().getCategory();
-            LocalDateTime visitedTime = visit.getCreatedDate();
-
-            // 만약 Map에 존재하지 않는 key면, List를 생성하고 값을 삽입
-            categoryVisitTimes.computeIfAbsent(category.getId(), k -> new ArrayList<>()).add(visitedTime);
-        }
-
-        for (Map.Entry<Long, List<LocalDateTime>> entry : categoryVisitTimes.entrySet()) {
-            Long categoryId = entry.getKey();
-            List<LocalDateTime> visitTimes = entry.getValue();
-
-            // 시간대 평균 계산
-            int averageHour = (int) Math.round(visitTimes.stream()
-                    .mapToDouble(LocalDateTime::getHour)
-                    .average()
-                    .orElse(0));
-
-            categoryAverageHour.put(categoryId, averageHour);
-        }
-
-        return categoryAverageHour;
-    }
-
-    private List<Category> getVisitCategories(List<PlaceVisit> placeVisits) {
-        return placeVisits.stream()
-                .map(PlaceVisit::getPlace)
-                .map(Place::getCategory)
-                .toList();
-    }
-
-    private List<Long> sortVisitCategories(List<Category> visitCategories) {
-        Map<Long, Integer> categoryCountMap = new HashMap<>();
-
-        visitCategories.forEach(category ->
-                categoryCountMap.put(
-                        category.getId(),
-                        categoryCountMap.getOrDefault(category.getId(), 0) + 1
-                )
-        );
-
-        return categoryCountMap.entrySet().stream()
-                .sorted((e1, e2) -> e2.getValue() - e1.getValue())
-                .map(Entry::getKey)
-                .toList();
+    private Member getCurrentMember() {
+        Long memberId = SecurityUtil.getCurrentMemberId();
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
     }
 }
