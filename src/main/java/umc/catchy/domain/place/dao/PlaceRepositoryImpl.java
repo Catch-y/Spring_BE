@@ -244,6 +244,10 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                         .where(memberPlaceVote.place.id.eq(place.id)
                                 .and(memberPlaceVote.group.id.eq(groupId)))
         );
+
+        String normGroup = LocationUtils.extractUpperLocation(groupLocation);
+        String normAlt = LocationUtils.extractUpperLocation(alternativeLocation);
+
         List<Place> places = queryFactory
                 .selectFrom(place)
                 .join(place.category, category).fetchJoin()
@@ -251,8 +255,7 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                 .join(place.category, category)
                 .where(
                         category.bigCategory.eq(bigCategory),
-                        place.roadAddress.like("%" + groupLocation + "%")
-                                .or(place.roadAddress.like("%" + alternativeLocation + "%"))
+                        locationFilter(normGroup, normAlt)
                 )
                 .groupBy(place.id)
                 .having(
@@ -279,6 +282,14 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
         }
 
         return new SliceImpl<>(places, PageRequest.of(0, pageSize), hasNext);
+    }
+
+    private BooleanExpression locationFilter(String normGroup, String normAlt) {
+        BooleanExpression groupCond = normGroup.equals("전체 지역") ? null : place.sido.eq(normGroup);
+        BooleanExpression altCond = normAlt.equals("전체 지역") ? null : place.sido.eq(normAlt);
+
+        if (groupCond != null && altCond != null) return groupCond.or(altCond);
+        return (groupCond != null) ? groupCond : altCond;
     }
 
     @Override
