@@ -2,14 +2,14 @@ package umc.catchy.domain.mapping.placeCourse.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.concurrent.CompletableFuture;
+
+import java.util.List;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import umc.catchy.domain.mapping.placeCourse.dto.request.PlaceSearchRequest;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceDetailResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlacePreviewResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceResponse;
@@ -26,26 +26,13 @@ public class PlaceCourseController {
 
     private final PlaceCourseService placeCourseService;
 
-    @GetMapping("/current")
-    @Operation(summary = "내 위치 기반 장소 검색 API", description = "사용자 반경 5km 이내에 사용자 키워드 관련 장소를 불러온다.")
-    public CompletableFuture<ResponseEntity<BaseResponse<SliceResponse<PlacePreviewResponse>>>> searchPlacesByMemberLocation(
-            @RequestParam String searchKeyword,
-            @RequestParam Double latitude,
-            @RequestParam Double longitude,
-            @RequestParam Integer page
-    ){
-        return placeCourseService.getPlacesByLocation(searchKeyword, latitude, longitude, page)
-                .thenApply(response -> ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response)));
-    }
-
-    @GetMapping("/region")
-    @Operation(summary = "지역명 기반 장소 검색 API", description = "지역명이 포함된 키워드를 받아 관련 장소를 검색")
-    public CompletableFuture<ResponseEntity<BaseResponse<SliceResponse<PlacePreviewResponse>>>> searchPlacesByLocation(
-            @RequestParam String searchKeyword,
-            @RequestParam Integer page
-    ){
-        return placeCourseService.getPlacesByLocation(searchKeyword, null, null, page)
-                .thenApply(response -> ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response)));
+    @PostMapping("/search")
+    @Operation(summary = "프론트엔드 장소 검색 API", description = "Apple Maps에서 받은 장소 리스트를 처리합니다.")
+    public ResponseEntity<BaseResponse<List<PlacePreviewResponse>>> searchPlacesByFrontend(
+            @RequestBody @Valid List<PlaceSearchRequest> requests
+    ) {
+        List<PlacePreviewResponse> response = placeCourseService.getPlacesByFrontend(requests);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
     @GetMapping("/{placeId}")
