@@ -31,7 +31,10 @@ import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.google.GooglePlaceClient;
 import umc.catchy.support.fixture.MemberFixture;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
 import static org.assertj.core.api.Assertions.assertThat;

@@ -33,8 +33,9 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import static umc.catchy.support.fixture.MemberFixture.*;
-import static umc.catchy.support.fixture.CourseFixture.*;
+import static umc.catchy.support.fixture.CourseFixture.createTestCourse;
+import static umc.catchy.support.fixture.CourseFixture.createTestCourseWithNoImage;
+import static umc.catchy.support.fixture.MemberFixture.createTestMember;
 
 @ExtendWith(MockitoExtension.class)
 class CourseFacadeTest {

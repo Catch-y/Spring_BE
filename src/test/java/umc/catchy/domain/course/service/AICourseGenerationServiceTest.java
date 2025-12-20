@@ -11,12 +11,12 @@ import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.course.ai.GptPromptBuilder;
 import umc.catchy.domain.course.ai.GptResponseParser;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
+import umc.catchy.domain.location.domain.Location;
 import umc.catchy.domain.mapping.memberActivetime.dao.MemberActiveTimeRepository;
 import umc.catchy.domain.mapping.memberCategory.dao.MemberCategoryRepository;
 import umc.catchy.domain.mapping.memberLocation.dao.MemberLocationRepository;
 import umc.catchy.domain.mapping.memberLocation.domain.MemberLocation;
 import umc.catchy.domain.mapping.memberStyle.dao.MemberStyleRepository;
-import umc.catchy.domain.location.domain.Location;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
@@ -36,7 +36,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import static umc.catchy.support.fixture.MemberFixture.createTestMember;
 
 @ExtendWith(MockitoExtension.class)
 class AICourseGenerationServiceTest {

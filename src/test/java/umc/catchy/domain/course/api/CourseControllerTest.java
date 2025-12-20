@@ -12,7 +12,10 @@ import umc.catchy.domain.course.dto.request.CourseCreateRequest;
 import umc.catchy.domain.course.dto.request.CourseUpdateRequest;
 import umc.catchy.domain.course.dto.response.CourseDetailResponse;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
-import umc.catchy.domain.course.service.*;
+import umc.catchy.domain.course.service.AICourseGenerationService;
+import umc.catchy.domain.course.service.CourseFacade;
+import umc.catchy.domain.course.service.CourseRecommendationService;
+import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReview.service.CourseReviewService;
@@ -34,6 +37,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 
 @WebMvcTest(CourseController.class)
 class CourseControllerTest extends ControllerTestSupport {
