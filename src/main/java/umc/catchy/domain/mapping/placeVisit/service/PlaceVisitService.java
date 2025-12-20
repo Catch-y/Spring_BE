@@ -71,11 +71,11 @@ public class PlaceVisitService {
         placeVisitRepository.save(placeVisit);
 
         // 코스 내의 장소 방문이 과반수 이상이면 코스 방문 체크
-        List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourse(course);
+        List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourseWithPlace(course);
         int placeNum = placeCourses.size();
 
         // PlaceVisit 일괄 조회 후 Set으로 변환
-        List<PlaceVisit> visits = placeVisitRepository.findAllByCourseAndMember(course, member);
+        List<PlaceVisit> visits = placeVisitRepository.findAllByCourseAndMemberWithPlace(course, member);
         Set<Long> visitedPlaceIds = visits.stream()
                 .map(pv -> pv.getPlace().getId())
                 .collect(Collectors.toSet());

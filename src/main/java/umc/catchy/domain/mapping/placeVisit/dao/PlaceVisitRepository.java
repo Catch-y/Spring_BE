@@ -51,4 +51,7 @@ public interface PlaceVisitRepository extends JpaRepository<PlaceVisit, Long> {
             @Param("course") Course course,
             @Param("member") Member member
     );
+
+    @Query("SELECT pv FROM PlaceVisit pv JOIN FETCH pv.place WHERE pv.course = :course AND pv.member = :member")
+    List<PlaceVisit> findAllByCourseAndMemberWithPlace(@Param("course") Course course, @Param("member") Member member);
 }
