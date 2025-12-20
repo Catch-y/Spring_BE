@@ -1,15 +1,12 @@
 package umc.catchy.domain.mapping.placeVisit.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
 import java.time.LocalDate;
 import java.util.List;
 
-@Getter
-@NoArgsConstructor
-@AllArgsConstructor
-public class PlaceVisitedDateResponse {
-    private List<LocalDate> visitedDate;
+public record PlaceVisitedDateResponse(
+        List<LocalDate> visitedDate
+) {
+    public static PlaceVisitedDateResponse of(List<LocalDate> visitedDate) {
+        return new PlaceVisitedDateResponse(visitedDate);
+    }
 }

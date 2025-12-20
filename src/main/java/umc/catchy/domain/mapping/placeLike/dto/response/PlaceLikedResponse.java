@@ -1,12 +1,10 @@
 package umc.catchy.domain.mapping.placeLike.dto.response;
 
-import lombok.*;
-
-@Getter
-@Builder
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
-public class PlaceLikedResponse {
-    private Long placeLikeId;
-    private boolean isLiked;
+public record PlaceLikedResponse(
+        Long placeLikeId,
+        boolean isLiked
+) {
+    public static PlaceLikedResponse of(Long placeLikeId, boolean isLiked) {
+        return new PlaceLikedResponse(placeLikeId, isLiked);
+    }
 }

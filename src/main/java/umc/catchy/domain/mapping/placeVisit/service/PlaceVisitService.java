@@ -12,11 +12,9 @@ import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
 import umc.catchy.domain.mapping.placeCourse.dao.PlaceCourseRepository;
 import umc.catchy.domain.mapping.placeCourse.domain.PlaceCourse;
-import umc.catchy.domain.mapping.placeVisit.converter.PlaceVisitConverter;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedResponse;
-import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedDateResponse;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
@@ -31,9 +29,9 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 @Slf4j
 public class PlaceVisitService {
+
     private final PlaceVisitRepository placeVisitRepository;
     private final MemberRepository memberRepository;
     private final PlaceRepository placeRepository;
@@ -41,10 +39,9 @@ public class PlaceVisitService {
     private final MemberCourseRepository memberCourseRepository;
     private final PlaceCourseRepository placeCourseRepository;
 
+    @Transactional
     public PlaceVisitedResponse check(Long courseId, Long placeId) {
-        Long memberId = SecurityUtil.getCurrentMemberId();
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        Member member = getCurrentMember();
 
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
@@ -56,13 +53,20 @@ public class PlaceVisitService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER));
 
         // 이미 오늘 방문 체크를 하였다면 예외 처리
-        Optional<PlaceVisit> optionalPlaceVisit = placeVisitRepository.findByPlaceAndMemberAndCourseAndVisitedDate(place, member, course, LocalDate.now());
+        Optional<PlaceVisit> optionalPlaceVisit = placeVisitRepository
+                .findByPlaceAndMemberAndCourseAndVisitedDate(place, member, course, LocalDate.now());
         if (optionalPlaceVisit.isPresent()) {
             throw new GeneralException(ErrorStatus.PLACE_VISIT_ALREADY_CHECK);
         }
 
         // placeVisit 생성
-        PlaceVisit placeVisit = PlaceVisitConverter.toPlaceVisit(course, place, member);
+        PlaceVisit placeVisit = PlaceVisit.builder()
+                .course(course)
+                .place(place)
+                .member(member)
+                .isVisited(true)
+                .visitedDate(LocalDate.now())
+                .build();
 
         placeVisitRepository.save(placeVisit);
 
@@ -85,16 +89,12 @@ public class PlaceVisitService {
             course.increaseParticipants();
         }
 
-        return PlaceVisitConverter.toPlaceVisitResponse(placeVisit);
+        return PlaceVisitedResponse.of(placeVisit.getId(), placeVisit.isVisited());
     }
 
-    public PlaceVisitedDateResponse getPlaceVisitDate(Long courseId, Long placeId) {
+    private Member getCurrentMember() {
         Long memberId = SecurityUtil.getCurrentMemberId();
-        Member currentMember = memberRepository.findById(memberId).orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        Place place = placeRepository.findById(placeId).orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
-        Course course = courseRepository.findById(courseId).orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
-        List<PlaceVisit> placeVisitList = placeVisitRepository.findAllByMemberAndPlaceAndCourseAndIsVisitedTrue(currentMember,place,course);
-        List<LocalDate> visitedDate = placeVisitList.stream().map(PlaceVisit::getVisitedDate).toList();
-        return new PlaceVisitedDateResponse(visitedDate);
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
     }
 }
