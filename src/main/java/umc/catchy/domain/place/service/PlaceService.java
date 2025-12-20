@@ -24,6 +24,7 @@ import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.place.dto.request.SetCategoryRequest;
+import umc.catchy.domain.place.dto.response.PlaceSearchSliceResponse;
 import umc.catchy.domain.place.dto.response.RecommendationContext;
 import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
@@ -85,7 +86,7 @@ public class PlaceService {
     }
 
     @Transactional(readOnly = true)
-    public SliceResponse<PlaceSearchResponse> searchPlaceByCategoryOrName(int pageSize, String keyword, Integer lastRelevanceScore, Long lastPlaceId) {
+    public PlaceSearchSliceResponse searchPlaceByCategoryOrName(int pageSize, String keyword, Integer lastRelevanceScore, Long lastPlaceId) {
         Slice<PlaceSearchDto> searchDtos = placeRepository.searchPlace(
                 pageSize,
                 keyword,
@@ -97,7 +98,7 @@ public class PlaceService {
                 .map(PlaceSearchResponse::from)
                 .toList();
 
-        return new SliceResponse<>(response, searchDtos.isLast());
+        return PlaceSearchSliceResponse.of(response, searchDtos.isLast());
     }
 
     @Transactional

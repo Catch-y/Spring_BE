@@ -14,6 +14,7 @@ import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceDetailResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlacePreviewResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceResponse;
 import umc.catchy.domain.mapping.placeCourse.service.PlaceCourseFacade;
+import umc.catchy.domain.mapping.placeLike.dto.response.LikedPlaceSliceResponse;
 import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
@@ -44,11 +45,11 @@ public class PlaceCourseController {
 
     @Operation(summary = "좋아요한 장소 무한 스크롤 API", description = "좋아요한 장소 정보들을 무한 스크롤로 보여줍니다.")
     @GetMapping("/mypage/like")
-    public BaseResponse<SliceResponse<PlaceResponse>> findAllCourseByBookmarked(
+    public BaseResponse<LikedPlaceSliceResponse> findAllCourseByBookmarked(
             @RequestParam int pageSize,
             @RequestParam(required = false) Long lastPlaceId
     ) {
-        SliceResponse<PlaceResponse> response = placeCourseFacade.searchLikedPlace(pageSize, lastPlaceId);
+        LikedPlaceSliceResponse response = placeCourseFacade.searchLikedPlace(pageSize, lastPlaceId);
         return BaseResponse.onSuccess(SuccessStatus._OK, response);
     }
 }

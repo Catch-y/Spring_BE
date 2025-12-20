@@ -7,9 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlacePreviewResponse;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceSearchResponse;
 import umc.catchy.domain.mapping.placeLike.dto.response.PlaceLikedResponse;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedDateResponse;
+import umc.catchy.domain.place.dto.response.PlaceSearchSliceResponse;
 import umc.catchy.domain.place.service.PlaceService;
 import umc.catchy.domain.placeReview.dto.request.PostPlaceReviewRequest;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
@@ -88,13 +88,13 @@ public class PlaceController {
 
     @Operation(summary = "장소 검색 API", description = "장소이름/카테고리를 통해 장소 리스트 반환")
     @GetMapping("/home/search")
-    public ResponseEntity<BaseResponse<SliceResponse<PlaceSearchResponse>>> getSearchPlaces(
+    public ResponseEntity<BaseResponse<PlaceSearchSliceResponse>> getSearchPlaces(
             @RequestParam(required = false) String keyword,
             @RequestParam int pageSize,
             @RequestParam(required = false) Integer relevanceScore,
             @RequestParam(required = false) Long lastPlaceId
     ) {
-        SliceResponse<PlaceSearchResponse> response = placeService.searchPlaceByCategoryOrName(pageSize, keyword, relevanceScore, lastPlaceId);
+        PlaceSearchSliceResponse response = placeService.searchPlaceByCategoryOrName(pageSize, keyword, relevanceScore, lastPlaceId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

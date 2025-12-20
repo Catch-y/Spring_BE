@@ -20,6 +20,7 @@ import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceDetailResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlacePreviewResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceResponse;
 import umc.catchy.domain.mapping.placeLike.dao.PlaceLikeRepository;
+import umc.catchy.domain.mapping.placeLike.dto.response.LikedPlaceSliceResponse;
 import umc.catchy.domain.mapping.placeVisit.dao.PlaceVisitRepository;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.dao.MemberRepository;
@@ -27,7 +28,6 @@ import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
-import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
@@ -108,15 +108,16 @@ public class PlaceCourseFacade {
     }
 
     @Transactional(readOnly = true)
-    public SliceResponse<PlaceResponse> searchLikedPlace(int pageSize, Long lastPlaceId) {
+    public LikedPlaceSliceResponse searchLikedPlace(int pageSize, Long lastPlaceId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Slice<PlaceDto> placeDtos = placeCourseRepository.searchPlaceByLiked(memberId, pageSize, lastPlaceId);
 
-        List<PlaceResponse> responses = placeDtos.getContent().stream()
+        List<PlaceResponse> responses = placeDtos.getContent()
+                .stream()
                 .map(PlaceResponse::from)
                 .toList();
 
-        return new SliceResponse<>(responses, placeDtos.isLast());
+        return LikedPlaceSliceResponse.of(responses, placeDtos.isLast());
     }
 
     private Place createPlaceFromGoogle(PlaceSearchRequest request) {
