@@ -1,6 +1,5 @@
 package umc.catchy.domain.placeReview.converter;
 
-import java.time.LocalDate;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.placeReview.domain.PlaceReview;

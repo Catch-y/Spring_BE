@@ -2,9 +2,6 @@ package umc.catchy.domain.mapping.placeCourse.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
-import java.util.List;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -12,12 +9,12 @@ import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.mapping.placeCourse.dto.request.PlaceSearchRequest;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceDetailResponse;
 import umc.catchy.domain.mapping.placeCourse.dto.response.PlacePreviewResponse;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceResponse;
 import umc.catchy.domain.mapping.placeCourse.service.PlaceCourseFacade;
 import umc.catchy.domain.mapping.placeLike.dto.response.LikedPlaceSliceResponse;
-import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
+
+import java.util.List;
 
 @Tag(name = "PlaceCourse", description = "코스/장소 관련 API")
 @RestController

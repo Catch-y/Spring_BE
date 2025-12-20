@@ -1,6 +1,5 @@
 package umc.catchy.domain.place.dao;
 
-import java.util.Map;
 import org.springframework.data.domain.Slice;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.course.dto.query.GptPlaceInfoDto;
@@ -9,6 +8,7 @@ import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceSearchDto;
 import umc.catchy.domain.place.domain.Place;
 
 import java.util.List;
+import java.util.Map;
 
 public interface PlaceCustomRepository {
     List<Place> findRecommendedPlaces(List<Long> categoryIds, List<String> upperRegions, List<String> lowerRegions, Long memberId, int maxPlaces);

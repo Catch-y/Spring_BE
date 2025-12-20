@@ -1,19 +1,13 @@
 package umc.catchy.domain.group.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.group.dao.GroupRepository;
 import umc.catchy.domain.group.domain.Groups;
 import umc.catchy.domain.group.dto.request.CreateGroupRequest;
-import umc.catchy.domain.group.dto.response.CreateGroupResponse;
-import umc.catchy.domain.group.dto.response.GroupCalendarResponse;
-import umc.catchy.domain.group.dto.response.GroupInfoResponse;
-import umc.catchy.domain.group.dto.response.GroupJoinResponse;
-import umc.catchy.domain.group.dto.response.GroupMemberResponse;
+import umc.catchy.domain.group.dto.response.*;
 import umc.catchy.domain.mapping.memberGroup.dao.MemberGroupRepository;
 import umc.catchy.domain.mapping.memberGroup.domain.MemberGroup;
 import umc.catchy.domain.member.dao.MemberRepository;

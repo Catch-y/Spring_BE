@@ -5,7 +5,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import umc.catchy.domain.reviewReport.domain.ReviewType;
 import umc.catchy.domain.reviewReport.dto.request.PostReviewReportRequest;
 import umc.catchy.domain.reviewReport.dto.response.DeleteReviewResponse;
 import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;

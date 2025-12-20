@@ -22,7 +22,6 @@ import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReview.service.CourseReviewService;
-import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedResponse;
 import umc.catchy.domain.mapping.placeVisit.service.PlaceVisitService;
 import umc.catchy.domain.place.dto.request.SetCategoryRequest;

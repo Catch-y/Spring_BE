@@ -14,11 +14,11 @@ import umc.catchy.domain.member.dto.response.LoginResponse;
 import umc.catchy.domain.member.dto.response.ReIssueTokenResponse;
 import umc.catchy.domain.member.dto.response.SignUpResponse;
 import umc.catchy.domain.member.dto.response.TokenPair;
+import umc.catchy.domain.member.service.OAuthService.SocialUserInfo;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
-import umc.catchy.domain.member.service.OAuthService.SocialUserInfo;
 
 import java.io.IOException;
 import java.util.UUID;

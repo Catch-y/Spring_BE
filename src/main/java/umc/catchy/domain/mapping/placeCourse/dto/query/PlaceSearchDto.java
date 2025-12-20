@@ -1,8 +1,6 @@
 package umc.catchy.domain.mapping.placeCourse.dto.query;
 
 import lombok.Getter;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceResponse;
-import umc.catchy.domain.mapping.placeCourse.dto.response.PlaceSearchResponse;
 
 @Getter
 public class PlaceSearchDto {

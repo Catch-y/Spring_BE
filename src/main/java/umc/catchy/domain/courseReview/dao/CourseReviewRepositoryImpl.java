@@ -12,13 +12,14 @@ import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 
 import java.util.List;
 
-import static com.querydsl.core.group.GroupBy.*;
+import static com.querydsl.core.group.GroupBy.groupBy;
+import static com.querydsl.core.group.GroupBy.list;
 import static com.querydsl.jpa.JPAExpressions.select;
 import static umc.catchy.domain.course.domain.QCourse.course;
-import static umc.catchy.domain.courseReview.domain.QCourseReview.*;
-import static umc.catchy.domain.courseReviewImage.domain.QCourseReviewImage.*;
+import static umc.catchy.domain.courseReview.domain.QCourseReview.courseReview;
+import static umc.catchy.domain.courseReviewImage.domain.QCourseReviewImage.courseReviewImage;
 import static umc.catchy.domain.mapping.placeCourse.domain.QPlaceCourse.placeCourse;
-import static umc.catchy.domain.member.domain.QMember.*;
+import static umc.catchy.domain.member.domain.QMember.member;
 
 @RequiredArgsConstructor
 public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{

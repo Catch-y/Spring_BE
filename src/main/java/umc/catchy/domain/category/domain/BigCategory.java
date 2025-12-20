@@ -1,10 +1,11 @@
 package umc.catchy.domain.category.domain;
 
-import java.util.Arrays;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
+
+import java.util.Arrays;
 
 @Getter
 @AllArgsConstructor

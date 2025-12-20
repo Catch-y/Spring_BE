@@ -1,18 +1,20 @@
 package umc.catchy.domain.member.service;
 
-import java.util.UUID;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.member.dto.request.NicknameRequest;
-import umc.catchy.domain.member.dto.response.*;
+import umc.catchy.domain.member.dto.response.NicknameResponse;
+import umc.catchy.domain.member.dto.response.ProfileImageResponse;
+import umc.catchy.domain.member.dto.response.ProfileResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.aws.s3.AmazonS3Manager;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor

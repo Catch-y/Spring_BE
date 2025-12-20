@@ -1,6 +1,5 @@
 package umc.catchy.domain.placeReview.service;
 
-import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;

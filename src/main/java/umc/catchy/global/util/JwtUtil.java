@@ -1,15 +1,14 @@
 package umc.catchy.global.util;
 
 import io.jsonwebtoken.ExpiredJwtException;
-
-import java.util.Date;
-
 import io.jsonwebtoken.MalformedJwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import umc.catchy.domain.jwt.domain.JwtTokenProvider;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
+
+import java.util.Date;
 
 @Component
 @RequiredArgsConstructor

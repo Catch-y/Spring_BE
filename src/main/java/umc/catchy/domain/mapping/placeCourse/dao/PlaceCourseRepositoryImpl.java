@@ -14,7 +14,7 @@ import java.util.List;
 import static umc.catchy.domain.category.domain.QCategory.category;
 import static umc.catchy.domain.mapping.placeLike.domain.QPlaceLike.placeLike;
 import static umc.catchy.domain.member.domain.QMember.member;
-import static umc.catchy.domain.place.domain.QPlace.*;
+import static umc.catchy.domain.place.domain.QPlace.place;
 import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
 
 @RequiredArgsConstructor

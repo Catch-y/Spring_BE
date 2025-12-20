@@ -3,7 +3,6 @@ package umc.catchy.domain.placeReview.dao;
 import com.querydsl.core.group.GroupBy;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -11,20 +10,20 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
-import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
 import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 
-import java.util.*;
 import java.time.LocalDate;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-import static com.querydsl.core.group.GroupBy.*;
-import static umc.catchy.domain.category.domain.QCategory.category;
-import static umc.catchy.domain.member.domain.QMember.*;
+import static com.querydsl.core.group.GroupBy.groupBy;
+import static com.querydsl.core.group.GroupBy.list;
+import static umc.catchy.domain.member.domain.QMember.member;
 import static umc.catchy.domain.place.domain.QPlace.place;
 import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
-import static umc.catchy.domain.placeReviewImage.domain.QPlaceReviewImage.*;
+import static umc.catchy.domain.placeReviewImage.domain.QPlaceReviewImage.placeReviewImage;
 
 @RequiredArgsConstructor
 public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{

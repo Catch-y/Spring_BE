@@ -3,7 +3,6 @@ package umc.catchy.domain.courseReviewImage.converter;
 import umc.catchy.domain.courseReview.domain.CourseReview;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.courseReviewImage.domain.CourseReviewImage;
-import umc.catchy.domain.placeReviewImage.domain.PlaceReviewImage;
 
 public class CourseReviewImageConverter {
 

@@ -6,10 +6,10 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import umc.catchy.global.common.response.code.BaseCode;
 import umc.catchy.global.common.response.code.ErrorReasonDTO;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.common.response.status.SuccessStatus;
-import umc.catchy.global.common.response.code.BaseCode;
 
 import java.util.Collections;
 

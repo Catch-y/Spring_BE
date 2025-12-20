@@ -14,7 +14,10 @@ import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.mapping.memberCourse.dto.query.MemberCourseDto;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static umc.catchy.domain.category.domain.QCategory.category;

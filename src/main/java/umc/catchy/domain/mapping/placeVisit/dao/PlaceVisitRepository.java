@@ -1,8 +1,5 @@
 package umc.catchy.domain.mapping.placeVisit.dao;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,6 +8,10 @@ import umc.catchy.domain.course.domain.Course;
 import umc.catchy.domain.mapping.placeVisit.domain.PlaceVisit;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.domain.Place;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PlaceVisitRepository extends JpaRepository<PlaceVisit, Long> {

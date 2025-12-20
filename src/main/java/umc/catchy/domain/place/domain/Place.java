@@ -1,15 +1,6 @@
 package umc.catchy.domain.place.domain;
 
 import jakarta.persistence.*;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,6 +10,10 @@ import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
+
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 @Entity
 @Getter

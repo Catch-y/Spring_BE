@@ -3,8 +3,8 @@ package umc.catchy.global.common.response.status;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
-import umc.catchy.global.common.response.code.ReasonDTO;
 import umc.catchy.global.common.response.code.BaseCode;
+import umc.catchy.global.common.response.code.ReasonDTO;
 
 @Getter
 @AllArgsConstructor

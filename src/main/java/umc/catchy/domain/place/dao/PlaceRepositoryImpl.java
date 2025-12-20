@@ -1,10 +1,4 @@
 package umc.catchy.domain.place.dao;
-import static umc.catchy.domain.category.domain.QCategory.category;
-import static umc.catchy.domain.mapping.memberPlaceVote.domain.QMemberPlaceVote.memberPlaceVote;
-import static umc.catchy.domain.mapping.placeLike.domain.QPlaceLike.placeLike;
-import static umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit.placeVisit;
-import static umc.catchy.domain.place.domain.QPlace.place;
-import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
 
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.ExpressionUtils;
@@ -15,10 +9,6 @@ import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -32,7 +22,18 @@ import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceSearchDto;
 import umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit;
 import umc.catchy.domain.place.domain.Place;
 
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+
+import static umc.catchy.domain.category.domain.QCategory.category;
+import static umc.catchy.domain.mapping.memberPlaceVote.domain.QMemberPlaceVote.memberPlaceVote;
+import static umc.catchy.domain.mapping.placeLike.domain.QPlaceLike.placeLike;
+import static umc.catchy.domain.mapping.placeVisit.domain.QPlaceVisit.placeVisit;
+import static umc.catchy.domain.place.domain.QPlace.place;
+import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
 
 @Slf4j
 @RequiredArgsConstructor
