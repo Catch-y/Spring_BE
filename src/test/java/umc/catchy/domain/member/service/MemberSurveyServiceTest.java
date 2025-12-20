@@ -197,19 +197,19 @@ class MemberSurveyServiceTest {
     @DisplayName("선호지역 설문 저장 성공")
     void createMemberLocation_success() {
         List<LocationSurveyRequest> request = List.of(
-                new LocationSurveyRequest("서울시", "강남구"),
-                new LocationSurveyRequest("서울시", "마포구")
+                new LocationSurveyRequest("서울", "강남구"),
+                new LocationSurveyRequest("서울", "마포구")
         );
 
         Location location1 = Location.builder()
                 .id(1L)
-                .upperLocation("서울시")
+                .upperLocation("서울")
                 .lowerLocation("강남구")
                 .build();
 
         Location location2 = Location.builder()
                 .id(2L)
-                .upperLocation("서울시")
+                .upperLocation("서울")
                 .lowerLocation("마포구")
                 .build();
 
@@ -223,9 +223,9 @@ class MemberSurveyServiceTest {
             mockedSecurityUtil.when(SecurityUtil::getCurrentMemberId).thenReturn(1L);
 
             when(memberRepository.findById(1L)).thenReturn(Optional.of(testMember));
-            when(locationRepository.findByUpperLocationAndLowerLocation("서울시", "강남구"))
+            when(locationRepository.findByUpperLocationAndLowerLocation("서울", "강남구"))
                     .thenReturn(Optional.of(location1));
-            when(locationRepository.findByUpperLocationAndLowerLocation("서울시", "마포구"))
+            when(locationRepository.findByUpperLocationAndLowerLocation("서울", "마포구"))
                     .thenReturn(Optional.of(location2));
             when(memberLocationRepository.saveAll(anyList()))
                     .thenReturn(List.of(memberLocation1, memberLocation2));

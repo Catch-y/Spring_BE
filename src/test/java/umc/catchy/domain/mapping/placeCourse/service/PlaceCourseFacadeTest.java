@@ -106,7 +106,7 @@ class PlaceCourseFacadeTest {
             assertAll(
                     () -> assertThat(responses).hasSize(1),
                     () -> assertThat(responses.get(0).reviewCount()).isEqualTo(5L),
-                    () -> assertThat(responses.get(0).isLiked()).isTrue()
+                    () -> assertThat(responses.get(0).liked()).isTrue()
             );
         }
     }
@@ -132,7 +132,7 @@ class PlaceCourseFacadeTest {
 
             assertAll(
                     () -> assertThat(response.placeId()).isEqualTo(placeId),
-                    () -> assertThat(response.isVisited()).isTrue(),
+                    () -> assertThat(response.visited()).isTrue(),
                     () -> assertThat(response.liked()).isTrue(),
                     () -> assertThat(response.reviewCount()).isEqualTo(10L)
             );

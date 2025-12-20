@@ -47,7 +47,7 @@ class PlaceCourseControllerTest extends ControllerTestSupport {
                 .andExpect(jsonPath("$.result[0].placeName").value("테스트 장소"))
                 .andExpect(jsonPath("$.result[0].placeImage").value("image_url"))
                 .andExpect(jsonPath("$.result[0].placeLatitude").value(37.5))
-                .andExpect(jsonPath("$.result[0].isLiked").value(true));
+                .andExpect(jsonPath("$.result[0].liked").value(true));
     }
 
     @Test
@@ -67,7 +67,7 @@ class PlaceCourseControllerTest extends ControllerTestSupport {
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.result.placeId").value(placeId))
                 .andExpect(jsonPath("$.result.placeName").value("장소이름"))
-                .andExpect(jsonPath("$.result.isVisited").value(true))
+                .andExpect(jsonPath("$.result.visited").value(true))
                 .andExpect(jsonPath("$.result.liked").value(true));
     }
 

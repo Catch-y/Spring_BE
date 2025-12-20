@@ -180,7 +180,7 @@ class PlaceServiceTest {
             PlaceLikedResponse response = placeService.togglePlaceLike(placeId);
 
             assertAll(
-                    () -> assertThat(response.isLiked()).isTrue(),
+                    () -> assertThat(response.liked()).isTrue(),
                     () -> verify(placeLikeRepository).save(any(PlaceLike.class))
             );
         }
@@ -201,7 +201,7 @@ class PlaceServiceTest {
 
             PlaceLikedResponse response = placeService.togglePlaceLike(placeId);
 
-            assertThat(response.isLiked()).isFalse();
+            assertThat(response.liked()).isFalse();
         }
     }
 

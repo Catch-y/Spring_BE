@@ -77,7 +77,7 @@ class PlaceControllerTest extends ControllerTestSupport {
                         .header("Authorization", testToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))
-                .andExpect(jsonPath("$.result.isLiked").value(true));
+                .andExpect(jsonPath("$.result.liked").value(true));
     }
 
     @Test
