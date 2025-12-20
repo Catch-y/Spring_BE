@@ -33,7 +33,7 @@ import umc.catchy.domain.vote.dto.response.category.CategoryResult;
 import umc.catchy.domain.vote.dto.response.group.GroupPlaceResponse;
 import umc.catchy.domain.vote.dto.response.group.GroupVoteResultResponse;
 import umc.catchy.domain.vote.dto.response.group.GroupVoteStatusResponse;
-import umc.catchy.domain.vote.dto.response.place.PlaceResponse;
+import umc.catchy.domain.vote.dto.response.place.VotePlaceResponse;
 import umc.catchy.domain.vote.dto.response.vote.MemberVoteStatus;
 import umc.catchy.domain.vote.dto.response.vote.VoteResult;
 import umc.catchy.domain.vote.dto.response.vote.VoteResultResponse;
@@ -268,7 +268,7 @@ public class VoteService {
                 groupId
         );
 
-        List<PlaceResponse> placeResponses = placesSlice.getContent().stream()
+        List<VotePlaceResponse> votePlaceRespons = placesSlice.getContent().stream()
                 .map(place -> {
                     long reviewCount = placeReviewRepository.countByPlaceId(place.getId());
 
@@ -283,7 +283,7 @@ public class VoteService {
                             ))
                             .toList();
 
-                    return new PlaceResponse(
+                    return new VotePlaceResponse(
                             place.getId(),
                             place.getPlaceName(),
                             place.getRoadAddress(),
@@ -297,7 +297,7 @@ public class VoteService {
 
         boolean isLast = !placesSlice.hasNext();
 
-        return new GroupPlaceResponse(groupLocation, placeResponses, isLast);
+        return new GroupPlaceResponse(groupLocation, votePlaceRespons, isLast);
     }
 
     @Transactional
