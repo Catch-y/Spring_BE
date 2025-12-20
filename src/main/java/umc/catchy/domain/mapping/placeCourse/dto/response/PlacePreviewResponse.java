@@ -14,7 +14,7 @@ public record PlacePreviewResponse(
         Double placeLatitude,
         Double placeLongitude,
         Long reviewCount,
-        boolean isLiked
+        boolean liked
 ) {
     public static PlacePreviewResponse from(PlacePreviewDto dto) {
         return new PlacePreviewResponse(
@@ -32,7 +32,7 @@ public record PlacePreviewResponse(
         );
     }
 
-    public static PlacePreviewResponse from(Place place, Long reviewCount, Boolean isLiked) {
+    public static PlacePreviewResponse from(Place place, Long reviewCount, boolean liked) {
         String categoryName = place.getCategory() != null
                 ? place.getCategory().getBigCategory().getValue()
                 : null;
@@ -50,7 +50,7 @@ public record PlacePreviewResponse(
                 place.getLatitude(),
                 place.getLongitude(),
                 reviewCount,
-                isLiked
+                liked
         );
     }
 }

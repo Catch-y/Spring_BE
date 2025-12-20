@@ -51,7 +51,7 @@ public class PlaceVisitService {
 
         checkAndUpdateCourseCompletion(course, member, memberCourse);
 
-        return PlaceVisitedResponse.of(placeVisit.getId(), placeVisit.isVisited());
+        return PlaceVisitedResponse.of(placeVisit.getId(), placeVisit.getVisitedDate(), placeVisit.isVisited());
     }
 
     private void validateNotAlreadyVisitedToday(Place place, Member member, Course course) {

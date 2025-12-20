@@ -16,10 +16,10 @@ public record PlaceDetailResponse(
         Long reviewCount,
         Double placeLatitude,
         Double placeLongitude,
-        boolean isVisited,
-        boolean liked
+        boolean liked,
+        boolean visited
 ) {
-    public static PlaceDetailResponse from(Place place, Long reviewCount, Boolean isVisited, Boolean isLiked) {
+    public static PlaceDetailResponse from(Place place, Long reviewCount, boolean visited, boolean liked) {
         BigCategory categoryBigCategory = place.getCategory() != null
                 ? place.getCategory().getBigCategory()
                 : null;
@@ -41,8 +41,8 @@ public record PlaceDetailResponse(
                 reviewCount,
                 place.getLatitude(),
                 place.getLongitude(),
-                isVisited,
-                isLiked
+                liked,
+                visited
         );
     }
 }
