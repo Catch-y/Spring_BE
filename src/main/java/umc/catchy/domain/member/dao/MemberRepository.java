@@ -18,7 +18,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByNickname(String nickname);
     Optional<Member> findByEmailAndProviderId(String email, String providerId);
 
-    /* 멤버 삭제 시 연관 엔티티 삭제 */
     @Modifying
     @Query(value = """
             DELETE FROM member_style WHERE member_id = :memberId;

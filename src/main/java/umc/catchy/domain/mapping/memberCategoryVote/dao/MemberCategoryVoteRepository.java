@@ -15,14 +15,15 @@ public interface MemberCategoryVoteRepository extends JpaRepository<MemberCatego
 
     @Query("SELECT COUNT(mcv) > 0 FROM MemberCategoryVote mcv WHERE mcv.categoryVote.vote.id = :voteId AND mcv.member.id = :memberId")
     boolean existsByVoteIdAndMemberId(@Param("voteId") Long voteId, @Param("memberId") Long memberId);
+
     @Query("SELECT COUNT(DISTINCT mcv.member.id) FROM MemberCategoryVote mcv WHERE mcv.voteId = :voteId")
     int countDistinctMembersByVoteId(@Param("voteId") Long voteId);
+
     @Query("SELECT COUNT(mcv) " +
             "FROM MemberCategoryVote mcv " +
             "WHERE mcv.categoryVote.vote.id = :voteId " +
             "AND mcv.categoryVote.id = :categoryVoteId")
     int countByVoteIdAndCategoryVoteId(@Param("voteId") Long voteId, @Param("categoryVoteId") Long categoryVoteId);
-    Integer deleteAllByMember(Member member);
 
     @Modifying
     @Query("DELETE FROM MemberCategoryVote m WHERE m.voteId = :voteId AND m.member.id = :memberId")

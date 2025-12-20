@@ -1,6 +1,5 @@
 package umc.catchy.domain.mapping.placeLike.dao;
 
-
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -16,7 +15,6 @@ import umc.catchy.domain.place.domain.Place;
 @Repository
 public interface PlaceLikeRepository extends JpaRepository<PlaceLike, Long> {
     Optional<PlaceLike> findByPlaceAndMember(Place place, Member member);
-    Integer deleteAllByMember(Member member);
 
     @Query("SELECT pl.place.id FROM PlaceLike pl WHERE pl.member.id = :memberId AND pl.place.id IN :placeIds")
     Set<Long> findLikedPlaceIdsByMemberAndPlaceIds(@Param("memberId") Long memberId, @Param("placeIds") List<Long> placeIds);

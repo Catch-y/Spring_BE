@@ -12,7 +12,6 @@ import java.util.List;
 
 @Repository
 public interface CourseRepository extends JpaRepository<Course, Long>, CourseRepositoryCustom {
-    List<Course> findTop2ByMemberIdAndCourseTypeOrderByCreatedDateDesc(Long memberId, CourseType courseType);
 
     @Query("SELECT c FROM Course c WHERE c.member.id = :memberId AND c.courseType = :courseType ORDER BY c.createdDate DESC")
     List<Course> findTopNByMemberIdAndCourseTypeOrderByCreatedDateDesc(
