@@ -1,7 +1,9 @@
 package umc.catchy.domain.mapping.placeVisit.service;
 
 import java.time.LocalDate;
-import java.util.Optional;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,10 +25,6 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -42,24 +40,28 @@ public class PlaceVisitService {
     @Transactional
     public PlaceVisitedResponse check(Long courseId, Long placeId) {
         Member member = getCurrentMember();
+        Course course = getCourse(courseId);
+        Place place = getPlace(placeId);
+        MemberCourse memberCourse = getMemberCourse(course, member);
 
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
+        validateNotAlreadyVisitedToday(place, member, course);
 
-        Place place = placeRepository.findById(placeId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+        PlaceVisit placeVisit = createPlaceVisit(course, place, member);
 
-        MemberCourse memberCourse = memberCourseRepository.findByCourseAndMember(course, member)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER));
+        checkAndUpdateCourseCompletion(course, member, memberCourse);
 
-        // 이미 오늘 방문 체크를 하였다면 예외 처리
-        Optional<PlaceVisit> optionalPlaceVisit = placeVisitRepository
-                .findByPlaceAndMemberAndCourseAndVisitedDate(place, member, course, LocalDate.now());
-        if (optionalPlaceVisit.isPresent()) {
-            throw new GeneralException(ErrorStatus.PLACE_VISIT_ALREADY_CHECK);
-        }
+        return PlaceVisitedResponse.of(placeVisit.getId(), placeVisit.isVisited());
+    }
 
-        // placeVisit 생성
+    private void validateNotAlreadyVisitedToday(Place place, Member member, Course course) {
+        placeVisitRepository
+                .findByPlaceAndMemberAndCourseAndVisitedDate(place, member, course, LocalDate.now())
+                .ifPresent(pv -> {
+                    throw new GeneralException(ErrorStatus.PLACE_VISIT_ALREADY_CHECK);
+                });
+    }
+
+    private PlaceVisit createPlaceVisit(Course course, Place place, Member member) {
         PlaceVisit placeVisit = PlaceVisit.builder()
                 .course(course)
                 .place(place)
@@ -68,28 +70,42 @@ public class PlaceVisitService {
                 .visitedDate(LocalDate.now())
                 .build();
 
-        placeVisitRepository.save(placeVisit);
+        return placeVisitRepository.save(placeVisit);
+    }
 
-        // 코스 내의 장소 방문이 과반수 이상이면 코스 방문 체크
+    private void checkAndUpdateCourseCompletion(Course course, Member member, MemberCourse memberCourse) {
         List<PlaceCourse> placeCourses = placeCourseRepository.findAllByCourseWithPlace(course);
-        int placeNum = placeCourses.size();
-
-        // PlaceVisit 일괄 조회 후 Set으로 변환
         List<PlaceVisit> visits = placeVisitRepository.findAllByCourseAndMemberWithPlace(course, member);
+
         Set<Long> visitedPlaceIds = visits.stream()
                 .map(pv -> pv.getPlace().getId())
                 .collect(Collectors.toSet());
 
-        int visitNum = (int) placeCourses.stream()
+        long visitedCount = placeCourses.stream()
                 .filter(pc -> visitedPlaceIds.contains(pc.getPlace().getId()))
                 .count();
 
-        if (visitNum == Math.round((double) placeNum / 2)) {
+        int requiredVisits = (int) Math.round((double) placeCourses.size() / 2);
+
+        if (visitedCount == requiredVisits) {
             memberCourse.markAsVisited(LocalDate.now());
             course.increaseParticipants();
         }
+    }
 
-        return PlaceVisitedResponse.of(placeVisit.getId(), placeVisit.isVisited());
+    private Course getCourse(Long courseId) {
+        return courseRepository.findById(courseId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
+    }
+
+    private Place getPlace(Long placeId) {
+        return placeRepository.findById(placeId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
+    }
+
+    private MemberCourse getMemberCourse(Course course, Member member) {
+        return memberCourseRepository.findByCourseAndMember(course, member)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_INVALID_MEMBER));
     }
 
     private Member getCurrentMember() {
