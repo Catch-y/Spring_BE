@@ -3,11 +3,11 @@ package umc.catchy.domain.mapping.placeCourse.dto.response;
 import umc.catchy.domain.mapping.placeCourse.dto.query.PlaceSearchDto;
 
 public record PlaceSearchResponse(
-        PlaceResponse placeResponse,
+        PlaceResponse placeInfoResponse,
         Integer relevanceScore
 ) {
     public static PlaceSearchResponse from(PlaceSearchDto dto) {
-        PlaceResponse placeResponse = new PlaceResponse(
+        PlaceResponse placeInfoResponse = new PlaceResponse(
                 dto.getPlaceId(),
                 dto.getImageUrl(),
                 dto.getPlaceName(),
@@ -18,6 +18,6 @@ public record PlaceSearchResponse(
                 dto.getReviewCount()
         );
 
-        return new PlaceSearchResponse(placeResponse, dto.getRelevanceScore());
+        return new PlaceSearchResponse(placeInfoResponse, dto.getRelevanceScore());
     }
 }
