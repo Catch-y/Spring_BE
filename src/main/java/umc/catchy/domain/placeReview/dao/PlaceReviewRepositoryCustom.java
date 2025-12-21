@@ -6,6 +6,7 @@ import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface PlaceReviewRepositoryCustom {
@@ -13,4 +14,5 @@ public interface PlaceReviewRepositoryCustom {
     Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> findPlaceReviewSliceByPlaceId(Long placeId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId);
     Optional<Double> findAverageRatingByPlaceId(Long placeId);
     Slice<MyPageReviewsResponse.PlaceReviewDTO> getAllPlaceReviewByMemberId(Long memberId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId);
+    Map<Long, Long> countReviewByPlaceIds(List<Long> placeIds);
 }

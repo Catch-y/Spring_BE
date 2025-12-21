@@ -1,6 +1,5 @@
 package umc.catchy.domain.place.dao;
 
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,6 +8,7 @@ import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.place.domain.Place;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PlaceRepository extends JpaRepository<Place, Long>, PlaceCustomRepository {
@@ -19,5 +19,9 @@ public interface PlaceRepository extends JpaRepository<Place, Long>, PlaceCustom
             @Param("groupLocation") String groupLocation,
             @Param("alternativeLocation") String alternativeLocation
     );
-    Optional<Place> findByPoiId(Long poiId);
+
+    List<Place> findAllByPoiIdIn(List<Long> poiIds);
+
+    @Query("SELECT p FROM Place p LEFT JOIN FETCH p.category WHERE p.id = :placeId")
+    Optional<Place> findByIdWithCategory(@Param("placeId") Long placeId);
 }

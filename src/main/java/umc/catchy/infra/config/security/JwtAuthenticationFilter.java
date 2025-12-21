@@ -4,7 +4,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +14,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import umc.catchy.domain.member.service.JwtTokenService;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.JwtUtil;
+
+import java.io.IOException;
 
 
 @Component

@@ -53,7 +53,7 @@ public class MemberSurveyControllerTest extends ControllerTestSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andDo(print())
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("COMMON201"))
                 .andExpect(jsonPath("$.result.memberCategoryIds[0]").value(1L));
@@ -81,7 +81,7 @@ public class MemberSurveyControllerTest extends ControllerTestSupport {
                         .header("Authorization", testToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.code").value("COMMON201"))
                 .andExpect(jsonPath("$.result.memberStyleSurveyId").isArray())
@@ -130,7 +130,7 @@ public class MemberSurveyControllerTest extends ControllerTestSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requests)))
                 .andDo(print())
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.result.memberLocationId").isArray())
                 .andExpect(jsonPath("$.result.memberLocationId[0]").value(100L));

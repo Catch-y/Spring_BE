@@ -9,7 +9,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import umc.catchy.domain.member.domain.SocialType;
 import umc.catchy.domain.member.dto.request.LoginRequest;
 import umc.catchy.domain.member.dto.request.SignUpRequest;
-import umc.catchy.domain.member.dto.response.*;
+import umc.catchy.domain.member.dto.response.LoginResponse;
+import umc.catchy.domain.member.dto.response.ReIssueTokenResponse;
+import umc.catchy.domain.member.dto.response.SignUpResponse;
 import umc.catchy.domain.member.service.MemberAccountFacade;
 import umc.catchy.domain.member.service.OAuthService;
 import umc.catchy.support.ControllerTestSupport;
@@ -70,7 +72,7 @@ public class AuthControllerTest extends ControllerTestSupport {
         mockMvc.perform(post("/member/login/{platform}", platform)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.isSuccess").value(false))
                 .andExpect(jsonPath("$.code").value("SOCIAL400"))
                 .andExpect(jsonPath("$.message").value("유효하지 않은 소셜 플랫폼입니다. (KAKAO 또는 APPLE만 허용)"));
@@ -123,7 +125,7 @@ public class AuthControllerTest extends ControllerTestSupport {
                         .file(profileImage)
                         .contentType(MediaType.MULTIPART_FORM_DATA)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.result.id").value(1L))
                 .andExpect(jsonPath("$.result.email").value("test@test.com"))
@@ -141,7 +143,7 @@ public class AuthControllerTest extends ControllerTestSupport {
         // when & then
         mockMvc.perform(get("/member/reissue")
                         .header("Authorization", testToken))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.isSuccess").value(true))
                 .andExpect(jsonPath("$.result.accessToken").value("new-access-token"))
                 .andExpect(jsonPath("$.result.refreshToken").value("new-refresh-token"));

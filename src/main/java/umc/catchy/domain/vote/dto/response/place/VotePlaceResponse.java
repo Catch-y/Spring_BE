@@ -8,7 +8,7 @@ import java.util.List;
 
 @Getter
 @AllArgsConstructor
-public class PlaceResponse {
+public class VotePlaceResponse {
     private Long placeId;
     private String placeName;
     private String roadAddress;

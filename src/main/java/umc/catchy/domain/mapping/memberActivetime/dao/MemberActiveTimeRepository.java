@@ -5,10 +5,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import umc.catchy.domain.mapping.memberActivetime.domain.MemberActiveTime;
+import umc.catchy.domain.member.domain.Member;
 
 import java.time.DayOfWeek;
 import java.util.List;
-import umc.catchy.domain.member.domain.Member;
 
 @Repository
 public interface MemberActiveTimeRepository extends JpaRepository<MemberActiveTime, Long> {

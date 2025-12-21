@@ -1,15 +1,12 @@
 package umc.catchy.domain.place.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
-public class SetCategoryRequest {
-    @NotBlank
-    private String bigCategory;
+public record SetCategoryRequest(
+        @NotBlank(message = "대카테고리는 필수 입력 항목입니다.")
+        String bigCategory,
 
-    @NotBlank
-    private String smallCategory;
+        @NotBlank(message = "소카테고리는 필수 입력 항목입니다.")
+        String smallCategory
+) {
 }

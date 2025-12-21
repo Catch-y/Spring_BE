@@ -16,9 +16,9 @@ import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
 import umc.catchy.domain.mapping.memberCourse.domain.MemberCourse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.CourseBookmarkResponse;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
-import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseSliceResponse;
 import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
+import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
@@ -148,7 +148,7 @@ class MemberCourseServiceTest {
                     .thenReturn(slice);
 
             // when
-            MemberCourseSliceResponse result = memberCourseService.findAllCourseByBookmarked(10, null);
+            SliceResponse<MemberCourseResponse> result = memberCourseService.findAllCourseByBookmarked(10, null);
 
             // then
             assertAll(
@@ -175,7 +175,7 @@ class MemberCourseServiceTest {
                     .thenReturn(emptySlice);
 
             // when
-            MemberCourseSliceResponse result = memberCourseService.findAllCourseByBookmarked(10, null);
+            SliceResponse<MemberCourseResponse> result = memberCourseService.findAllCourseByBookmarked(10, null);
 
             // then
             assertAll(
@@ -218,7 +218,7 @@ class MemberCourseServiceTest {
             )).thenReturn(slice);
 
             // when
-            MemberCourseSliceResponse result = memberCourseService.getMemberCourses(courseType, upperLoc, lowerLoc, lastId);
+            SliceResponse<MemberCourseResponse> result = memberCourseService.getMemberCourses(courseType, upperLoc, lowerLoc, lastId);
 
             // then
             assertAll(
@@ -254,7 +254,7 @@ class MemberCourseServiceTest {
             )).thenReturn(emptySlice);
 
             // when
-            MemberCourseSliceResponse result = memberCourseService.getMemberCourses(courseType, upperLoc, lowerLoc, null);
+            SliceResponse<MemberCourseResponse> result = memberCourseService.getMemberCourses(courseType, upperLoc, lowerLoc, null);
 
             // then
             assertAll(

@@ -17,7 +17,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import static umc.catchy.global.common.constants.FcmConstants.*;
+import static umc.catchy.global.common.constants.FcmConstants.COURSE_UPDATED_MESSAGE_CONTENT;
+import static umc.catchy.global.common.constants.FcmConstants.COURSE_UPDATED_MESSAGE_TITLE;
 
 @Slf4j
 @Service

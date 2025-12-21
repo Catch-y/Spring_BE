@@ -8,6 +8,7 @@ import umc.catchy.domain.activetime.domain.ActiveTime;
 import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.category.dto.request.CategorySurveyRequest;
+import umc.catchy.domain.course.util.LocationUtils;
 import umc.catchy.domain.location.dao.LocationRepository;
 import umc.catchy.domain.location.domain.Location;
 import umc.catchy.domain.location.dto.request.LocationSurveyRequest;
@@ -129,8 +130,12 @@ public class MemberSurveyService {
     }
 
     private Location findOrCreateLocation(String upperLocation, String lowerLocation) {
-        return locationRepository.findByUpperLocationAndLowerLocation(upperLocation, lowerLocation)
-                .orElseGet(() -> locationRepository.save(Location.createLocation(upperLocation, lowerLocation)));
+        String normalizedUpper = LocationUtils.normalizeLocation(upperLocation);
+
+        return locationRepository.findByUpperLocationAndLowerLocation(normalizedUpper, lowerLocation)
+                .orElseGet(() -> {
+                    return locationRepository.save(Location.createLocation(normalizedUpper, lowerLocation));
+                });
     }
 
     private Member findMemberById(Long memberId) {

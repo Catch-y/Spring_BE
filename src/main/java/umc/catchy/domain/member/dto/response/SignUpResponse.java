@@ -1,9 +1,9 @@
 package umc.catchy.domain.member.dto.response;
 
-import java.time.LocalDateTime;
-
 import umc.catchy.domain.member.domain.FcmInfo;
 import umc.catchy.domain.member.domain.Member;
+
+import java.time.LocalDateTime;
 
 public record SignUpResponse(
         Long id,

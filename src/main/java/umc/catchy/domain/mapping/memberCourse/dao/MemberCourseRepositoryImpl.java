@@ -11,10 +11,13 @@ import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.course.util.LocationUtils;
-import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseDto;
+import umc.catchy.domain.mapping.memberCourse.dto.query.MemberCourseDto;
 import umc.catchy.domain.mapping.memberCourse.dto.response.MemberCourseResponse;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static umc.catchy.domain.category.domain.QCategory.category;
@@ -98,7 +101,7 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
 
         // 1. 모든 courseId 추출
         List<Long> courseIds = dtos.stream()
-                .map(MemberCourseDto::courseId)
+                .map(MemberCourseDto::getCourseId)
                 .toList();
 
         // 2. IN 쿼리로 한 번에 조회
@@ -126,13 +129,13 @@ public class MemberCourseRepositoryImpl implements MemberCourseRepositoryCustom 
         // 4. 결과 조합
         List<MemberCourseResponse> results = new ArrayList<>();
         for (MemberCourseDto dto : dtos) {
-            List<BigCategory> categories = categoryMap.getOrDefault(dto.courseId(), List.of());
+            List<BigCategory> categories = categoryMap.getOrDefault(dto.getCourseId(), List.of());
             List<BigCategory> uniqueCategories = new ArrayList<>(new HashSet<>(categories));
             List<String> categoryStrings = uniqueCategories.stream()
                     .map(BigCategory::getValue)
                     .toList();
 
-            results.add(dto.toResponse(categoryStrings));
+            results.add(MemberCourseResponse.from(dto, categoryStrings));
         }
 
         return results;

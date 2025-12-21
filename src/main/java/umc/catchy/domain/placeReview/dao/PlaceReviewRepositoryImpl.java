@@ -1,8 +1,8 @@
 package umc.catchy.domain.placeReview.dao;
 
+import com.querydsl.core.group.GroupBy;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -10,23 +10,20 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
-import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
 import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
-import static com.querydsl.core.group.GroupBy.*;
-import static umc.catchy.domain.category.domain.QCategory.category;
-import static umc.catchy.domain.member.domain.QMember.*;
+import static com.querydsl.core.group.GroupBy.groupBy;
+import static com.querydsl.core.group.GroupBy.list;
+import static umc.catchy.domain.member.domain.QMember.member;
 import static umc.catchy.domain.place.domain.QPlace.place;
 import static umc.catchy.domain.placeReview.domain.QPlaceReview.placeReview;
-import static umc.catchy.domain.placeReviewImage.domain.QPlaceReviewImage.*;
+import static umc.catchy.domain.placeReviewImage.domain.QPlaceReviewImage.placeReviewImage;
 
 @RequiredArgsConstructor
 public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
@@ -96,44 +93,6 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
         return averageRating.map(Double::valueOf);
     }
 
-    private BooleanExpression placeIdEq(Long placeId) {
-        return placeId == null ? null : placeReview.place.id.eq(placeId);
-    }
-
-    private BooleanExpression lastPlaceReviewDate(LocalDate lastPlaceReviewDate) {
-        if (lastPlaceReviewDate == null) {
-            return null;
-        }
-        return placeReview.visitedDate.lt(lastPlaceReviewDate);
-    }
-
-    private BooleanExpression lastPlaceReviewCondition(LocalDate lastVisitedDate, Long lastReviewId) {
-        if (lastVisitedDate == null || lastReviewId == null) {
-            return null;  // 첫 페이지 요청 시에는 조건 없이 모든 데이터를 조회
-        }
-
-        // 방문 날짜가 마지막 방문 날짜보다 이전인 경우
-        BooleanExpression beforeVisitedDate = placeReview.visitedDate.lt(lastVisitedDate);
-
-        // 방문 날짜가 같고, 리뷰 ID가 마지막 리뷰 ID보다 작은 경우
-        BooleanExpression sameDateBeforeId = placeReview.visitedDate.eq(lastVisitedDate)
-                .and(placeReview.id.lt(lastReviewId));
-
-        // 두 조건 중 하나라도 만족하면 해당 데이터를 가져옴
-        return beforeVisitedDate.or(sameDateBeforeId);
-    }
-
-    private Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> checkLastPage(int pageSize, List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> results) {
-        boolean hasNext = false;
-
-        if (results.size() > pageSize) {
-            hasNext = true;
-            results.remove(pageSize);
-        }
-
-        return new SliceImpl<>(results, PageRequest.of(0,pageSize), hasNext);
-    }
-
     @Override
     public Slice<MyPageReviewsResponse.PlaceReviewDTO> getAllPlaceReviewByMemberId(Long memberId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId){
         List<Long> reviewIds = queryFactory
@@ -170,6 +129,54 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                 ));
 
         return checkLastPageOfMyReviews(pageSize, results);
+    }
+
+    @Override
+    public Map<Long, Long> countReviewByPlaceIds(List<Long> placeIds) {
+        return queryFactory
+                .from(placeReview)
+                .where(placeReview.place.id.in(placeIds))
+                .groupBy(placeReview.place.id)
+                .transform(GroupBy.groupBy(placeReview.place.id)
+                        .as(placeReview.count()));
+    }
+
+    private BooleanExpression placeIdEq(Long placeId) {
+        return placeId == null ? null : placeReview.place.id.eq(placeId);
+    }
+
+    private BooleanExpression lastPlaceReviewDate(LocalDate lastPlaceReviewDate) {
+        if (lastPlaceReviewDate == null) {
+            return null;
+        }
+        return placeReview.visitedDate.lt(lastPlaceReviewDate);
+    }
+
+    private BooleanExpression lastPlaceReviewCondition(LocalDate lastVisitedDate, Long lastReviewId) {
+        if (lastVisitedDate == null || lastReviewId == null) {
+            return null;  // 첫 페이지 요청 시에는 조건 없이 모든 데이터를 조회
+        }
+
+        // 방문 날짜가 마지막 방문 날짜보다 이전인 경우
+        BooleanExpression beforeVisitedDate = placeReview.visitedDate.lt(lastVisitedDate);
+
+        // 방문 날짜가 같고, 리뷰 ID가 마지막 리뷰 ID보다 작은 경우
+        BooleanExpression sameDateBeforeId = placeReview.visitedDate.eq(lastVisitedDate)
+                .and(placeReview.id.lt(lastReviewId));
+
+        // 두 조건 중 하나라도 만족하면 해당 데이터를 가져옴
+        return beforeVisitedDate.or(sameDateBeforeId);
+    }
+
+    private Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> checkLastPage(int pageSize, List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> results) {
+        boolean hasNext = false;
+
+        if (results.size() > pageSize) {
+            hasNext = true;
+            results.remove(pageSize);
+        }
+
+        return new SliceImpl<>(results, PageRequest.of(0,pageSize), hasNext);
     }
 
     private BooleanExpression memberIdEq(Long memberId) {

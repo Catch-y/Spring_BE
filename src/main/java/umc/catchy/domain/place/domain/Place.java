@@ -1,21 +1,34 @@
 package umc.catchy.domain.place.domain;
 
 import jakarta.persistence.*;
-import java.time.LocalTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import umc.catchy.domain.category.domain.Category;
 import umc.catchy.domain.common.BaseTimeEntity;
+import umc.catchy.domain.course.util.LocationUtils;
+import umc.catchy.global.common.response.status.ErrorStatus;
+import umc.catchy.global.error.exception.GeneralException;
+
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 @Entity
 @Getter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Table(
+        name = "place",
+        indexes = {
+                @Index(name = "idx_place_search", columnList = "category_id, sido, sigungu"),
+                @Index(name = "idx_place_recommendation", columnList = "category_id, latitude, longitude, start_time, end_time")
+        }
+)
 public class Place extends BaseTimeEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "place_id")
@@ -28,31 +41,88 @@ public class Place extends BaseTimeEntity {
     @Column(length = 50000)
     private String placeDescription;
 
-    private String roadAddress; //도로명 주소
+    @Column(length = 255)
+    private String roadAddress;
 
-    private String numberAddress; // 지번 주소
+    @Column(length = 20)
+    private String sido;
 
-    private Double latitude; // 위도
+    @Column(length = 20)
+    private String sigungu;
 
-    private Double longitude; // 경도
+    private Double latitude;
 
-    private String activeTime; // 영업시간
+    private Double longitude;
+
+    private String activeTime;
 
     private LocalTime startTime;
 
     private LocalTime endTime;
 
-    private String placeSite; // 장소 사이트
+    private String placeSite;
 
     @Column(length = 50000)
-    private String imageUrl; // 장소 이미지
+    private String imageUrl;
 
-    @Setter
-    private Double rating; // 장소 총 평점 : 처음에 0으로 초기화해주세요
+    @Builder.Default
+    private Double rating = 0.0;
 
-    @Setter
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @PrePersist
+    @PreUpdate
+    public void preUpdateAddress() {
+        if (this.roadAddress != null && !this.roadAddress.isEmpty()) {
+            this.sido = LocationUtils.extractUpperLocation(this.roadAddress); // "서울"
+            this.sigungu = LocationUtils.extractLowerLocation(this.roadAddress); // "강남구"
+        }
+    }
+
+    public void assignCategory(Category category) {
+        if (this.category != null) {
+            throw new GeneralException(ErrorStatus.PLACE_CATEGORY_EXIST);
+        }
+        this.category = category;
+    }
+
+    public void updateRating(Double newRating) {
+        this.rating = newRating;
+    }
+
+    public static Place fromGoogleInfo(Long poiId, Map<String, String> googleInfo) {
+        return Place.builder()
+                .poiId(poiId)
+                .placeName(googleInfo.get("name"))
+                .placeDescription(googleInfo.get("description"))
+                .roadAddress(googleInfo.get("address"))
+                .latitude(parseDouble(googleInfo.get("lat")))
+                .longitude(parseDouble(googleInfo.get("lon")))
+                .activeTime(googleInfo.get("activeTime"))
+                .startTime(parseLocalTime(googleInfo.get("startTime")))
+                .endTime(parseLocalTime(googleInfo.get("endTime")))
+                .placeSite(googleInfo.get("website"))
+                .imageUrl(googleInfo.get("imageUrl"))
+                .build();
+    }
+
+    private static Double parseDouble(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static LocalTime parseLocalTime(String time) {
+        if (time == null || time.isBlank()) return null;
+        try {
+            return LocalTime.parse(time, DateTimeFormatter.ofPattern("HH:mm"));
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

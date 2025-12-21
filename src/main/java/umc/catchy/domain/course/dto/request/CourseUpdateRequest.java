@@ -3,6 +3,7 @@ package umc.catchy.domain.course.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 
 public record CourseUpdateRequest(

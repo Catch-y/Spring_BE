@@ -1,6 +1,5 @@
 package umc.catchy.domain.courseReview.dao;
 
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
 import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;

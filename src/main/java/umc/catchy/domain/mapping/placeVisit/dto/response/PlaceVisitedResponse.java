@@ -1,13 +1,13 @@
 package umc.catchy.domain.mapping.placeVisit.dto.response;
 
 import java.time.LocalDate;
-import lombok.Builder;
-import lombok.Getter;
 
-@Getter
-@Builder
-public class PlaceVisitedResponse {
-    private Long placeVisitId;
-    private LocalDate visitedDate;
-    private Boolean isVisited;
+public record PlaceVisitedResponse(
+        Long placeVisitId,
+        LocalDate visitedDate,
+        boolean isVisited
+) {
+    public static PlaceVisitedResponse of(Long placeVisitId, LocalDate visitedDate, boolean isVisited) {
+        return new PlaceVisitedResponse(placeVisitId, visitedDate, isVisited);
+    }
 }

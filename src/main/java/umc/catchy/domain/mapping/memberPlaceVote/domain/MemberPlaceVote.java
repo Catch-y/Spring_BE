@@ -13,6 +13,9 @@ import umc.catchy.domain.vote.domain.Vote;
 @Entity
 @Getter
 @NoArgsConstructor
+@Table(name = "member_place_vote", indexes = {
+        @Index(name = "idx_membervote_place_group", columnList = "place_id, group_id")
+})
 public class MemberPlaceVote extends BaseTimeEntity {
 
     @Id

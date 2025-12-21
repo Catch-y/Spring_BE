@@ -1,14 +1,14 @@
 package umc.catchy.domain.member.dao;
 
-import java.util.List;
-import java.util.Optional;
-
 import feign.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import umc.catchy.domain.member.domain.Member;
+
+import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface MemberRepository extends JpaRepository<Member, Long> {
@@ -18,7 +18,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByNickname(String nickname);
     Optional<Member> findByEmailAndProviderId(String email, String providerId);
 
-    /* 멤버 삭제 시 연관 엔티티 삭제 */
     @Modifying
     @Query(value = """
             DELETE FROM member_style WHERE member_id = :memberId;

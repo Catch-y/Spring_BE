@@ -1,6 +1,5 @@
 package umc.catchy.global.error.exception;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import umc.catchy.global.common.response.code.BaseErrorCode;
 import umc.catchy.global.common.response.code.ErrorReasonDTO;

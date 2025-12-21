@@ -2,7 +2,7 @@ package umc.catchy.domain.vote.dto.response.group;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import umc.catchy.domain.vote.dto.response.place.PlaceResponse;
+import umc.catchy.domain.vote.dto.response.place.VotePlaceResponse;
 
 import java.util.List;
 
@@ -10,6 +10,6 @@ import java.util.List;
 @AllArgsConstructor
 public class GroupPlaceResponse {
     private String groupLocation;
-    private List<PlaceResponse> places;
+    private List<VotePlaceResponse> places;
     private Boolean isLast;
 }

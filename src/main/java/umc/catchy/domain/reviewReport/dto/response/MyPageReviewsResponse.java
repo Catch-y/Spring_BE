@@ -7,7 +7,6 @@ import umc.catchy.domain.reviewReport.domain.ReviewType;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
 
 public class MyPageReviewsResponse {
 

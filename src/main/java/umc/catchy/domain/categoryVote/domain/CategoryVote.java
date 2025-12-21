@@ -1,11 +1,7 @@
 package umc.catchy.domain.categoryVote.domain;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.vote.domain.Vote;
