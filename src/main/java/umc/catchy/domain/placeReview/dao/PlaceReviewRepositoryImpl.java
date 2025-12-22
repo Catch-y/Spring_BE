@@ -13,7 +13,8 @@ import org.springframework.data.domain.SliceImpl;
 import umc.catchy.domain.placeReview.dto.response.PlaceReviewImageResponse;
 import umc.catchy.domain.placeReview.dto.response.PlaceReviewRatingResponse;
 import umc.catchy.domain.placeReview.dto.response.PlaceReviewResponse;
-import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
+import umc.catchy.domain.reviewReport.dto.query.PlaceReviewDto;
+import umc.catchy.domain.reviewReport.dto.query.ReviewImageDto;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -97,38 +98,33 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
     }
 
     @Override
-    public Slice<MyPageReviewsResponse.PlaceReviewDTO> getAllPlaceReviewByMemberId(Long memberId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId){
+    public Slice<PlaceReviewDto> getAllPlaceReviewByMemberId(Long memberId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId) {
         List<Long> reviewIds = queryFactory
                 .select(placeReview.id)
                 .from(placeReview)
-                .where(
-                        memberIdEq(memberId),
-                        lastPlaceReviewCondition(lastPlaceReviewDate, lastPlaceReviewId)
-                )
+                .where(memberIdEq(memberId), lastPlaceReviewCondition(lastPlaceReviewDate, lastPlaceReviewId))
                 .orderBy(placeReview.visitedDate.desc(), placeReview.id.desc())
                 .limit(pageSize + 1)
                 .fetch();
 
-        List<MyPageReviewsResponse.PlaceReviewDTO> results = queryFactory.selectFrom(placeReview)
-                .leftJoin(placeReview.place, place).on(placeReview.place.id.eq(place.id))
+        List<PlaceReviewDto> results = queryFactory.selectFrom(placeReview)
+                .leftJoin(placeReview.place, place)
                 .leftJoin(placeReviewImage).on(placeReviewImage.placeReview.id.eq(placeReview.id))
-                .where(
-                        placeReview.id.in(reviewIds)
-                )
+                .where(placeReview.id.in(reviewIds))
                 .orderBy(placeReview.visitedDate.desc(), placeReview.id.desc())
                 .transform(groupBy(placeReview.id).list(
-                        Projections.fields(MyPageReviewsResponse.PlaceReviewDTO.class,
-                                placeReview.id.as("reviewId"),
-                                placeReview.place.placeName.as("name"),
-                                placeReview.comment.as("comment"),
-                                list(
-                                        Projections.fields(MyPageReviewsResponse.ReviewImagesDTO.class,
-                                                placeReviewImage.id.as("reviewImageId"),
-                                                placeReviewImage.imageUrl.as("imageUrl"))
-                                ).as("reviewImages"),
-                                placeReview.place.category.bigCategory.as("category"),
-                                placeReview.rating.as("rating"),
-                                placeReview.visitedDate.as("visitedDate"))
+                        Projections.constructor(PlaceReviewDto.class,
+                                placeReview.id,
+                                place.placeName,
+                                placeReview.comment,
+                                list(Projections.constructor(ReviewImageDto.class,
+                                        placeReviewImage.id,
+                                        placeReviewImage.imageUrl
+                                )),
+                                place.category.bigCategory,
+                                placeReview.rating,
+                                placeReview.visitedDate
+                        )
                 ));
 
         return checkLastPageOfMyReviews(pageSize, results);
@@ -186,14 +182,12 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
         return memberId == null ? null : placeReview.member.id.eq(memberId);
     }
 
-    private Slice<MyPageReviewsResponse.PlaceReviewDTO> checkLastPageOfMyReviews(int pageSize, List<MyPageReviewsResponse.PlaceReviewDTO> results) {
+    private Slice<PlaceReviewDto> checkLastPageOfMyReviews(int pageSize, List<PlaceReviewDto> results) {
         boolean hasNext = false;
-
         if (results.size() > pageSize) {
             hasNext = true;
             results.remove(pageSize);
         }
-
         return new SliceImpl<>(results, PageRequest.of(0, pageSize), hasNext);
     }
 }

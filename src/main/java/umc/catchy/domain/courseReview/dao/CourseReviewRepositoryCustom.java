@@ -2,9 +2,9 @@ package umc.catchy.domain.courseReview.dao;
 
 import org.springframework.data.domain.Slice;
 import umc.catchy.domain.courseReview.dto.response.CourseReviewResponse;
-import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
+import umc.catchy.domain.reviewReport.dto.query.CourseReviewDto;
 
 public interface CourseReviewRepositoryCustom {
     Slice<CourseReviewResponse> getAllCourseReviewByCourseId(Long courseId, int pageSize, Long lastReviewId);
-    Slice<MyPageReviewsResponse.CourseReviewDTO> getAllCourseReviewByMemberId(Long memberId, int pageSize, Long lastReviewId);
+    Slice<CourseReviewDto> getAllCourseReviewByMemberId(Long memberId, int pageSize, Long lastReviewId);
 }

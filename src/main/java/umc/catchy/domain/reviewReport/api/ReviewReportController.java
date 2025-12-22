@@ -26,7 +26,7 @@ public class ReviewReportController {
     public ResponseEntity<BaseResponse<PostReviewReportResponse>> postReviewReport(
             @PathVariable Long reviewId,
             @Valid @RequestBody PostReviewReportRequest request
-            ){
+    ) {
         PostReviewReportResponse response = reviewReportService.postReviewReport(reviewId, request);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
@@ -36,29 +36,29 @@ public class ReviewReportController {
     public ResponseEntity<BaseResponse<DeleteReviewResponse>> deleteReview(
             @PathVariable Long reviewId,
             @RequestParam String reviewType
-    ){
+    ) {
         DeleteReviewResponse response = reviewReportService.deleteReview(reviewId, reviewType);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
     @Operation(summary = "마이페이지/내 장소 리뷰 조회 API", description = "내가 작성한 장소 리뷰를 조회하는 API입니다.")
     @GetMapping("mypage/placeReviews")
-    public ResponseEntity<BaseResponse<MyPageReviewsResponse.ReviewsDTO>> getMyPlaceReviews(
+    public ResponseEntity<BaseResponse<MyPageReviewsResponse>> getMyPlaceReviews(
             @RequestParam int pageSize,
             @RequestParam(required = false) LocalDate lastPlaceReviewDate,
             @RequestParam(required = false) Long lastReviewId
-    ){
-        MyPageReviewsResponse.ReviewsDTO response = reviewReportService.getMyReviews("PLACE", pageSize, lastPlaceReviewDate, lastReviewId);
+    ) {
+        MyPageReviewsResponse response = reviewReportService.getMyReviews("PLACE", pageSize, lastPlaceReviewDate, lastReviewId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
     @Operation(summary = "마이페이지/내 코스 리뷰 조회 API", description = "내가 작성한 코스 리뷰를 조회하는 API입니다.")
     @GetMapping("mypage/courseReviews")
-    public ResponseEntity<BaseResponse<MyPageReviewsResponse.ReviewsDTO>> getMyCourseReviews(
+    public ResponseEntity<BaseResponse<MyPageReviewsResponse>> getMyCourseReviews(
             @RequestParam int pageSize,
             @RequestParam(required = false) Long lastReviewId
-    ){
-        MyPageReviewsResponse.ReviewsDTO response = reviewReportService.getMyReviews("COURSE", pageSize, null, lastReviewId);
+    ) {
+        MyPageReviewsResponse response = reviewReportService.getMyReviews("COURSE", pageSize, null, lastReviewId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

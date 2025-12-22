@@ -1,17 +1,18 @@
 package umc.catchy.domain.reviewReport.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import umc.catchy.domain.reviewReport.domain.ReviewReport;
 import umc.catchy.domain.reviewReport.domain.ReviewType;
 
-@Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class PostReviewReportResponse {
-    Long reportId;
-    ReviewType reviewType;
-    String message;
+public record PostReviewReportResponse(
+        Long reportId,
+        ReviewType reviewType,
+        String message
+) {
+    public static PostReviewReportResponse from(ReviewReport reviewReport) {
+        return new PostReviewReportResponse(
+                reviewReport.getId(),
+                reviewReport.getReviewType(),
+                "해당 리뷰가 성공적으로 신고되었습니다."
+        );
+    }
 }

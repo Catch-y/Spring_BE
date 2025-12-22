@@ -30,4 +30,20 @@ public class ReviewReport extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_review_id", nullable = true)
     private PlaceReview placeReview;
+
+    public static ReviewReport createForCourseReview(String reason, CourseReview courseReview) {
+        return ReviewReport.builder()
+                .reviewType(ReviewType.COURSE)
+                .reason(reason)
+                .courseReview(courseReview)
+                .build();
+    }
+
+    public static ReviewReport createForPlaceReview(String reason, PlaceReview placeReview) {
+        return ReviewReport.builder()
+                .reviewType(ReviewType.PLACE)
+                .reason(reason)
+                .placeReview(placeReview)
+                .build();
+    }
 }
