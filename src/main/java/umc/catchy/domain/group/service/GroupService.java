@@ -51,7 +51,7 @@ public class GroupService {
                 .build();
         memberGroupRepository.save(memberGroup);
 
-        return new GroupJoinResponse(true, "Successfully joined the group.");
+        return GroupJoinResponse.of(true, "Successfully joined the group.");
     }
 
     @Transactional(readOnly = true)
@@ -59,12 +59,7 @@ public class GroupService {
         Groups group = groupRepository.findByInviteCode(inviteCode)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_INVITE_CODE_INVALID));
 
-        return GroupInfoResponse.builder()
-                .groupName(group.getGroupName())
-                .groupLocation(group.getGroupLocation())
-                .promiseTime(group.getPromiseTime())
-                .groupImage(group.getGroupImage())
-                .build();
+        return GroupInfoResponse.from(group);
     }
 
     @Transactional
@@ -73,36 +68,25 @@ public class GroupService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         String groupImageUrl = null;
-        MultipartFile groupImageFile = request.getGroupImage();
+        MultipartFile groupImageFile = request.groupImage();
         if (groupImageFile != null && !groupImageFile.isEmpty()) {
             String keyName = "group-images/" + groupImageFile.getOriginalFilename();
             groupImageUrl = amazonS3Manager.uploadFile(keyName, groupImageFile);
         }
 
         // promiseTime 처리
-        LocalDateTime promiseTime = request.getPromiseTime()
+        LocalDateTime promiseTime = request.promiseTime()
                 .withSecond(0)
                 .withNano(0);
 
 
-        Groups group = Groups.builder()
-                .groupName(request.getGroupName())
-                .groupImage(groupImageUrl)
-                .groupLocation(request.getGroupLocation())
-                .inviteCode(request.getInviteCode())
-                .promiseTime(promiseTime)
-                .build();
-
+        Groups group = Groups.create(request, groupImageUrl, promiseTime);
         Groups savedGroup = groupRepository.save(group);
 
-        MemberGroup memberGroup = MemberGroup.builder()
-                .promiseTime(savedGroup.getPromiseTime())
-                .member(member)
-                .group(savedGroup)
-                .build();
+        MemberGroup memberGroup = MemberGroup.create(group, member);
         memberGroupRepository.save(memberGroup);
 
-        return CreateGroupResponse.fromEntity(savedGroup, member.getNickname());
+        return CreateGroupResponse.of(savedGroup, member.getNickname());
     }
 
     @Transactional
@@ -132,18 +116,9 @@ public class GroupService {
 
         // 해당 년도와 월에 맞는 그룹 필터링
         return memberGroups.stream()
-                .filter(memberGroup -> {
-                    LocalDateTime promiseTime = memberGroup.getGroup().getPromiseTime();
-                    return promiseTime.getYear() == year && promiseTime.getMonthValue() == month;
-                })
-                .map(memberGroup -> {
-                    Groups group = memberGroup.getGroup();
-                    return GroupCalendarResponse.builder()
-                            .groupId(group.getId())
-                            .groupName(group.getGroupName())
-                            .promiseTime(group.getPromiseTime())
-                            .build();
-                })
+                .map(MemberGroup::getGroup)
+                .filter(group -> group.getPromiseTime().getYear() == year && group.getPromiseTime().getMonthValue() == month)
+                .map(GroupCalendarResponse::from)
                 .collect(Collectors.toList());
     }
 
