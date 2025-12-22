@@ -10,15 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.category.domain.BigCategory;
-import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
+import umc.catchy.domain.vote.dto.request.CategoryVoteRequest;
 import umc.catchy.domain.vote.dto.request.PlaceVoteRequest;
-import umc.catchy.domain.vote.dto.request.SubmitVoteRequest;
-import umc.catchy.domain.vote.dto.response.category.CategoryResponse;
-import umc.catchy.domain.vote.dto.response.group.GroupPlaceResponse;
-import umc.catchy.domain.vote.dto.response.group.GroupVoteResultResponse;
-import umc.catchy.domain.vote.dto.response.group.GroupVoteStatusResponse;
-import umc.catchy.domain.vote.dto.response.vote.VoteResponse;
-import umc.catchy.domain.vote.dto.response.vote.VoteResultResponse;
+import umc.catchy.domain.vote.dto.request.VoteCreateRequest;
+import umc.catchy.domain.vote.dto.response.*;
 import umc.catchy.domain.vote.service.VoteService;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
@@ -33,46 +28,43 @@ public class VoteController {
 
     @Operation(summary = "투표 생성", description = "새로운 투표를 생성합니다.")
     @PostMapping
-    public ResponseEntity<BaseResponse<VoteResponse>> createVote(@Valid @RequestBody CreateVoteRequest request) {
+    public ResponseEntity<BaseResponse<VoteIdResponse>> createVote(@Valid @RequestBody VoteCreateRequest request) {
         Long voteId = voteService.createVote(request).getId();
-        VoteResponse response = VoteResponse.builder()
-                .voteId(voteId)
-                .build();
         return ResponseEntity.status(SuccessStatus._CREATED.getHttpStatus())
-                .body(BaseResponse.onSuccess(SuccessStatus._CREATED, response));
+                .body(BaseResponse.onSuccess(SuccessStatus._CREATED, VoteIdResponse.of(voteId)));
     }
 
     @Operation(summary = "카테고리 투표", description = "최소 2개 이상 카테고리를 투표합니다.")
     @PostMapping("/{voteId}/category")
     public ResponseEntity<BaseResponse<Void>> submitVote(
             @PathVariable Long voteId,
-            @RequestBody SubmitVoteRequest request) {
-        voteService.submitVote(voteId, request.getCategoryIds());
+            @Valid @RequestBody CategoryVoteRequest request) {
+        voteService.submitVote(voteId, request.categoryIds());
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 
     @Operation(summary = "투표 진행 중", description = "카테고리 투표 진행 중 투표 현황 조회")
     @GetMapping("/{voteId}")
-    public ResponseEntity<BaseResponse<VoteResultResponse>> getVoteResults(@PathVariable Long voteId) {
-        VoteResultResponse response = voteService.getVoteResults(voteId);
+    public ResponseEntity<BaseResponse<CategoryVoteResultResponse>> getVoteResults(@PathVariable Long voteId) {
+        CategoryVoteResultResponse response = voteService.getVoteResults(voteId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
     @Operation(summary = "투표 진행 중", description = "카테고리 투표 진행 중 멤버 별 투표 현황 조회")
     @GetMapping("/{groupId}/votes/{voteId}/members")
-    public ResponseEntity<BaseResponse<GroupVoteStatusResponse>> getGroupVoteStatus(
+    public ResponseEntity<BaseResponse<MemberVoteStatusResponse>> getGroupVoteStatus(
             @PathVariable Long groupId,
             @PathVariable Long voteId
     ) {
-        GroupVoteStatusResponse response = voteService.getGroupVoteStatus(groupId, voteId);
+        MemberVoteStatusResponse response = voteService.getGroupVoteStatus(groupId, voteId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
-    @Operation(summary = "투표 진행 중", description = "해당 카테고리 ID 목록 조회")
+    @Operation(summary = "투표 진행 중", description = "해당 투표의 카테고리 ID 목록 조회")
     @GetMapping("/{voteId}/category")
-    public ResponseEntity<BaseResponse<CategoryResponse>> getCategories(
+    public ResponseEntity<BaseResponse<CategoryVoteListResponse>> getCategories(
             @PathVariable Long voteId) {
-        CategoryResponse response = voteService.getCategoriesByVoteId(voteId);
+        CategoryVoteListResponse response = voteService.getCategoriesByVoteId(voteId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
@@ -85,16 +77,16 @@ public class VoteController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
-    @Operation(summary = "투표 완료 - 카테고리 별 장소 확인", description = "카테고리 별 장소를 조회합니다.")
+    @Operation(summary = "투표 완료 - 카테고리 별 장소 확인", description = "선정된 카테고리 별 장소를 조회합니다.")
     @GetMapping("/{groupId}/categories/{category}/places")
-    public ResponseEntity<BaseResponse<GroupPlaceResponse>> getPlacesByCategory(
+    public ResponseEntity<BaseResponse<PlaceVoteListResponse>> getPlacesByCategory(
             @PathVariable Long groupId,
             @Parameter(description = "카테고리 값", schema = @Schema(implementation = BigCategory.class))
             @PathVariable BigCategory category,
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) Long lastPlaceId
     ) {
-        GroupPlaceResponse response = voteService.getPlacesByCategory(groupId, category.name(), pageSize, lastPlaceId);
+        PlaceVoteListResponse response = voteService.getPlacesByCategory(groupId, category.name(), pageSize, lastPlaceId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
@@ -112,8 +104,8 @@ public class VoteController {
     @PostMapping("/{voteId}/category/revote")
     public ResponseEntity<BaseResponse<Void>> revoteCategory(
             @PathVariable Long voteId,
-            @RequestBody SubmitVoteRequest request) {
-        voteService.revoteCategory(voteId, request.getCategoryIds());
+            @Valid @RequestBody CategoryVoteRequest request) {
+        voteService.revoteCategory(voteId, request.categoryIds());
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 }

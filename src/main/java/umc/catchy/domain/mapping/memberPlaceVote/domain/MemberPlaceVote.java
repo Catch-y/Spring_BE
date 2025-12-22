@@ -1,9 +1,7 @@
 package umc.catchy.domain.mapping.memberPlaceVote.domain;
 
 import jakarta.persistence.*;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.group.domain.Groups;
 import umc.catchy.domain.member.domain.Member;
@@ -12,7 +10,9 @@ import umc.catchy.domain.vote.domain.Vote;
 
 @Entity
 @Getter
-@NoArgsConstructor
+@Builder
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "member_place_vote", indexes = {
         @Index(name = "idx_membervote_place_group", columnList = "place_id, group_id")
 })
@@ -39,11 +39,12 @@ public class MemberPlaceVote extends BaseTimeEntity {
     @JoinColumn(name = "group_id", nullable = false)
     private Groups group;
 
-    @Builder
-    public MemberPlaceVote(Place place, Member member, Vote vote, Groups group) {
-        this.place = place;
-        this.member = member;
-        this.vote = vote;
-        this.group = group;
+    public static MemberPlaceVote create(Place place, Member member, Vote vote, Groups group) {
+        return MemberPlaceVote.builder()
+                .place(place)
+                .member(member)
+                .vote(vote)
+                .group(group)
+                .build();
     }
 }
