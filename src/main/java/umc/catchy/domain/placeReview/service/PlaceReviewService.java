@@ -131,7 +131,7 @@ public class PlaceReviewService {
         Long totalCount = placeReviewRepository.countByPlaceId(placeId);
         Slice<PlaceReviewResponse> contentList = placeReviewRepository.findPlaceReviewSliceByPlaceId(placeId, pageSize, lastPlaceReviewDate, lastPlaceReviewId);
 
-        return new PlaceReviewListResponse(
+        return PlaceReviewListResponse.of(
                 averageRating,
                 ratingList,
                 totalCount,
