@@ -25,10 +25,8 @@ public class PlaceVisit extends BaseTimeEntity {
     @Column(name = "placeVisit_id")
     private Long id;
 
-    @Setter
     private boolean isVisited;
 
-    @Setter
     private LocalDate visitedDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
