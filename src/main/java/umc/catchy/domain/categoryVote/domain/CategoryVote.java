@@ -25,4 +25,11 @@ public class CategoryVote extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vote_id")
     private Vote vote;
+
+    public static CategoryVote create(Vote vote, BigCategory bigCategory) {
+        return CategoryVote.builder()
+                .vote(vote)
+                .bigCategory(bigCategory)
+                .build();
+    }
 }

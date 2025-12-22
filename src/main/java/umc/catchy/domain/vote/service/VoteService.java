@@ -71,10 +71,7 @@ public class VoteService {
         voteRepository.save(vote);
 
         for (BigCategory bigCategory : BigCategory.values()) {
-            CategoryVote categoryVote = CategoryVote.builder()
-                    .vote(vote)
-                    .bigCategory(bigCategory)
-                    .build();
+            CategoryVote categoryVote = CategoryVote.create(vote, bigCategory);
             categoryVoteRepository.save(categoryVote);
         }
         fcmService.sendGroupMessageAsync(deviceTokenList, COURSE_UPDATED_MESSAGE_TITLE, GROUP_VOTE_START_MESSAGE_CONTENT);
@@ -101,7 +98,7 @@ public class VoteService {
                 throw new GeneralException(ErrorStatus.INVALID_CATEGORY_SELECTION);
             }
 
-            MemberCategoryVote memberCategoryVote = new MemberCategoryVote(member, categoryVote, voteId);
+            MemberCategoryVote memberCategoryVote = MemberCategoryVote.create(member, categoryVote, voteId);
             memberCategoryVoteRepository.save(memberCategoryVote);
         }
 
@@ -163,7 +160,7 @@ public class VoteService {
     @Transactional(readOnly = true)
     public CategoryVoteListResponse getCategoriesByVoteId(Long voteId) {
         List<CategoryVoteListResponse.CategoryInfo> categoryInfos = categoryVoteRepository.findByVoteId(voteId).stream()
-                .map(category -> new CategoryVoteListResponse.CategoryInfo(category.getId(), category.getBigCategory().toString()))
+                .map(category -> CategoryVoteListResponse.CategoryInfo.of(category.getId(), category.getBigCategory().toString()))
                 .toList();
 
         return CategoryVoteListResponse.of(voteId, categoryInfos);
@@ -327,7 +324,7 @@ public class VoteService {
             Member member = memberRepository.findById(memberId)
                     .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-            MemberCategoryVote memberCategoryVote = new MemberCategoryVote(member, categoryVote, voteId);
+            MemberCategoryVote memberCategoryVote = MemberCategoryVote.create(member, categoryVote, voteId);
             memberCategoryVoteRepository.save(memberCategoryVote);
         }
 
