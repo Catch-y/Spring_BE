@@ -7,7 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
-import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
+import umc.catchy.domain.courseReview.dto.response.CourseReviewImageResponse;
+import umc.catchy.domain.courseReview.dto.response.CourseReviewResponse;
 import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 
 import java.util.List;
@@ -27,7 +28,7 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> getAllCourseReviewByCourseId(Long courseId, int pageSize, Long lastReviewId) {
+    public Slice<CourseReviewResponse> getAllCourseReviewByCourseId(Long courseId, int pageSize, Long lastReviewId) {
 
         List<Long> reviewIds = queryFactory
                 .select(courseReview.id)
@@ -41,7 +42,7 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                 .limit(pageSize + 1)
                 .fetch();
 
-        List<PostCourseReviewResponse.newCourseReviewResponseDTO> result = queryFactory.selectFrom(courseReview)
+        List<CourseReviewResponse> result = queryFactory.selectFrom(courseReview)
                 .leftJoin(courseReview.member, member).on(courseReview.member.id.eq(member.id))
                 .leftJoin(courseReviewImage).on(courseReviewImage.courseReview.id.eq(courseReview.id))
                 .where(
@@ -49,11 +50,11 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                 )
                 .orderBy(courseReview.createdDate.desc())
                 .transform(groupBy(courseReview.id).list(
-                        Projections.fields(PostCourseReviewResponse.newCourseReviewResponseDTO.class,
+                        Projections.fields(CourseReviewResponse.class,
                                 courseReview.id.as("reviewId"),
                                 courseReview.comment.as("comment"),
                                 list(
-                                        Projections.fields(PostCourseReviewResponse.courseReviewImageResponseDTO.class,
+                                        Projections.fields(CourseReviewImageResponse.class,
                                                 courseReviewImage.id.as("reviewImageId"),
                                                 courseReviewImage.imageUrl.as("imageUrl"))
                                 ).as("reviewImages"),
@@ -75,7 +76,7 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
         return courseReview.id.lt(lastReviewId);
     }
 
-    private Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> checkLastPage(int pageSize, List<PostCourseReviewResponse.newCourseReviewResponseDTO> results) {
+    private Slice<CourseReviewResponse> checkLastPage(int pageSize, List<CourseReviewResponse> results) {
         boolean hasNext = false;
 
         if (results.size() > pageSize) {

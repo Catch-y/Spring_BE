@@ -17,11 +17,11 @@ import java.time.LocalDate;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CourseReview extends BaseTimeEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "courseReview_id")
     private Long id;
-
 
     private String comment;
 
@@ -35,6 +35,19 @@ public class CourseReview extends BaseTimeEntity {
     @JoinColumn(name = "course_id")
     private Course course;
 
-    @Setter
-    private Boolean isReported;
+    @Builder.Default
+    private Boolean isReported = false;
+
+    public void markAsReported() {
+        this.isReported = true;
+    }
+
+    public static CourseReview create(Member member, Course course, String comment) {
+        return CourseReview.builder()
+                .comment(comment)
+                .member(member)
+                .course(course)
+                .createdAt(LocalDate.now())
+                .build();
+    }
 }

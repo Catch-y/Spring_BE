@@ -7,12 +7,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
-import umc.catchy.domain.courseReview.converter.CourseReviewConverter;
 import umc.catchy.domain.courseReview.dao.CourseReviewRepository;
 import umc.catchy.domain.courseReview.domain.CourseReview;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
-import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
-import umc.catchy.domain.courseReviewImage.converter.CourseReviewImageConverter;
+import umc.catchy.domain.courseReview.dto.response.CourseReviewImageResponse;
+import umc.catchy.domain.courseReview.dto.response.CourseReviewListResponse;
+import umc.catchy.domain.courseReview.dto.response.CourseReviewResponse;
 import umc.catchy.domain.courseReviewImage.dao.CourseReviewImageRepository;
 import umc.catchy.domain.courseReviewImage.domain.CourseReviewImage;
 import umc.catchy.domain.mapping.memberCourse.dao.MemberCourseRepository;
@@ -41,7 +41,7 @@ public class CourseReviewService {
     private final CourseReviewRepository courseReviewRepository;
     private final CourseReviewImageRepository courseReviewImageRepository;
 
-    public PostCourseReviewResponse.newCourseReviewResponseDTO postNewCourseReview(Long courseId, PostCourseReviewRequest request){
+    public CourseReviewResponse postNewCourseReview(Long courseId, PostCourseReviewRequest request) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -49,51 +49,58 @@ public class CourseReviewService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
 
-        //멤버의 코스 참여 여부 확인
+        // 멤버의 코스 참여 여부 확인
         Boolean isVisited = memberCourseRepository.findByCourseAndMember(course, member)
                 .map(MemberCourse::isVisited)
                 .orElse(false);
-        if(!isVisited){
+        if (!isVisited) {
             throw new GeneralException(ErrorStatus.COURSE_REVIEW_INVALID_MEMBER);
         }
 
-        //CourseReview Entity 생성 및 저장
-        CourseReview newCourseReview = CourseReviewConverter.toCourseReview(member, course, request);
+        // CourseReview Entity 생성 및 저장 (정적 팩토리 메서드 사용)
+        CourseReview newCourseReview = CourseReview.create(member, course, request.comment());
         courseReviewRepository.save(newCourseReview);
-        //Course::hasReview refresh
-        if(!course.isHasReview()){
+
+        // Course::hasReview refresh
+        if (!course.isHasReview()) {
             course.markAsReviewed();
             courseRepository.save(course);
         }
 
-        List<PostCourseReviewResponse.courseReviewImageResponseDTO> images = new ArrayList<>();
-        for(MultipartFile image : request.getImages()){
-            //S3에 이미지 업로드
-            String keyName = "review/course-review-images/" + UUID.randomUUID().toString();
-            String url = amazonS3Manager.uploadFile(keyName, image);
+        // 이미지 업로드 및 저장
+        List<CourseReviewImageResponse> images = new ArrayList<>();
+        if (request.images() != null) {
+            for (MultipartFile image : request.images()) {
+                String keyName = "review/course-review-images/" + UUID.randomUUID();
+                String url = amazonS3Manager.uploadFile(keyName, image);
 
-            //CourseReview Entity 생성 및 저장
-            CourseReviewImage courseReviewImage = CourseReviewImageConverter.toCourseReviewImage(url, newCourseReview);
-            courseReviewImageRepository.save(courseReviewImage);
-            images.add(CourseReviewImageConverter.toCourseReviewImageResponseDTO(courseReviewImage));
+                CourseReviewImage courseReviewImage = CourseReviewImage.create(url, newCourseReview);
+                courseReviewImageRepository.save(courseReviewImage);
+                images.add(CourseReviewImageResponse.from(courseReviewImage));
+            }
         }
-        return CourseReviewConverter.toNewCourseReviewResponseDTO(newCourseReview, images);
+
+        return CourseReviewResponse.from(newCourseReview, images);
     }
 
     @Transactional(readOnly = true)
-    public PostCourseReviewResponse.courseReviewAllResponseDTO getAllCourseReview(Long courseId, int pageSize, Long lastReviewId ) {
-        Course course = courseRepository.findById(courseId).orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
-        Integer countReviews = courseReviewRepository.countAllByCourse(course);
-        if (countReviews == 0) throw new ResultEmptyListException(ErrorStatus.COURSE_REVIEW_NOT_FOUND);
+    public CourseReviewListResponse getAllCourseReview(Long courseId, int pageSize, Long lastReviewId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_NOT_FOUND));
 
-        Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> courseReviewResponses = courseReviewRepository.getAllCourseReviewByCourseId(courseId, pageSize, lastReviewId);
-        List<PostCourseReviewResponse.newCourseReviewResponseDTO> content = courseReviewResponses.getContent();
-        boolean last = courseReviewResponses.isLast();
-        return PostCourseReviewResponse.courseReviewAllResponseDTO.builder()
-                .courseRating(course.getRating())
-                .totalCount(countReviews)
-                .content(content)
-                .last(last)
-                .build();
+        Integer countReviews = courseReviewRepository.countAllByCourse(course);
+        if (countReviews == 0) {
+            throw new ResultEmptyListException(ErrorStatus.COURSE_REVIEW_NOT_FOUND);
+        }
+
+        Slice<CourseReviewResponse> courseReviewResponses =
+                courseReviewRepository.getAllCourseReviewByCourseId(courseId, pageSize, lastReviewId);
+
+        return new CourseReviewListResponse(
+                course.getRating(),
+                countReviews,
+                courseReviewResponses.getContent(),
+                courseReviewResponses.isLast()
+        );
     }
 }

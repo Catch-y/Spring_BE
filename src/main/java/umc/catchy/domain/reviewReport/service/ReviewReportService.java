@@ -104,7 +104,7 @@ public class ReviewReportService {
         else if(Objects.equals(request.getReviewType(), "COURSE")){
             CourseReview courseReview = courseReviewRepository.findById(reviewId)
                     .orElseThrow(()-> new GeneralException(ErrorStatus.COURSE_REVIEW_NOT_FOUND));
-            if(!courseReview.getIsReported()){ courseReview.setIsReported(true); }
+            if(!courseReview.getIsReported()){ courseReview.markAsReported(); }
 
             ReviewReport newReport = ReviewReportConverter.toCourseReviewReport(request, courseReview);
             reviewReportRepository.save(newReport);

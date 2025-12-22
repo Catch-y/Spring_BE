@@ -20,7 +20,8 @@ import umc.catchy.domain.course.service.CourseFacade;
 import umc.catchy.domain.course.service.CourseRecommendationService;
 import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
-import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
+import umc.catchy.domain.courseReview.dto.response.CourseReviewListResponse;
+import umc.catchy.domain.courseReview.dto.response.CourseReviewResponse;
 import umc.catchy.domain.courseReview.service.CourseReviewService;
 import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedResponse;
 import umc.catchy.domain.mapping.placeVisit.service.PlaceVisitService;
@@ -31,7 +32,6 @@ import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.common.response.status.SuccessStatus;
 import umc.catchy.global.util.SecurityUtil;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -89,19 +89,6 @@ public class CourseController {
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 
-    @Operation(summary = "코스 리뷰 작성 API", description = "코스 리뷰 작성을 위한 API, 멤버가 해당 코스의 과반수 이상의 장소에 방문 체크를 성공하였을 때 리뷰 작성 권한이 주어집니다.")
-    @PostMapping(value = "/{courseId}/review", consumes = "multipart/form-data")
-    public ResponseEntity<BaseResponse<PostCourseReviewResponse.newCourseReviewResponseDTO>> postCourseReview(
-            @PathVariable Long courseId,
-            @Valid @ModelAttribute PostCourseReviewRequest request
-    ){
-        if (request.getImages() == null || request.getImages().isEmpty()) {
-            request.setImages(Collections.emptyList());
-        }
-        PostCourseReviewResponse.newCourseReviewResponseDTO response = courseReviewService.postNewCourseReview(courseId, request);
-        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
-    }
-
     @Operation(summary = "코스 생성(AI) API", description = "AI가 생성하는 코스")
     @PostMapping("/generate-ai")
     public CompletableFuture<ResponseEntity<BaseResponse<GptCourseInfoResponse>>> generateCourseWithAI() {
@@ -154,14 +141,24 @@ public class CourseController {
         return  ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
-    @Operation(summary = "코스 리뷰 전체보기 API", description = "코스 리뷰 전체를 보여줍니다.")
+    @Operation(summary = "코스 리뷰 작성 API", description = "코스 리뷰 작성을 위한 API, 멤버가 해당 코스의 과반수 이상의 장소에 방문 체크를 성공하였을 때 리뷰 작성 권한이 주어집니다.")
+    @PostMapping(value = "/{courseId}/review", consumes = "multipart/form-data")
+    public ResponseEntity<BaseResponse<CourseReviewResponse>> postCourseReview(
+            @PathVariable Long courseId,
+            @Valid @ModelAttribute PostCourseReviewRequest request
+    ){
+        CourseReviewResponse response = courseReviewService.postNewCourseReview(courseId, request);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
     @GetMapping("/{courseId}/review/all")
-    public ResponseEntity<BaseResponse<PostCourseReviewResponse.courseReviewAllResponseDTO>> searchAllReview(
+    @Operation(summary = "코스 리뷰 전체 조회", description = "특정 코스의 모든 리뷰를 조회합니다.")
+    public ResponseEntity<BaseResponse<CourseReviewListResponse>> searchAllReview(
             @PathVariable Long courseId,
             @RequestParam int pageSize,
             @RequestParam(required = false) Long lastReviewId
-    ){
-        PostCourseReviewResponse.courseReviewAllResponseDTO response = courseReviewService.getAllCourseReview(courseId, pageSize, lastReviewId);
+    ) {
+        CourseReviewListResponse response = courseReviewService.getAllCourseReview(courseId, pageSize, lastReviewId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }
