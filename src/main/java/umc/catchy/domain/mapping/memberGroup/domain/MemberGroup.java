@@ -1,6 +1,7 @@
 package umc.catchy.domain.mapping.memberGroup.domain;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,6 +13,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor
 public class MemberGroup extends BaseTimeEntity {
     @Id
@@ -29,10 +32,11 @@ public class MemberGroup extends BaseTimeEntity {
     @JoinColumn(name = "group_id")
     private Groups group;
 
-    @Builder
-    public MemberGroup(LocalDateTime promiseTime, Member member, Groups group) {
-        this.promiseTime = promiseTime;
-        this.member = member;
-        this.group = group;
+    public static MemberGroup create(Groups group, Member member) {
+        return MemberGroup.builder()
+                .promiseTime(group.getPromiseTime())
+                .group(group)
+                .member(member)
+                .build();
     }
 }

@@ -42,11 +42,11 @@ public class PlaceCourseController {
 
     @Operation(summary = "좋아요한 장소 무한 스크롤 API", description = "좋아요한 장소 정보들을 무한 스크롤로 보여줍니다.")
     @GetMapping("/mypage/like")
-    public BaseResponse<LikedPlaceSliceResponse> findAllCourseByBookmarked(
+    public ResponseEntity<BaseResponse<LikedPlaceSliceResponse>> findAllCourseByBookmarked(
             @RequestParam int pageSize,
             @RequestParam(required = false) Long lastPlaceId
     ) {
         LikedPlaceSliceResponse response = placeCourseFacade.searchLikedPlace(pageSize, lastPlaceId);
-        return BaseResponse.onSuccess(SuccessStatus._OK, response);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

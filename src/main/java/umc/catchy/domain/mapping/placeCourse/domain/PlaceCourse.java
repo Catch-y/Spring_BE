@@ -32,4 +32,12 @@ public class PlaceCourse extends BaseTimeEntity {
     private Place place;
 
     private Integer placeOrder;
+
+    public static PlaceCourse create(Course course, Place place, int order) {
+        return PlaceCourse.builder()
+                .course(course)
+                .place(place)
+                .placeOrder(order)
+                .build();
+    }
 }

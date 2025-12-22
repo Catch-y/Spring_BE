@@ -11,6 +11,7 @@ import umc.catchy.domain.placeReview.domain.PlaceReview;
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PlaceReviewImage extends BaseTimeEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "placeReviewImage_id")
@@ -21,4 +22,11 @@ public class PlaceReviewImage extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "placeReview_id")
     private PlaceReview placeReview;
+
+    public static PlaceReviewImage create(String imageUrl, PlaceReview placeReview) {
+        return PlaceReviewImage.builder()
+                .imageUrl(imageUrl)
+                .placeReview(placeReview)
+                .build();
+    }
 }

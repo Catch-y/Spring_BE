@@ -54,11 +54,7 @@ public class CourseCommandService {
         for (int i = 0; i < sortedPlaces.size(); i++) {
             Place place = sortedPlaces.get(i);
 
-            placeCourses.add(PlaceCourse.builder()
-                    .course(course)
-                    .place(place)
-                    .placeOrder(i + 1)
-                    .build());
+            placeCourses.add(PlaceCourse.create(course, place, i + 1));
 
             if (place.getRating() != null && place.getRating() > 0) {
                 totalRating += place.getRating();
@@ -76,10 +72,7 @@ public class CourseCommandService {
     }
 
     public MemberCourse saveMemberCourse(Course course, Member member) {
-        MemberCourse memberCourse = MemberCourse.builder()
-                .course(course)
-                .member(member)
-                .build();
+        MemberCourse memberCourse = MemberCourse.create(course, member);
         return memberCourseRepository.save(memberCourse);
     }
 

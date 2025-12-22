@@ -1,16 +1,10 @@
 package umc.catchy.domain.group.dto.response;
 
-import lombok.Getter;
-import lombok.Setter;
-
-@Getter
-@Setter
-public class GroupJoinResponse {
-    private boolean success;
-    private String message;
-
-    public GroupJoinResponse(boolean success, String message) {
-        this.success = success;
-        this.message = message;
+public record GroupJoinResponse(
+        boolean success,
+        String message
+) {
+    public static GroupJoinResponse of(boolean success, String message) {
+        return new GroupJoinResponse(success, message);
     }
 }

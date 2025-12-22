@@ -1,14 +1,19 @@
 package umc.catchy.domain.group.dto.response;
 
-import lombok.Builder;
-import lombok.Getter;
+import umc.catchy.domain.group.domain.Groups;
 
 import java.time.LocalDateTime;
 
-@Getter
-@Builder
-public class GroupCalendarResponse {
-    private Long groupId;
-    private String groupName;
-    private LocalDateTime promiseTime;
+public record GroupCalendarResponse(
+        Long groupId,
+        String groupName,
+        LocalDateTime promiseTime
+) {
+    public static GroupCalendarResponse from(Groups group) {
+        return new GroupCalendarResponse(
+                group.getId(),
+                group.getGroupName(),
+                group.getPromiseTime()
+        );
+    }
 }

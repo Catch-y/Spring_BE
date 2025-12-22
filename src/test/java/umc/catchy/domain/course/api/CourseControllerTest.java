@@ -17,7 +17,7 @@ import umc.catchy.domain.course.service.CourseFacade;
 import umc.catchy.domain.course.service.CourseRecommendationService;
 import umc.catchy.domain.course.service.CourseService;
 import umc.catchy.domain.courseReview.dto.request.PostCourseReviewRequest;
-import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
+import umc.catchy.domain.courseReview.dto.response.CourseReviewResponse;
 import umc.catchy.domain.courseReview.service.CourseReviewService;
 import umc.catchy.domain.mapping.memberCourse.service.MemberCourseService;
 import umc.catchy.domain.mapping.placeVisit.service.PlaceVisitService;
@@ -208,21 +208,20 @@ class CourseControllerTest extends ControllerTestSupport {
         // given
         Long courseId = 1L;
 
-        PostCourseReviewResponse.newCourseReviewResponseDTO response = PostCourseReviewResponse.newCourseReviewResponseDTO.builder()
-                .reviewId(100L)
-                .comment("좋았습니다.")
-                .reviewImages(List.of()) // 이미지 없음
-                .createdAt(LocalDate.now())
-                .creatorNickname("TestUser")
-                .build();
+        CourseReviewResponse response = new CourseReviewResponse(
+                100L,
+                "좋았습니다.",
+                List.of(), // 이미지 없음
+                LocalDate.now(),
+                "TestUser"
+        );
 
         when(courseReviewService.postNewCourseReview(eq(courseId), any(PostCourseReviewRequest.class)))
                 .thenReturn(response);
 
         // when & then
         mockMvc.perform(multipart("/course/{courseId}/review", courseId)
-                        .param("comment", "좋았습니다.") // DTO 필드명에 맞춰 param 이름 comment로 사용
-                        .param("rating", "5.0")
+                        .param("comment", "좋았습니다.")
                         .header("Authorization", testToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isSuccess").value(true))

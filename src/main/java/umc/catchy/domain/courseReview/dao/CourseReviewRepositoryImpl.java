@@ -7,14 +7,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
-import umc.catchy.domain.courseReview.dto.response.PostCourseReviewResponse;
-import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
+import umc.catchy.domain.courseReview.dto.response.CourseReviewImageResponse;
+import umc.catchy.domain.courseReview.dto.response.CourseReviewResponse;
+import umc.catchy.domain.reviewReport.dto.query.CourseReviewDto;
+import umc.catchy.domain.reviewReport.dto.query.ReviewImageDto;
 
 import java.util.List;
 
 import static com.querydsl.core.group.GroupBy.groupBy;
 import static com.querydsl.core.group.GroupBy.list;
-import static com.querydsl.jpa.JPAExpressions.select;
 import static umc.catchy.domain.course.domain.QCourse.course;
 import static umc.catchy.domain.courseReview.domain.QCourseReview.courseReview;
 import static umc.catchy.domain.courseReviewImage.domain.QCourseReviewImage.courseReviewImage;
@@ -22,12 +23,12 @@ import static umc.catchy.domain.mapping.placeCourse.domain.QPlaceCourse.placeCou
 import static umc.catchy.domain.member.domain.QMember.member;
 
 @RequiredArgsConstructor
-public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
+public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> getAllCourseReviewByCourseId(Long courseId, int pageSize, Long lastReviewId) {
+    public Slice<CourseReviewResponse> getAllCourseReviewByCourseId(Long courseId, int pageSize, Long lastReviewId) {
 
         List<Long> reviewIds = queryFactory
                 .select(courseReview.id)
@@ -41,7 +42,7 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                 .limit(pageSize + 1)
                 .fetch();
 
-        List<PostCourseReviewResponse.newCourseReviewResponseDTO> result = queryFactory.selectFrom(courseReview)
+        List<CourseReviewResponse> result = queryFactory.selectFrom(courseReview)
                 .leftJoin(courseReview.member, member).on(courseReview.member.id.eq(member.id))
                 .leftJoin(courseReviewImage).on(courseReviewImage.courseReview.id.eq(courseReview.id))
                 .where(
@@ -49,45 +50,22 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                 )
                 .orderBy(courseReview.createdDate.desc())
                 .transform(groupBy(courseReview.id).list(
-                        Projections.fields(PostCourseReviewResponse.newCourseReviewResponseDTO.class,
-                                courseReview.id.as("reviewId"),
-                                courseReview.comment.as("comment"),
-                                list(
-                                        Projections.fields(PostCourseReviewResponse.courseReviewImageResponseDTO.class,
-                                                courseReviewImage.id.as("reviewImageId"),
-                                                courseReviewImage.imageUrl.as("imageUrl"))
-                                ).as("reviewImages"),
-                                courseReview.createdAt.as("createdAt"),
-                                courseReview.member.nickname.as("creatorNickname"))
+                        Projections.constructor(CourseReviewResponse.class,
+                                courseReview.id,
+                                courseReview.comment,
+                                list(Projections.constructor(CourseReviewImageResponse.class,
+                                        courseReviewImage.id,
+                                        courseReviewImage.imageUrl)),
+                                courseReview.createdAt,
+                                member.nickname
+                        )
                 ));
 
-        return checkLastPage(pageSize,result);
-    }
-
-    private BooleanExpression courseIdEq(Long courseId) {
-        return courseId == null ? null : courseReview.course.id.eq(courseId);
-    }
-
-    private BooleanExpression lastCourseReviewId(Long lastReviewId) {
-        if (lastReviewId == null) {
-            return null;
-        }
-        return courseReview.id.lt(lastReviewId);
-    }
-
-    private Slice<PostCourseReviewResponse.newCourseReviewResponseDTO> checkLastPage(int pageSize, List<PostCourseReviewResponse.newCourseReviewResponseDTO> results) {
-        boolean hasNext = false;
-
-        if (results.size() > pageSize) {
-            hasNext = true;
-            results.remove(pageSize);
-        }
-
-        return new SliceImpl<>(results, PageRequest.of(0,pageSize), hasNext);
+        return checkLastPage(pageSize, result);
     }
 
     @Override
-    public Slice<MyPageReviewsResponse.CourseReviewDTO> getAllCourseReviewByMemberId(Long memberId, int pageSize, Long lastReviewId){
+    public Slice<CourseReviewDto> getAllCourseReviewByMemberId(Long memberId, int pageSize, Long lastReviewId) {
         List<Long> reviewIds = queryFactory
                 .select(courseReview.id)
                 .from(courseReview)
@@ -99,47 +77,59 @@ public class CourseReviewRepositoryImpl implements CourseReviewRepositoryCustom{
                 .limit(pageSize + 1)
                 .fetch();
 
-        List<MyPageReviewsResponse.CourseReviewDTO> result = queryFactory.selectFrom(courseReview)
-                .leftJoin(courseReview.course, course).on(courseReview.course.id.eq(course.id))
+        List<CourseReviewDto> result = queryFactory.selectFrom(courseReview)
+                .leftJoin(courseReview.course, course)
                 .leftJoin(courseReviewImage).on(courseReviewImage.courseReview.id.eq(courseReview.id))
-                .where(
-                        courseReview.id.in(reviewIds)
-                )
+                .leftJoin(placeCourse).on(placeCourse.course.id.eq(course.id))
+                .where(courseReview.id.in(reviewIds))
                 .orderBy(courseReview.createdDate.desc())
                 .transform(groupBy(courseReview.id).list(
-                        Projections.fields(MyPageReviewsResponse.CourseReviewDTO.class,
-                                courseReview.id.as("reviewId"),
-                                courseReview.course.courseName.as("name"),
-                                courseReview.comment.as("comment"),
-                                list(
-                                        Projections.fields(MyPageReviewsResponse.ReviewImagesDTO.class,
-                                            courseReviewImage.id.as("reviewImageId"),
-                                            courseReviewImage.imageUrl.as("imageUrl")
-                                        )
-                                ).as("reviewImages"),
-                                courseReview.course.courseType.as("courseType"),
-                                list(select(placeCourse.place.category.bigCategory)
-                                        .from(placeCourse)
-                                        .where(placeCourse.course.id.eq(courseReview.course.id))
-                                        .distinct()).as("categories")
+                        Projections.constructor(CourseReviewDto.class,
+                                courseReview.id,
+                                course.courseName,
+                                courseReview.comment,
+                                list(Projections.constructor(ReviewImageDto.class,
+                                        courseReviewImage.id,
+                                        courseReviewImage.imageUrl
+                                )),
+                                course.courseType,
+                                list(placeCourse.place.category.bigCategory)
                         )
                 ));
 
         return checkLastPageOfMyReviews(pageSize, result);
     }
 
+    private BooleanExpression courseIdEq(Long courseId) {
+        return courseId == null ? null : courseReview.course.id.eq(courseId);
+    }
+
     private BooleanExpression memberIdEq(Long memberId) {
         return memberId == null ? null : courseReview.member.id.eq(memberId);
     }
 
-    private Slice<MyPageReviewsResponse.CourseReviewDTO> checkLastPageOfMyReviews(int pageSize, List<MyPageReviewsResponse.CourseReviewDTO> results) {
-        boolean hasNext = false;
+    private BooleanExpression lastCourseReviewId(Long lastReviewId) {
+        if (lastReviewId == null) {
+            return null;
+        }
+        return courseReview.id.lt(lastReviewId);
+    }
 
+    private Slice<CourseReviewResponse> checkLastPage(int pageSize, List<CourseReviewResponse> results) {
+        boolean hasNext = false;
         if (results.size() > pageSize) {
             hasNext = true;
             results.remove(pageSize);
         }
+        return new SliceImpl<>(results, PageRequest.of(0, pageSize), hasNext);
+    }
 
-        return new SliceImpl<>(results, PageRequest.of(0,pageSize), hasNext);
+    private Slice<CourseReviewDto> checkLastPageOfMyReviews(int pageSize, List<CourseReviewDto> results) {
+        boolean hasNext = false;
+        if (results.size() > pageSize) {
+            hasNext = true;
+            results.remove(pageSize);
+        }
+        return new SliceImpl<>(results, PageRequest.of(0, pageSize), hasNext);
     }
 }

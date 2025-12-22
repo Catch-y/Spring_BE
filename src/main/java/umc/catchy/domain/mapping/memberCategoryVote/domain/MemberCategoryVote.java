@@ -1,13 +1,16 @@
 package umc.catchy.domain.mapping.memberCategoryVote.domain;
 
 import jakarta.persistence.*;
-import lombok.Getter;
+import lombok.*;
 import umc.catchy.domain.categoryVote.domain.CategoryVote;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.member.domain.Member;
 
 @Entity
 @Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class MemberCategoryVote extends BaseTimeEntity {
 
     @Id
@@ -26,11 +29,11 @@ public class MemberCategoryVote extends BaseTimeEntity {
     @Column(name = "vote_id")
     private Long voteId;
 
-    public MemberCategoryVote(Member member, CategoryVote categoryVote, Long voteId) {
-        this.member = member;
-        this.categoryVote = categoryVote;
-        this.voteId = voteId;
-    }
-    protected MemberCategoryVote() {
+    public static MemberCategoryVote create(Member member, CategoryVote categoryVote, Long voteId) {
+        return MemberCategoryVote.builder()
+                .member(member)
+                .categoryVote(categoryVote)
+                .voteId(voteId)
+                .build();
     }
 }

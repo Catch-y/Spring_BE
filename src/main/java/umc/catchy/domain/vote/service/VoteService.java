@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import umc.catchy.domain.category.dao.CategoryRepository;
 import umc.catchy.domain.category.domain.BigCategory;
 import umc.catchy.domain.categoryVote.dao.CategoryVoteRepository;
 import umc.catchy.domain.categoryVote.domain.CategoryVote;
@@ -21,29 +20,19 @@ import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
 import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
-import umc.catchy.domain.placeVote.dao.PlaceVoteRepository;
 import umc.catchy.domain.vote.dao.VoteRepository;
 import umc.catchy.domain.vote.domain.Vote;
 import umc.catchy.domain.vote.domain.VoteStatus;
-import umc.catchy.domain.vote.dto.request.CreateVoteRequest;
+import umc.catchy.domain.vote.dto.request.VoteCreateRequest;
 import umc.catchy.domain.vote.dto.request.PlaceVoteRequest;
-import umc.catchy.domain.vote.dto.response.category.CategoryDto;
-import umc.catchy.domain.vote.dto.response.category.CategoryResponse;
-import umc.catchy.domain.vote.dto.response.category.CategoryResult;
-import umc.catchy.domain.vote.dto.response.group.GroupPlaceResponse;
-import umc.catchy.domain.vote.dto.response.group.GroupVoteResultResponse;
-import umc.catchy.domain.vote.dto.response.group.GroupVoteStatusResponse;
-import umc.catchy.domain.vote.dto.response.place.VotePlaceResponse;
-import umc.catchy.domain.vote.dto.response.vote.MemberVoteStatus;
-import umc.catchy.domain.vote.dto.response.vote.VoteResult;
-import umc.catchy.domain.vote.dto.response.vote.VoteResultResponse;
-import umc.catchy.domain.vote.dto.response.vote.VotedMemberResponse;
+import umc.catchy.domain.vote.dto.response.*;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.config.fcm.FCMService;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -53,6 +42,7 @@ import static umc.catchy.global.common.constants.FcmConstants.*;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class VoteService {
 
     private final VoteRepository voteRepository;
@@ -62,42 +52,31 @@ public class VoteService {
     private final MemberRepository memberRepository;
     private final MemberGroupRepository memberGroupRepository;
     private final PlaceRepository placeRepository;
-    private final CategoryRepository categoryRepository;
     private final PlaceReviewRepository placeReviewRepository;
     private final MemberPlaceVoteRepository memberPlaceVoteRepository;
-    private final PlaceVoteRepository placeVoteRepository;
     private final FCMService fcmService;
 
     @Transactional
-    public Vote createVote(CreateVoteRequest request) {
-        Groups group = groupRepository.findById(request.getGroupId())
+    public Vote createVote(VoteCreateRequest request) {
+        Groups group = groupRepository.findById(request.groupId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
 
         List<Member> members = memberGroupRepository.findMembersByGroupId(group.getId());
         List<String> deviceTokenList = members.stream()
-                .filter(member -> member.getFcmInfo().getAppAlarm()) // getAppAlarm()이 true인 경우만 필터링
-                .map(member -> member.getFcmInfo().getFcmToken()) // FCM 토큰만 추출
-                .collect(Collectors.toList());
+                .filter(member -> member.getFcmInfo().getAppAlarm())
+                .map(member -> member.getFcmInfo().getFcmToken())
+                .toList();
 
-        Vote vote = Vote.builder()
-                .status(VoteStatus.IN_PROGRESS)
-                .endTime(LocalDateTime.now().plusDays(1))
-                .group(group)
-                .build();
-
+        Vote vote = Vote.create(group);
         voteRepository.save(vote);
 
         for (BigCategory bigCategory : BigCategory.values()) {
-            CategoryVote categoryVote = CategoryVote.builder()
-                    .vote(vote)
-                    .bigCategory(bigCategory)
-                    .build();
+            CategoryVote categoryVote = CategoryVote.create(vote, bigCategory);
             categoryVoteRepository.save(categoryVote);
         }
         fcmService.sendGroupMessageAsync(deviceTokenList, COURSE_UPDATED_MESSAGE_TITLE, GROUP_VOTE_START_MESSAGE_CONTENT);
         return vote;
     }
-
 
     @Transactional
     public void submitVote(Long voteId, List<Long> categoryIds) {
@@ -119,59 +98,54 @@ public class VoteService {
                 throw new GeneralException(ErrorStatus.INVALID_CATEGORY_SELECTION);
             }
 
-            MemberCategoryVote memberCategoryVote = new MemberCategoryVote(member, categoryVote, voteId);
+            MemberCategoryVote memberCategoryVote = MemberCategoryVote.create(member, categoryVote, voteId);
             memberCategoryVoteRepository.save(memberCategoryVote);
         }
 
         checkAndUpdateVoteCompletion(voteId);
     }
 
-    @Transactional(readOnly = true)
-    public VoteResultResponse getVoteResults(Long voteId) {
+    public CategoryVoteResultResponse getVoteResults(Long voteId) {
         Vote vote = voteRepository.findById(voteId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_FOUND));
 
-        Long groupId = vote.getGroup().getId();
-        int totalMembers = memberGroupRepository.countByGroupId(groupId);
-
+        int totalMembers = memberGroupRepository.countByGroupId(vote.getGroup().getId());
         List<CategoryVote> categoryVotes = categoryVoteRepository.findByVoteId(voteId);
-        List<VoteResult> results = categoryVotes.stream()
-                .map(categoryVote -> {
-                    List<Member> votedMembers = memberCategoryVoteRepository.findMembersByCategoryVoteId(categoryVote.getId());
-                    return new VoteResult(
-                            categoryVote.getBigCategory().toString(),
-                            votedMembers.size(),
-                            votedMembers.stream()
-                                    .map(member -> new VotedMemberResponse(member.getId(), member.getNickname(), member.getProfileImage()))
-                                    .toList(),
-                            0
-                    );
-                })
-                .sorted(Comparator.comparing(VoteResult::getVoteCount).reversed())
+
+        List<CategoryVoteResultResponse.VoteResultInfo> rawResults = categoryVotes.stream()
+                .map(cv -> CategoryVoteResultResponse.VoteResultInfo.of(
+                        cv.getBigCategory().toString(),
+                        memberCategoryVoteRepository.countByVoteIdAndCategoryVoteId(voteId, cv.getId()),
+                        memberCategoryVoteRepository.findMembersByCategoryVoteId(cv.getId()).stream()
+                                .map(m -> CategoryVoteResultResponse.VotedMemberInfo.of(m.getId(), m.getNickname(), m.getProfileImage()))
+                                .toList(),
+                        0
+                ))
+                .sorted(Comparator.comparing(CategoryVoteResultResponse.VoteResultInfo::voteCount).reversed())
                 .toList();
 
+        List<CategoryVoteResultResponse.VoteResultInfo> finalResults = new ArrayList<>();
         int rank = 1;
-        for (int i = 0; i < results.size(); i++) {
-            if (i > 0 && results.get(i).getVoteCount() < results.get(i - 1).getVoteCount()) {
-                rank = i + 1;
-            }
-            results.get(i).setRank(rank);
+        for (int i = 0; i < rawResults.size(); i++) {
+            if (i > 0 && rawResults.get(i).voteCount() < rawResults.get(i - 1).voteCount()) rank = i + 1;
+            CategoryVoteResultResponse.VoteResultInfo raw = rawResults.get(i);
+            finalResults.add(CategoryVoteResultResponse.VoteResultInfo.of(raw.category(), raw.voteCount(), raw.votedMembers(), rank));
         }
 
-        return new VoteResultResponse(vote.getStatus().name(), totalMembers, results);
+        return CategoryVoteResultResponse.of(vote.getStatus().name(), totalMembers, finalResults);
     }
 
     @Transactional(readOnly = true)
-    public GroupVoteStatusResponse getGroupVoteStatus(Long groupId, Long voteId) {
+    public MemberVoteStatusResponse getGroupVoteStatus(Long groupId, Long voteId) {
         Vote vote = voteRepository.findByIdAndGroupId(voteId, groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_BELONG_TO_GROUP));
 
         List<Member> groupMembers = memberGroupRepository.findMembersByGroupId(groupId);
 
-        List<MemberVoteStatus> memberStatuses = groupMembers.stream()
+        List<MemberVoteStatusResponse.MemberStatus> memberStatuses = groupMembers.stream()
                 .map(member -> {
                     boolean hasVoted = memberCategoryVoteRepository.existsByVoteIdAndMemberId(voteId, member.getId());
-                    return new MemberVoteStatus(
+                    return MemberVoteStatusResponse.MemberStatus.of(
                             member.getId(),
                             member.getNickname(),
                             member.getProfileImage(),
@@ -180,18 +154,16 @@ public class VoteService {
                 })
                 .toList();
 
-        return new GroupVoteStatusResponse(groupMembers.size(), memberStatuses);
+        return MemberVoteStatusResponse.of(groupMembers.size(), memberStatuses);
     }
 
     @Transactional(readOnly = true)
-    public CategoryResponse getCategoriesByVoteId(Long voteId) {
-        List<CategoryVote> categories = categoryVoteRepository.findByVoteId(voteId);
-
-        List<CategoryDto> categoryDtos = categories.stream()
-                .map(category -> new CategoryDto(category.getId(), category.getBigCategory().toString()))
+    public CategoryVoteListResponse getCategoriesByVoteId(Long voteId) {
+        List<CategoryVoteListResponse.CategoryInfo> categoryInfos = categoryVoteRepository.findByVoteId(voteId).stream()
+                .map(category -> CategoryVoteListResponse.CategoryInfo.of(category.getId(), category.getBigCategory().toString()))
                 .toList();
 
-        return new CategoryResponse(voteId, categoryDtos);
+        return CategoryVoteListResponse.of(voteId, categoryInfos);
     }
 
     @Transactional
@@ -220,37 +192,35 @@ public class VoteService {
 
         List<Member> members = memberGroupRepository.findMembersByGroupId(group.getId());
         List<String> deviceTokenList = members.stream()
-                .filter(member -> member.getFcmInfo().getAppAlarm()) // getAppAlarm()이 true인 경우만 필터링
-                .map(member -> member.getFcmInfo().getFcmToken()) // FCM 토큰만 추출
+                .filter(member -> member.getFcmInfo().getAppAlarm())
+                .map(member -> member.getFcmInfo().getFcmToken())
                 .collect(Collectors.toList());
         fcmService.sendGroupMessageAsync(deviceTokenList,COURSE_UPDATED_MESSAGE_TITLE,GROUP_VOTE_END_MESSAGE_CONTENT);
 
         String groupLocation = group.getGroupLocation();
         String alternativeLocation = LocationUtils.normalizeLocation(groupLocation);
 
-        // 그룹 인원 수 계산
         int totalMembers = memberGroupRepository.countByGroupId(groupId);
         int majorityThreshold = (int) Math.ceil(totalMembers / 2.0);
 
-        // 카테고리별 장소 조회
-        List<CategoryResult> categories = categoryVoteRepository.findByVoteId(voteId).stream()
+        List<GroupVoteResultResponse.CategoryResult> categories = categoryVoteRepository.findByVoteId(voteId).stream()
                 .map(categoryVote -> {
                     int votesForCategory = memberCategoryVoteRepository.countByVoteIdAndCategoryVoteId(voteId, categoryVote.getId());
 
                     if (votesForCategory >= majorityThreshold) {
                         List<Place> places = placeRepository.findByBigCategoryAndLocation(categoryVote.getBigCategory(), groupLocation, alternativeLocation);
-                        return new CategoryResult(categoryVote.getBigCategory().toString(), places.size());
+                        return GroupVoteResultResponse.CategoryResult.of(categoryVote.getBigCategory().toString(), places.size());
                     }
                     return null;
                 })
                 .filter(Objects::nonNull)
                 .toList();
 
-        return new GroupVoteResultResponse(groupLocation, categories);
+        return GroupVoteResultResponse.of(groupLocation, categories);
     }
 
     @Transactional(readOnly = true)
-    public GroupPlaceResponse getPlacesByCategory(Long groupId, String category, int pageSize, Long lastPlaceId) {
+    public PlaceVoteListResponse getPlacesByCategory(Long groupId, String category, int pageSize, Long lastPlaceId) {
         Groups group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         String groupLocation = group.getGroupLocation();
@@ -258,7 +228,6 @@ public class VoteService {
         String normalizedGroupLocation = LocationUtils.normalizeLocation(groupLocation);
         String normalizedAlternativeLocation = LocationUtils.normalizeLocation(normalizedGroupLocation);
 
-        // QueryDSL을 활용해 카테고리 필터링 + 투표 수 정렬 + 페이징 처리
         Slice<Place> placesSlice = placeRepository.getPlacesByCategoryWithPaging(
                 BigCategory.valueOf(category),
                 normalizedGroupLocation,
@@ -268,22 +237,21 @@ public class VoteService {
                 groupId
         );
 
-        List<VotePlaceResponse> votePlaceRespons = placesSlice.getContent().stream()
+        List<PlaceVoteListResponse.PlaceVoteInfo> placeInfos = placesSlice.getContent().stream()
                 .map(place -> {
                     long reviewCount = placeReviewRepository.countByPlaceId(place.getId());
 
-                    // 해당 장소에 투표한 멤버 정보 조회
                     List<Member> votingMembers = memberPlaceVoteRepository.findMembersByPlaceIdAndGroupId(place.getId(), groupId);
 
-                    List<VotedMemberResponse> votedMembers = votingMembers.stream()
-                            .map(member -> new VotedMemberResponse(
+                    List<CategoryVoteResultResponse.VotedMemberInfo> votedMembers = votingMembers.stream()
+                            .map(member -> CategoryVoteResultResponse.VotedMemberInfo.of(
                                     member.getId(),
                                     member.getNickname(),
                                     member.getProfileImage()
                             ))
                             .toList();
 
-                    return new VotePlaceResponse(
+                    return PlaceVoteListResponse.PlaceVoteInfo.of(
                             place.getId(),
                             place.getPlaceName(),
                             place.getRoadAddress(),
@@ -297,12 +265,12 @@ public class VoteService {
 
         boolean isLast = !placesSlice.hasNext();
 
-        return new GroupPlaceResponse(groupLocation, votePlaceRespons, isLast);
+        return PlaceVoteListResponse.of(groupLocation, placeInfos, isLast);
     }
 
     @Transactional
     public String togglePlaceVote(Long voteId, Long groupId, PlaceVoteRequest request) {
-        Long placeId = request.getPlaceId();
+        Long placeId = request.placeId();
 
         Member member = memberRepository.findById(SecurityUtil.getCurrentMemberId())
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -322,12 +290,7 @@ public class VoteService {
             memberPlaceVoteRepository.delete(existingVote);
             return "Vote removed successfully.";
         } else {
-            MemberPlaceVote memberPlaceVote = MemberPlaceVote.builder()
-                    .place(place)
-                    .member(member)
-                    .vote(vote)
-                    .group(group)
-                    .build();
+            MemberPlaceVote memberPlaceVote = MemberPlaceVote.create(place, member, vote, group);
             memberPlaceVoteRepository.save(memberPlaceVote);
             return "Vote added successfully.";
         }
@@ -344,15 +307,12 @@ public class VoteService {
         Vote vote = voteRepository.findById(voteId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_FOUND));
 
-        // 투표가 완료 상태면 재투표 불가능
         if (vote.getStatus() == VoteStatus.COMPLETED) {
             throw new GeneralException(ErrorStatus.VOTE_ALREADY_COMPLETED);
         }
 
-        // 기존 투표 삭제
         memberCategoryVoteRepository.deleteByVoteIdAndMemberId(voteId, memberId);
 
-        // 새로 투표 등록
         for (Long categoryId : categoryIds) {
             CategoryVote categoryVote = categoryVoteRepository.findById(categoryId)
                     .orElseThrow(() -> new GeneralException(ErrorStatus.CATEGORY_NOT_FOUND));
@@ -364,7 +324,7 @@ public class VoteService {
             Member member = memberRepository.findById(memberId)
                     .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-            MemberCategoryVote memberCategoryVote = new MemberCategoryVote(member, categoryVote, voteId);
+            MemberCategoryVote memberCategoryVote = MemberCategoryVote.create(member, categoryVote, voteId);
             memberCategoryVoteRepository.save(memberCategoryVote);
         }
 

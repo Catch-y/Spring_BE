@@ -14,12 +14,13 @@ import umc.catchy.domain.member.dao.MemberRepository;
 import umc.catchy.domain.member.domain.Member;
 import umc.catchy.domain.place.dao.PlaceRepository;
 import umc.catchy.domain.place.domain.Place;
-import umc.catchy.domain.placeReview.converter.PlaceReviewConverter;
 import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
 import umc.catchy.domain.placeReview.domain.PlaceReview;
 import umc.catchy.domain.placeReview.dto.request.PostPlaceReviewRequest;
-import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
-import umc.catchy.domain.placeReviewImage.converter.PlaceReviewImageConverter;
+import umc.catchy.domain.placeReview.dto.response.PlaceReviewImageResponse;
+import umc.catchy.domain.placeReview.dto.response.PlaceReviewListResponse;
+import umc.catchy.domain.placeReview.dto.response.PlaceReviewRatingResponse;
+import umc.catchy.domain.placeReview.dto.response.PlaceReviewResponse;
 import umc.catchy.domain.placeReviewImage.dao.PlaceReviewImageRepository;
 import umc.catchy.domain.placeReviewImage.domain.PlaceReviewImage;
 import umc.catchy.global.common.response.status.ErrorStatus;
@@ -73,7 +74,7 @@ public class PlaceReviewService {
                 });
     }
 
-    public PostPlaceReviewResponse.newPlaceReviewResponseDTO postNewPlaceReview(PostPlaceReviewRequest request, Long placeId){
+    public PlaceReviewResponse postNewPlaceReview(PostPlaceReviewRequest request, Long placeId){
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
@@ -89,46 +90,53 @@ public class PlaceReviewService {
             throw new GeneralException(ErrorStatus.PLACE_REVIEW_INVALID_MEMBER);
         }
 
-        //장소 방문일자 가져오기
-        LocalDate visitedDate = placeVisitRepository.findByPlaceAndMember(place, member)
-                .map(PlaceVisit::getVisitedDate)
-                .orElse(null);
-
-        //PlaceReview 엔티티 생성 및 저장
-        PlaceReview newPlaceReview = PlaceReviewConverter.toPlaceReview(member, place, request);
+        //PlaceReview 엔티티 생성 및 저장 (정적 팩토리 메서드 사용)
+        PlaceReview newPlaceReview = PlaceReview.create(
+                member,
+                place,
+                request.rating(),
+                request.comment(),
+                request.visitedDate()
+        );
         placeReviewRepository.save(newPlaceReview);
+
         //Place::rating refresh
         refreshPlaceRating(newPlaceReview.getPlace());
 
-        List<PostPlaceReviewResponse.placeReviewImageResponseDTO> reviewImages = new ArrayList<>();
-        for(MultipartFile image : request.getImages()){
+        List<PlaceReviewImageResponse> reviewImages = new ArrayList<>();
+        for(MultipartFile image : request.images()){
             //S3에 이미지 업로드
             String keyName = "review/place-review-images/" + UUID.randomUUID().toString();
             String url = amazonS3Manager.uploadFile(keyName, image);
 
             //PlaceReviewImage 엔티티 생성 및 저장
-            PlaceReviewImage placeReviewImage = PlaceReviewImageConverter.toPlaceReviewImage(newPlaceReview, url);
+            PlaceReviewImage placeReviewImage = PlaceReviewImage.create(url, newPlaceReview);
             placeReviewImageRepository.save(placeReviewImage);
-            reviewImages.add(PlaceReviewImageConverter.toPlaceReviewImageResponseDTO(placeReviewImage));
+            reviewImages.add(PlaceReviewImageResponse.from(placeReviewImage));
         }
-        return PlaceReviewConverter.toNewPlaceReviewResponseDTO(newPlaceReview, reviewImages);
+
+        return PlaceReviewResponse.from(newPlaceReview, reviewImages);
     }
 
     @Transactional(readOnly = true)
-    public PostPlaceReviewResponse.placeReviewAllResponseDTO getAllPlaceReviews(Long placeId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId) {
-        Place place = placeRepository.findById(placeId).orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
-        Double averageRatingTypeDouble = placeReviewRepository.findAverageRatingByPlaceId(placeId).orElseThrow(() -> new ResultEmptyListException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
-        Float averageRating = Math.round(averageRatingTypeDouble * 10) / 10.0f;
-        List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> ratingList = placeReviewRepository.findRatingList(placeId);
-        Long totalCount = placeReviewRepository.countByPlaceId(placeId);
-        Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> contentList = placeReviewRepository.findPlaceReviewSliceByPlaceId(placeId, pageSize, lastPlaceReviewDate, lastPlaceReviewId);
+    public PlaceReviewListResponse getAllPlaceReviews(Long placeId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId) {
+        Place place = placeRepository.findById(placeId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_NOT_FOUND));
 
-        return PostPlaceReviewResponse.placeReviewAllResponseDTO.builder()
-                .averageRating(averageRating)
-                .ratingList(ratingList)
-                .totalCount(totalCount)
-                .content(contentList.getContent())
-                .last(contentList.isLast())
-                .build();
+        Double averageRatingTypeDouble = placeReviewRepository.findAverageRatingByPlaceId(placeId)
+                .orElseThrow(() -> new ResultEmptyListException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
+        Float averageRating = Math.round(averageRatingTypeDouble * 10) / 10.0f;
+
+        List<PlaceReviewRatingResponse> ratingList = placeReviewRepository.findRatingList(placeId);
+        Long totalCount = placeReviewRepository.countByPlaceId(placeId);
+        Slice<PlaceReviewResponse> contentList = placeReviewRepository.findPlaceReviewSliceByPlaceId(placeId, pageSize, lastPlaceReviewDate, lastPlaceReviewId);
+
+        return PlaceReviewListResponse.of(
+                averageRating,
+                ratingList,
+                totalCount,
+                contentList.getContent(),
+                contentList.isLast()
+        );
     }
 }

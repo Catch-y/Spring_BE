@@ -33,7 +33,7 @@ public class MemberCourseService {
 
         memberCourse.toggleBookmark();
 
-        return new CourseBookmarkResponse(
+        return CourseBookmarkResponse.of(
                 memberCourse.getId(),
                 memberCourse.isBookmark()
         );

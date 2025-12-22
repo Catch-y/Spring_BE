@@ -49,6 +49,18 @@ public class Course extends BaseTimeEntity {
     @JoinColumn(name = "member_id")
     private Member member;
 
+    public static Course createAiCourse(String name, String description, LocalTime start, LocalTime end, Member member) {
+        return Course.builder()
+                .courseName(name)
+                .courseDescription(description)
+                .courseType(CourseType.AI)
+                .recommendTimeStart(start)
+                .recommendTimeEnd(end)
+                .participantsNumber(0L)
+                .member(member)
+                .build();
+    }
+
     public void updateCourseName(String courseName) {
         if (courseName != null && !courseName.isEmpty()) {
             this.courseName = courseName;

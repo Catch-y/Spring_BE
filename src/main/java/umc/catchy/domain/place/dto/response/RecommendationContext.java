@@ -7,4 +7,7 @@ public record RecommendationContext(
         List<Long> sortedCategories,
         Map<Long, Integer> averageHours
 ) {
+    public static RecommendationContext of(List<Long> sortedCategories, Map<Long, Integer> averageHours) {
+        return new RecommendationContext(sortedCategories, averageHours);
+    }
 }

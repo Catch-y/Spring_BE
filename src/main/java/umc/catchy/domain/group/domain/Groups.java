@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.course.util.LocationUtils;
+import umc.catchy.domain.group.dto.request.CreateGroupRequest;
 
 import java.time.LocalDateTime;
 
@@ -48,5 +49,15 @@ public class Groups extends BaseTimeEntity {
             this.sido = LocationUtils.extractUpperLocation(this.groupLocation);
             this.sigungu = LocationUtils.extractLowerLocation(this.groupLocation);
         }
+    }
+
+    public static Groups create(CreateGroupRequest request, String groupImageUrl, LocalDateTime promiseTime) {
+        return Groups.builder()
+                .groupName(request.groupName())
+                .groupLocation(request.groupLocation())
+                .promiseTime(promiseTime)
+                .inviteCode(request.inviteCode())
+                .groupImage(groupImageUrl)
+                .build();
     }
 }

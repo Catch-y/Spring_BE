@@ -26,11 +26,13 @@ public class MemberCourse extends BaseTimeEntity {
     @Column(name = "member_course_id")
     private Long id;
 
+    @Builder.Default
     private boolean isVisited = false;
 
-    private LocalDate visitedDate;
-
+    @Builder.Default
     private boolean bookmark = false;
+
+    private LocalDate visitedDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
@@ -47,5 +49,12 @@ public class MemberCourse extends BaseTimeEntity {
     public void markAsVisited(LocalDate visitedDate) {
         this.isVisited = true;
         this.visitedDate = visitedDate;
+    }
+
+    public static MemberCourse create(Course course, Member member) {
+        return MemberCourse.builder()
+                .course(course)
+                .member(member)
+                .build();
     }
 }

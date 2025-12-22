@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import umc.catchy.domain.course.dao.CourseRepository;
 import umc.catchy.domain.course.domain.Course;
-import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.course.dto.response.CourseDetailResponse;
 import umc.catchy.domain.course.dto.response.GptCourseInfoResponse;
 import umc.catchy.domain.course.dto.response.GptPlaceInfoResponse;
@@ -76,16 +75,13 @@ public class CourseService {
     public void saveCourseAndPlaces(GptCourseInfoResponse parsedResponse, Member member) {
         Pair<LocalTime, LocalTime> recommendTime = parseRecommendTime(parsedResponse.recommendTime());
 
-        Course course = Course.builder()
-                .courseName(parsedResponse.courseName())
-                .courseDescription(parsedResponse.courseDescription())
-                .courseType(CourseType.AI)
-                .recommendTimeStart(recommendTime.getLeft())
-                .recommendTimeEnd(recommendTime.getRight())
-                .courseImage(null)
-                .participantsNumber(0L)
-                .member(member)
-                .build();
+        Course course = Course.createAiCourse(
+                parsedResponse.courseName(),
+                parsedResponse.courseDescription(),
+                recommendTime.getLeft(),
+                recommendTime.getRight(),
+                member
+        );
 
         Course savedCourse = courseRepository.save(course);
 
@@ -95,10 +91,7 @@ public class CourseService {
 
         registerPlacesToCourse(savedCourse, placeIds);
 
-        MemberCourse memberCourse = MemberCourse.builder()
-                .course(savedCourse)
-                .member(member)
-                .build();
+        MemberCourse memberCourse = MemberCourse.create(savedCourse, member);
         memberCourseRepository.save(memberCourse);
     }
 
@@ -120,11 +113,7 @@ public class CourseService {
         for (int i = 0; i < sortedPlaces.size(); i++) {
             Place place = sortedPlaces.get(i);
 
-            placeCourses.add(PlaceCourse.builder()
-                    .course(course)
-                    .place(place)
-                    .placeOrder(i + 1)
-                    .build());
+            placeCourses.add(PlaceCourse.create(course, place, i + 1));
 
             if (place.getRating() != null && place.getRating() > 0) {
                 totalRating += place.getRating();

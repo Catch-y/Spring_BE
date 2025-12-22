@@ -14,10 +14,11 @@ import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
 import umc.catchy.domain.placeReview.domain.PlaceReview;
 import umc.catchy.domain.placeReviewImage.dao.PlaceReviewImageRepository;
 import umc.catchy.domain.placeReviewImage.domain.PlaceReviewImage;
-import umc.catchy.domain.reviewReport.converter.ReviewReportConverter;
 import umc.catchy.domain.reviewReport.dao.ReviewReportRepository;
 import umc.catchy.domain.reviewReport.domain.ReviewReport;
 import umc.catchy.domain.reviewReport.domain.ReviewType;
+import umc.catchy.domain.reviewReport.dto.query.CourseReviewDto;
+import umc.catchy.domain.reviewReport.dto.query.PlaceReviewDto;
 import umc.catchy.domain.reviewReport.dto.request.PostReviewReportRequest;
 import umc.catchy.domain.reviewReport.dto.response.DeleteReviewResponse;
 import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
@@ -50,113 +51,103 @@ public class ReviewReportService {
         return Arrays.stream(ReviewType.values())
                 .filter(t -> t.name().equalsIgnoreCase(reviewType))
                 .findFirst()
-                .orElseThrow(()-> new GeneralException(ErrorStatus._BAD_REQUEST, "리뷰 타입은 COURSE 또는 PLACE 입니다."));
-    }
-
-    private MyPageReviewsResponse.ReviewsDTO toReviewsDTO(
-            ReviewType type,
-            Integer totalCount,
-            List<? extends MyPageReviewsResponse.BaseReviewDTO> content,
-            Boolean last
-    ){
-        return MyPageReviewsResponse.ReviewsDTO.builder()
-                .reviewType(type)
-                .reviewCount(totalCount)
-                .content(content)
-                .last(last)
-                .build();
+                .orElseThrow(() -> new GeneralException(ErrorStatus._BAD_REQUEST, "리뷰 타입은 COURSE 또는 PLACE 입니다."));
     }
 
     //마이페이지 : 내 리뷰 조회
-    public MyPageReviewsResponse.ReviewsDTO getMyReviews(String reviewType, int pageSize, LocalDate lastPlaceReviewDate, Long lastReviewId){
+    public MyPageReviewsResponse getMyReviews(String reviewType, int pageSize, LocalDate lastPlaceReviewDate, Long lastReviewId) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         ReviewType type = parseReviewType(reviewType);
 
-        if(type==ReviewType.PLACE){
+        if (type == ReviewType.PLACE) {
             Integer totalCount = placeReviewRepository.countAllByMemberId(memberId);
-            Slice<MyPageReviewsResponse.PlaceReviewDTO> placeReviewResponse
-                    = placeReviewRepository.getAllPlaceReviewByMemberId(memberId, pageSize, lastPlaceReviewDate, lastReviewId);
-            List<MyPageReviewsResponse.PlaceReviewDTO> content = placeReviewResponse.getContent();
-            Boolean last = placeReviewResponse.isLast();
-            return toReviewsDTO(type, totalCount, content, last);
-        }
-        else{
+            Slice<PlaceReviewDto> queryResult = placeReviewRepository.getAllPlaceReviewByMemberId(memberId, pageSize, lastPlaceReviewDate, lastReviewId);
+
+            List<MyPageReviewsResponse.PlaceReviewContent> content = queryResult.getContent().stream()
+                    .map(MyPageReviewsResponse.PlaceReviewContent::from)
+                    .toList();
+
+            return MyPageReviewsResponse.of(type, totalCount, content, queryResult.isLast());
+        } else {
             Integer totalCount = courseReviewRepository.countAllByMemberId(memberId);
-            Slice<MyPageReviewsResponse.CourseReviewDTO> courseReviewResponse
-                    = courseReviewRepository.getAllCourseReviewByMemberId(memberId, pageSize, lastReviewId);
-            List<MyPageReviewsResponse.CourseReviewDTO> content = courseReviewResponse.getContent();
-            Boolean last = courseReviewResponse.isLast();
-            return toReviewsDTO(type, totalCount, content, last);
+            Slice<CourseReviewDto> queryResult = courseReviewRepository.getAllCourseReviewByMemberId(memberId, pageSize, lastReviewId);
+
+            List<MyPageReviewsResponse.CourseReviewContent> content = queryResult.getContent().stream()
+                    .map(MyPageReviewsResponse.CourseReviewContent::from)
+                    .toList();
+
+            return MyPageReviewsResponse.of(type, totalCount, content, queryResult.isLast());
         }
     }
 
     //리뷰 신고하기
     public PostReviewReportResponse postReviewReport(Long reviewId, PostReviewReportRequest request) {
-        if(Objects.equals(request.getReviewType(), "PLACE")){
+        if (Objects.equals(request.reviewType(), "PLACE")) {
             PlaceReview placeReview = placeReviewRepository.findById(reviewId)
-                    .orElseThrow(()-> new GeneralException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
-            if(!placeReview.getIsReported()){ placeReview.setIsReported(true); }
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
+            if (!placeReview.getIsReported()) {
+                placeReview.markAsReported();
+            }
 
-            ReviewReport newReport = ReviewReportConverter.toPlaceReviewReport(request, placeReview);
+            ReviewReport newReport = ReviewReport.createForPlaceReview(request.reason(), placeReview);
             reviewReportRepository.save(newReport);
-            return ReviewReportConverter.toPostReviewReportResponse(newReport);
-        }
-        else if(Objects.equals(request.getReviewType(), "COURSE")){
+            return PostReviewReportResponse.from(newReport);
+        } else if (Objects.equals(request.reviewType(), "COURSE")) {
             CourseReview courseReview = courseReviewRepository.findById(reviewId)
-                    .orElseThrow(()-> new GeneralException(ErrorStatus.COURSE_REVIEW_NOT_FOUND));
-            if(!courseReview.getIsReported()){ courseReview.setIsReported(true); }
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_REVIEW_NOT_FOUND));
+            if (!courseReview.getIsReported()) {
+                courseReview.markAsReported();
+            }
 
-            ReviewReport newReport = ReviewReportConverter.toCourseReviewReport(request, courseReview);
+            ReviewReport newReport = ReviewReport.createForCourseReview(request.reason(), courseReview);
             reviewReportRepository.save(newReport);
-            return ReviewReportConverter.toPostReviewReportResponse(newReport);
-        }
-        else throw new GeneralException(ErrorStatus._BAD_REQUEST);
+            return PostReviewReportResponse.from(newReport);
+        } else throw new GeneralException(ErrorStatus._BAD_REQUEST);
     }
 
     //리뷰 이미지 삭제 : PLACE
-    private void DeletePlaceReviewImages(PlaceReview placeReview){
+    private void deletePlaceReviewImages(PlaceReview placeReview) {
         List<PlaceReviewImage> images = placeReviewImageRepository.findAllByPlaceReview(placeReview);
         images.forEach(image -> s3Manager.deleteImage(image.getImageUrl()));
         placeReviewImageRepository.deleteAllByPlaceReview(placeReview);
     }
 
     //리뷰 이미지 삭제 : COURSE
-    private void DeleteCourseReviewImages(CourseReview courseReview){
+    private void deleteCourseReviewImages(CourseReview courseReview) {
         List<CourseReviewImage> images = courseReviewImageRepository.findAllByCourseReview(courseReview);
         images.forEach(image -> s3Manager.deleteImage(image.getImageUrl()));
         courseReviewImageRepository.deleteAllByCourseReview(courseReview);
     }
 
     //리뷰 삭제하기
-    public DeleteReviewResponse deleteReview(Long reviewId, String reviewType){
+    public DeleteReviewResponse deleteReview(Long reviewId, String reviewType) {
         Long memberId = SecurityUtil.getCurrentMemberId();
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
         ReviewType type = parseReviewType(reviewType);
 
-        if(type==ReviewType.PLACE){
+        if (type == ReviewType.PLACE) {
             PlaceReview placeReview = placeReviewRepository.findById(reviewId)
-                    .orElseThrow(()-> new GeneralException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
 
-            if(!placeReview.getMember().equals(member)){
+            if (!placeReview.getMember().equals(member)) {
                 throw new GeneralException(ErrorStatus.REVIEW_DELETE_INVALID);
             }
-            DeletePlaceReviewImages(placeReview);
+            deletePlaceReviewImages(placeReview);
             reviewReportRepository.deleteAllByPlaceReview(placeReview);
             placeReviewRepository.delete(placeReview);
-        }
-        else {
+        } else {
             CourseReview courseReview = courseReviewRepository.findById(reviewId)
-                    .orElseThrow(()-> new GeneralException(ErrorStatus.COURSE_REVIEW_NOT_FOUND));
+                    .orElseThrow(() -> new GeneralException(ErrorStatus.COURSE_REVIEW_NOT_FOUND));
 
-            if(!courseReview.getMember().equals(member)){
+            if (!courseReview.getMember().equals(member)) {
                 throw new GeneralException(ErrorStatus.REVIEW_DELETE_INVALID);
             }
-            DeleteCourseReviewImages(courseReview);
+            deleteCourseReviewImages(courseReview);
             reviewReportRepository.deleteAllByCourseReview(courseReview);
             courseReviewRepository.delete(courseReview);
         }
-        return ReviewReportConverter.toDeleteReviewResponse(reviewId, type);
+        return DeleteReviewResponse.of(reviewId, type);
     }
 }

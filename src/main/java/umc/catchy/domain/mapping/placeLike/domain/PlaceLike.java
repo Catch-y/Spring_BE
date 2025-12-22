@@ -21,6 +21,7 @@ public class PlaceLike extends BaseTimeEntity {
     @Column(name = "placeLike_id")
     private Long id;
 
+    @Builder.Default
     private boolean isLiked = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -30,6 +31,14 @@ public class PlaceLike extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "place_id")
     private Place place;
+
+    public static PlaceLike create(Member member, Place place) {
+        return PlaceLike.builder()
+                .member(member)
+                .place(place)
+                .isLiked(true)
+                .build();
+    }
 
     public static void toggleLiked(PlaceLike placeLike) {
         placeLike.isLiked = !placeLike.isLiked;

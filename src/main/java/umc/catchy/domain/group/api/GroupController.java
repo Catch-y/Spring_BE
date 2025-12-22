@@ -38,7 +38,7 @@ public class GroupController {
     @Operation(summary = "그룹 초대 코드로 가입", description = "초대 코드를 입력하여 사용자가 그룹에 가입합니다.")
     @PostMapping("/join")
     public ResponseEntity<BaseResponse<GroupJoinResponse>> joinGroupByInviteCode(@Valid @RequestBody InviteCodeRequest request) {
-        GroupJoinResponse response = groupService.joinGroupByInviteCode(request.getInviteCode());
+        GroupJoinResponse response = groupService.joinGroupByInviteCode(request.inviteCode());
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 

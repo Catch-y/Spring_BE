@@ -1,62 +1,58 @@
 package umc.catchy.domain.reviewReport.dto.response;
 
-import lombok.*;
-import umc.catchy.domain.category.domain.BigCategory;
-import umc.catchy.domain.course.domain.CourseType;
 import umc.catchy.domain.reviewReport.domain.ReviewType;
+import umc.catchy.domain.reviewReport.dto.query.CourseReviewDto;
+import umc.catchy.domain.reviewReport.dto.query.PlaceReviewDto;
+import umc.catchy.domain.reviewReport.dto.query.ReviewImageDto;
 
-import java.time.LocalDate;
 import java.util.List;
 
-public class MyPageReviewsResponse {
-
-    @Getter
-    @Builder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class ReviewImagesDTO{
-        Long reviewImageId;
-        String imageUrl;
+public record MyPageReviewsResponse(
+        ReviewType reviewType,
+        Integer reviewCount,
+        List<?> content,
+        Boolean last
+) {
+    public static MyPageReviewsResponse of(ReviewType reviewType, Integer reviewCount, List<?> content, Boolean last) {
+        return new MyPageReviewsResponse(reviewType, reviewCount, content, last);
     }
 
-    @Getter
-    @Setter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class BaseReviewDTO{
-        Long reviewId;
-        String name;    //장소이름 또는 코스이름
-        String comment;
-        List<ReviewImagesDTO> reviewImages;
+    public record CourseReviewContent(
+            Long reviewId, String name, String comment,
+            List<ReviewImage> reviewImages, String courseType, List<String> categories
+    ) {
+        public static CourseReviewContent from(CourseReviewDto dto) {
+            return new CourseReviewContent(
+                    dto.getReviewId(),
+                    dto.getName(),
+                    dto.getComment(),
+                    dto.getReviewImages().stream().map(ReviewImage::from).toList(),
+                    dto.getCourseType().name(),
+                    dto.getCategories().stream().map(Enum::name).distinct().toList()
+            );
+        }
     }
 
-    @Getter
-    @Builder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class PlaceReviewDTO extends BaseReviewDTO {
-        BigCategory category;
-        Integer rating;
-        LocalDate visitedDate;
+    public record PlaceReviewContent(
+            Long reviewId, String name, String comment,
+            List<ReviewImage> reviewImages, String category, Integer rating, String visitedDate
+    ) {
+        public static PlaceReviewContent from(PlaceReviewDto dto) {
+            return new PlaceReviewContent(
+                    dto.getReviewId(),
+                    dto.getName(),
+                    dto.getComment(),
+                    dto.getReviewImages().stream().map(ReviewImage::from).toList(),
+                    dto.getCategory().name(),
+                    dto.getRating(),
+                    dto.getVisitedDate().toString()
+            );
+        }
     }
 
-    @Getter
-    @Builder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class CourseReviewDTO extends BaseReviewDTO {
-        CourseType courseType;
-        List<BigCategory> categories;
-    }
-
-    @Getter
-    @Builder
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class ReviewsDTO{
-        ReviewType reviewType;
-        Integer reviewCount;
-        List<? extends BaseReviewDTO> content;
-        Boolean last;
+    public record ReviewImage(Long reviewImageId, String imageUrl) {
+        public static ReviewImage from(ReviewImageDto dto) {
+            return new ReviewImage(dto.getReviewImageId(), dto.getImageUrl());
+        }
     }
 }

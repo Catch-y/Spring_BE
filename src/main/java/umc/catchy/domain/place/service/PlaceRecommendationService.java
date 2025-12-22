@@ -21,7 +21,7 @@ public class PlaceRecommendationService {
 
         Map<Long, List<LocalDateTime>> categoryVisits = groupVisitsByCategory(visits);
 
-        return new RecommendationContext(
+        return RecommendationContext.of(
                 sortByVisitCount(categoryVisits),
                 calculateAverageHours(categoryVisits)
         );
