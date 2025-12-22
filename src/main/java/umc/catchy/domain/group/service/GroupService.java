@@ -44,11 +44,7 @@ public class GroupService {
             throw new GeneralException(ErrorStatus.GROUP_MEMBER_ALREADY_EXISTS);
         }
 
-        MemberGroup memberGroup = MemberGroup.builder()
-                .promiseTime(group.getPromiseTime())
-                .group(group)
-                .member(member)
-                .build();
+        MemberGroup memberGroup = MemberGroup.create(group, member);
         memberGroupRepository.save(memberGroup);
 
         return GroupJoinResponse.of(true, "Successfully joined the group.");
@@ -119,7 +115,7 @@ public class GroupService {
                 .map(MemberGroup::getGroup)
                 .filter(group -> group.getPromiseTime().getYear() == year && group.getPromiseTime().getMonthValue() == month)
                 .map(GroupCalendarResponse::from)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -128,6 +124,6 @@ public class GroupService {
 
         return members.stream()
                 .map(GroupMemberResponse::fromEntity)
-                .collect(Collectors.toList());
+                .toList();
     }
 }
