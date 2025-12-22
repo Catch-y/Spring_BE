@@ -96,7 +96,7 @@ public class CourseReviewService {
         Slice<CourseReviewResponse> courseReviewResponses =
                 courseReviewRepository.getAllCourseReviewByCourseId(courseId, pageSize, lastReviewId);
 
-        return new CourseReviewListResponse(
+        return CourseReviewListResponse.of(
                 course.getRating(),
                 countReviews,
                 courseReviewResponses.getContent(),

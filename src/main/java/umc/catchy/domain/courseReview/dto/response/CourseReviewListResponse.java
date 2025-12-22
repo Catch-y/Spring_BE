@@ -8,4 +8,7 @@ public record CourseReviewListResponse(
         List<CourseReviewResponse> content,
         Boolean last
 ) {
+    public static CourseReviewListResponse of(Double courseRating, Integer totalCount, List<CourseReviewResponse> content, Boolean last) {
+        return new CourseReviewListResponse(courseRating, totalCount, content, last);
+    }
 }
