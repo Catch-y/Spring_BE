@@ -95,7 +95,7 @@ public class ReviewReportService {
         if(Objects.equals(request.getReviewType(), "PLACE")){
             PlaceReview placeReview = placeReviewRepository.findById(reviewId)
                     .orElseThrow(()-> new GeneralException(ErrorStatus.PLACE_REVIEW_NOT_FOUND));
-            if(!placeReview.getIsReported()){ placeReview.setIsReported(true); }
+            if(!placeReview.getIsReported()){ placeReview.markAsReported(); }
 
             ReviewReport newReport = ReviewReportConverter.toPlaceReviewReport(request, placeReview);
             reviewReportRepository.save(newReport);

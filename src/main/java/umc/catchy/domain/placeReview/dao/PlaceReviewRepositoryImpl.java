@@ -10,7 +10,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
-import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
+import umc.catchy.domain.placeReview.dto.response.PlaceReviewImageResponse;
+import umc.catchy.domain.placeReview.dto.response.PlaceReviewRatingResponse;
+import umc.catchy.domain.placeReview.dto.response.PlaceReviewResponse;
 import umc.catchy.domain.reviewReport.dto.response.MyPageReviewsResponse;
 
 import java.time.LocalDate;
@@ -30,10 +32,11 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<PostPlaceReviewResponse.placeReviewRatingResponseDTO> findRatingList(Long placeId) {
-        JPAQuery<PostPlaceReviewResponse.placeReviewRatingResponseDTO> query = queryFactory.select(Projections.constructor(PostPlaceReviewResponse.placeReviewRatingResponseDTO.class,
-                        placeReview.rating,
-                        placeReview.rating.count())
+    public List<PlaceReviewRatingResponse> findRatingList(Long placeId) {
+        JPAQuery<PlaceReviewRatingResponse> query = queryFactory.select(
+                        Projections.constructor(PlaceReviewRatingResponse.class,
+                                placeReview.rating,
+                                placeReview.rating.count())
                 )
                 .from(placeReview)
                 .where(placeIdEq(placeId))
@@ -43,7 +46,7 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
     }
 
     @Override
-    public Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> findPlaceReviewSliceByPlaceId(Long placeId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId) {
+    public Slice<PlaceReviewResponse> findPlaceReviewSliceByPlaceId(Long placeId, int pageSize, LocalDate lastPlaceReviewDate, Long lastPlaceReviewId) {
         List<Long> reviewIds = queryFactory
                 .select(placeReview.id)
                 .from(placeReview)
@@ -56,7 +59,7 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                 .limit(pageSize + 1)
                 .fetch();
 
-        List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> result = queryFactory.selectFrom(placeReview)
+        List<PlaceReviewResponse> result = queryFactory.selectFrom(placeReview)
                 .leftJoin(placeReview.member, member).on(placeReview.member.id.eq(member.id))
                 .leftJoin(placeReviewImage).on(placeReviewImage.placeReview.id.eq(placeReview.id))
                 .where(
@@ -64,18 +67,18 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
                 )
                 .orderBy(placeReview.visitedDate.desc(), placeReview.id.desc())
                 .transform(groupBy(placeReview.id).list(
-                        Projections.fields(PostPlaceReviewResponse.newPlaceReviewResponseDTO.class,
+                        Projections.fields(PlaceReviewResponse.class,
                                 placeReview.id.as("reviewId"),
                                 placeReview.comment.as("comment"),
                                 placeReview.rating.as("rating"),
                                 list(
-                                        Projections.fields(PostPlaceReviewResponse.placeReviewImageResponseDTO.class,
+                                        Projections.fields(PlaceReviewImageResponse.class,
                                                 placeReviewImage.id.as("reviewImageId"),
                                                 placeReviewImage.imageUrl.as("imageUrl"))
                                 ).as("reviewImages"),
                                 placeReview.visitedDate.as("visitedDate"),
                                 placeReview.member.nickname.as("creatorNickname"))
-                        ));
+                ));
         return checkLastPage(pageSize, result);
     }
 
@@ -168,7 +171,7 @@ public class PlaceReviewRepositoryImpl implements PlaceReviewRepositoryCustom{
         return beforeVisitedDate.or(sameDateBeforeId);
     }
 
-    private Slice<PostPlaceReviewResponse.newPlaceReviewResponseDTO> checkLastPage(int pageSize, List<PostPlaceReviewResponse.newPlaceReviewResponseDTO> results) {
+    private Slice<PlaceReviewResponse> checkLastPage(int pageSize, List<PlaceReviewResponse> results) {
         boolean hasNext = false;
 
         if (results.size() > pageSize) {

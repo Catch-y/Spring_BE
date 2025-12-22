@@ -12,7 +12,8 @@ import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedDateRespons
 import umc.catchy.domain.place.dto.response.PlaceSearchSliceResponse;
 import umc.catchy.domain.place.service.PlaceService;
 import umc.catchy.domain.placeReview.dto.request.PostPlaceReviewRequest;
-import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
+import umc.catchy.domain.placeReview.dto.response.PlaceReviewListResponse;
+import umc.catchy.domain.placeReview.dto.response.PlaceReviewResponse;
 import umc.catchy.domain.placeReview.service.PlaceReviewService;
 import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.support.ControllerTestSupport;
@@ -41,13 +42,14 @@ class PlaceControllerTest extends ControllerTestSupport {
         Long placeId = 1L;
         MockMultipartFile image = new MockMultipartFile("images", "test.jpg", "image/jpeg", "image".getBytes());
 
-        PostPlaceReviewResponse.newPlaceReviewResponseDTO response = PostPlaceReviewResponse.newPlaceReviewResponseDTO.builder()
-                .reviewId(100L)
-                .comment("정말 좋아요")
-                .rating(5)
-                .visitedDate(LocalDate.of(2025, 12, 20))
-                .creatorNickname("테스트유저")
-                .build();
+        PlaceReviewResponse response = new PlaceReviewResponse(
+                100L,
+                "정말 좋아요",
+                5,
+                List.of(),
+                LocalDate.of(2025, 12, 20),
+                "테스트유저"
+        );
 
         when(placeReviewService.postNewPlaceReview(any(PostPlaceReviewRequest.class), eq(placeId)))
                 .thenReturn(response);
@@ -100,12 +102,14 @@ class PlaceControllerTest extends ControllerTestSupport {
     @DisplayName("장소 리뷰 전체 조회 - 성공")
     void getAllPlaceReviews_success() throws Exception {
         Long placeId = 1L;
-        PostPlaceReviewResponse.placeReviewAllResponseDTO response = PostPlaceReviewResponse.placeReviewAllResponseDTO.builder()
-                .averageRating(4.5f)
-                .totalCount(10L)
-                .content(List.of())
-                .last(true)
-                .build();
+
+        PlaceReviewListResponse response = new PlaceReviewListResponse(
+                4.5f,
+                List.of(),
+                10L,
+                List.of(),
+                true
+        );
 
         when(placeReviewService.getAllPlaceReviews(eq(placeId), anyInt(), any(), any()))
                 .thenReturn(response);

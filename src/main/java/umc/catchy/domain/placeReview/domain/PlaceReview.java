@@ -8,7 +8,6 @@ import umc.catchy.domain.place.domain.Place;
 
 import java.time.LocalDate;
 
-
 @Entity
 @Getter
 @Builder
@@ -34,6 +33,20 @@ public class PlaceReview extends BaseTimeEntity {
     @JoinColumn(name = "place_id")
     private Place place;
 
-    @Setter
-    private Boolean isReported;
+    @Builder.Default
+    private Boolean isReported = false;
+
+    public void markAsReported() {
+        this.isReported = true;
+    }
+
+    public static PlaceReview create(Member member, Place place, Integer rating, String comment, LocalDate visitedDate) {
+        return PlaceReview.builder()
+                .rating(rating)
+                .comment(comment)
+                .visitedDate(visitedDate)
+                .member(member)
+                .place(place)
+                .build();
+    }
 }

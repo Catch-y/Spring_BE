@@ -12,14 +12,14 @@ import umc.catchy.domain.mapping.placeVisit.dto.response.PlaceVisitedDateRespons
 import umc.catchy.domain.place.dto.response.PlaceSearchSliceResponse;
 import umc.catchy.domain.place.service.PlaceService;
 import umc.catchy.domain.placeReview.dto.request.PostPlaceReviewRequest;
-import umc.catchy.domain.placeReview.dto.response.PostPlaceReviewResponse;
+import umc.catchy.domain.placeReview.dto.response.PlaceReviewListResponse;
+import umc.catchy.domain.placeReview.dto.response.PlaceReviewResponse;
 import umc.catchy.domain.placeReview.service.PlaceReviewService;
 import umc.catchy.global.common.dto.SliceResponse;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
 
 import java.time.LocalDate;
-import java.util.Collections;
 
 @Tag(name = "Place", description = "장소 관련 API")
 @RestController
@@ -29,21 +29,6 @@ public class PlaceController {
 
     private final PlaceReviewService placeReviewService;
     private final PlaceService placeService;
-
-    @Operation(summary = "장소 평점/리뷰 달기 API", description = "장소에 대해 평점/리뷰를 달기 위한 API입니다. 멤버가 해당 장소에 방문체크한 이후 평점/리뷰를 남길 수 있습니다.")
-    @PostMapping(value = "/{placeId}/review", consumes = "multipart/form-data")
-    public ResponseEntity<BaseResponse<PostPlaceReviewResponse.newPlaceReviewResponseDTO>> postPlaceReview(
-            @PathVariable("placeId") Long placeId,
-            @Valid @ModelAttribute PostPlaceReviewRequest request
-    ) {
-        if (request.getImages() == null || request.getImages().isEmpty()) {
-            request.setImages(Collections.emptyList());
-        }
-
-        PostPlaceReviewResponse.newPlaceReviewResponseDTO response
-                = placeReviewService.postNewPlaceReview(request, placeId);
-        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
-    }
 
     @Operation(summary = "장소 좋아요 API", description = "사용자가 해당 장소를 좋아요로 설정합니다.")
     @PatchMapping("/{placeId}/like")
@@ -59,18 +44,6 @@ public class PlaceController {
             @PathVariable("placeId") Long placeId
     ) {
         PlaceVisitedDateResponse response = placeService.getPlaceVisitDate(courseId, placeId);
-        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
-    }
-
-    @Operation(summary = "장소리뷰 전체 조회 API", description = "해당 장소의 전체 리뷰를 보여줍니다.")
-    @GetMapping("/{placeId}/review/all")
-    public ResponseEntity<BaseResponse<PostPlaceReviewResponse.placeReviewAllResponseDTO>> getAllPlaceReviews(
-            @PathVariable("placeId") Long placeId,
-            @RequestParam int pageSize,
-            @RequestParam(required = false) LocalDate lastPlaceReviewDate,
-            @RequestParam(required = false) Long lastPlaceReviewId
-    ) {
-        PostPlaceReviewResponse.placeReviewAllResponseDTO response = placeReviewService.getAllPlaceReviews(placeId, pageSize, lastPlaceReviewDate, lastPlaceReviewId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
@@ -95,6 +68,28 @@ public class PlaceController {
             @RequestParam(required = false) Long lastPlaceId
     ) {
         PlaceSearchSliceResponse response = placeService.searchPlaceByCategoryOrName(pageSize, keyword, relevanceScore, lastPlaceId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "장소 평점/리뷰 달기 API", description = "장소에 대해 평점/리뷰를 달기 위한 API입니다. 멤버가 해당 장소에 방문체크한 이후 평점/리뷰를 남길 수 있습니다.")
+    @PostMapping(value = "/{placeId}/review", consumes = "multipart/form-data")
+    public ResponseEntity<BaseResponse<PlaceReviewResponse>> postPlaceReview(
+            @PathVariable("placeId") Long placeId,
+            @Valid @ModelAttribute PostPlaceReviewRequest request
+    ) {
+        PlaceReviewResponse response = placeReviewService.postNewPlaceReview(request, placeId);
+        return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
+    }
+
+    @Operation(summary = "장소 리뷰 전체 조회 API", description = "해당 장소의 전체 리뷰를 보여줍니다.")
+    @GetMapping("/{placeId}/review/all")
+    public ResponseEntity<BaseResponse<PlaceReviewListResponse>> getAllPlaceReviews(
+            @PathVariable("placeId") Long placeId,
+            @RequestParam int pageSize,
+            @RequestParam(required = false) LocalDate lastPlaceReviewDate,
+            @RequestParam(required = false) Long lastPlaceReviewId
+    ) {
+        PlaceReviewListResponse response = placeReviewService.getAllPlaceReviews(placeId, pageSize, lastPlaceReviewDate, lastPlaceReviewId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }
