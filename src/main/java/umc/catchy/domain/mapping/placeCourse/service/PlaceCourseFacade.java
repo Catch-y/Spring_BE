@@ -103,7 +103,7 @@ public class PlaceCourseFacade {
         Boolean isVisited = placeVisitRepository.findByPlaceAndMember(place, member)
                 .map(PlaceVisit::isVisited).orElse(false);
 
-        Boolean isLiked = placeLikeRepository.findByPlaceAndMember(place, member).isPresent();
+        boolean isLiked = placeLikeRepository.findByPlaceAndMember(place, member).isPresent();
 
         return PlaceDetailResponse.from(place, reviewCount, isVisited, isLiked);
     }
