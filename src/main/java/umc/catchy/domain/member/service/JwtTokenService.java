@@ -23,7 +23,7 @@ public class JwtTokenService {
 
         redisTokenService.saveRefreshToken(refreshToken, memberId);
 
-        return new TokenPair(accessToken, refreshToken);
+        return TokenPair.of(accessToken, refreshToken);
     }
 
     public TokenPair reissueTokens(String accessToken, String refreshToken) {

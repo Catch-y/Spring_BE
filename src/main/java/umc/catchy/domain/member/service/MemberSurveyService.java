@@ -69,7 +69,7 @@ public class MemberSurveyService {
                 .map(MemberCategory::getId)
                 .toList();
 
-        return new MemberCategoryCreatedResponse(memberCategoryIds);
+        return MemberCategoryCreatedResponse.of(memberCategoryIds);
     }
 
     public StyleAndActiveTimeSurveyCreatedResponse createStyleAndActiveTimeSurvey(StyleAndActiveTimeSurveyRequest request) {
@@ -94,7 +94,7 @@ public class MemberSurveyService {
                 .collect(Collectors.toList());
         List<Long> memberActiveTimeIds = saveAndExtractIds(memberActiveTimeRepository.saveAll(memberActiveTimeList), MemberActiveTime::getId);
 
-        return new StyleAndActiveTimeSurveyCreatedResponse(memberStyleIds, memberActiveTimeIds);
+        return StyleAndActiveTimeSurveyCreatedResponse.of(memberStyleIds, memberActiveTimeIds);
     }
 
     public MemberLocationCreatedResponse createMemberLocation(List<LocationSurveyRequest> request) {
@@ -115,13 +115,13 @@ public class MemberSurveyService {
                 .map(MemberLocation::getId)
                 .collect(Collectors.toList());
 
-        return new MemberLocationCreatedResponse(memberLocationIds);
+        return MemberLocationCreatedResponse.of(memberLocationIds);
     }
 
     private <T> List<Long> saveAndExtractIds(List<T> savedEntities, java.util.function.Function<T, Long> idExtractor) {
         return savedEntities.stream()
                 .map(idExtractor)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private ActiveTime findOrCreateActiveTime(java.time.DayOfWeek dayOfWeek, LocalTime startTime, LocalTime endTime) {
