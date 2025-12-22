@@ -21,6 +21,7 @@ public class PlaceLike extends BaseTimeEntity {
     @Column(name = "placeLike_id")
     private Long id;
 
+    @Builder.Default
     private boolean isLiked = false;
 
     @ManyToOne(fetch = FetchType.LAZY)

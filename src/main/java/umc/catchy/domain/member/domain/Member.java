@@ -37,6 +37,7 @@ public class Member extends BaseTimeEntity {
     private String authorizationCode;
 
     @Column(nullable = false)
+    @Builder.Default
     private Integer gpt_count = 0;
 
     @Embedded
