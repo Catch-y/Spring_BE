@@ -50,4 +50,11 @@ public class MemberCourse extends BaseTimeEntity {
         this.isVisited = true;
         this.visitedDate = visitedDate;
     }
+
+    public static MemberCourse create(Course course, Member member) {
+        return MemberCourse.builder()
+                .course(course)
+                .member(member)
+                .build();
+    }
 }
