@@ -63,13 +63,7 @@ public class PlaceVisitService {
     }
 
     private PlaceVisit createPlaceVisit(Course course, Place place, Member member) {
-        PlaceVisit placeVisit = PlaceVisit.builder()
-                .course(course)
-                .place(place)
-                .member(member)
-                .isVisited(true)
-                .visitedDate(LocalDate.now())
-                .build();
+        PlaceVisit placeVisit = PlaceVisit.create(course, place, member);
 
         return placeVisitRepository.save(placeVisit);
     }

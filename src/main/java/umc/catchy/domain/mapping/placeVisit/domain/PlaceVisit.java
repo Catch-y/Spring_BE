@@ -40,4 +40,14 @@ public class PlaceVisit extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id")
     private Course course;
+
+    public static PlaceVisit create(Course course, Place place, Member member) {
+        return PlaceVisit.builder()
+                .course(course)
+                .place(place)
+                .member(member)
+                .isVisited(true)
+                .visitedDate(LocalDate.now())
+                .build();
+    }
 }
