@@ -32,6 +32,14 @@ public class PlaceLike extends BaseTimeEntity {
     @JoinColumn(name = "place_id")
     private Place place;
 
+    public static PlaceLike create(Member member, Place place) {
+        return PlaceLike.builder()
+                .member(member)
+                .place(place)
+                .isLiked(true)
+                .build();
+    }
+
     public static void toggleLiked(PlaceLike placeLike) {
         placeLike.isLiked = !placeLike.isLiked;
     }

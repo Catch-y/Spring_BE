@@ -78,11 +78,9 @@ public class PlaceService {
                 page
         );
 
-        List<PlacePreviewResponse> response = placePreviewDtos.getContent().stream()
-                .map(PlacePreviewResponse::from)
-                .toList();
+        Slice<PlacePreviewResponse> response = placePreviewDtos.map(PlacePreviewResponse::from);
 
-        return new SliceResponse<>(response, placePreviewDtos.isLast());
+        return SliceResponse.of(response);
     }
 
     @Transactional(readOnly = true)
@@ -114,11 +112,7 @@ public class PlaceService {
             placeLike = existing.get();
             PlaceLike.toggleLiked(placeLike);
         } else {
-            placeLike = PlaceLike.builder()
-                    .member(member)
-                    .place(place)
-                    .isLiked(true)
-                    .build();
+            placeLike = PlaceLike.create(member, place);
             placeLikeRepository.save(placeLike);
         }
 
