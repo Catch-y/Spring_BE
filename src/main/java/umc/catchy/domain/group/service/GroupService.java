@@ -79,7 +79,7 @@ public class GroupService {
         Groups group = Groups.create(request, groupImageUrl, promiseTime);
         Groups savedGroup = groupRepository.save(group);
 
-        MemberGroup memberGroup = MemberGroup.create(group, member);
+        MemberGroup memberGroup = MemberGroup.create(savedGroup, member);
         memberGroupRepository.save(memberGroup);
 
         return CreateGroupResponse.of(savedGroup, member.getNickname());
