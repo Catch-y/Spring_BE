@@ -96,6 +96,10 @@ dependencies {
 
 	// Sentry
 	implementation 'io.sentry:sentry-spring-boot-starter:8.22.0'
+
+	// 성능 모니터링
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'io.micrometer:micrometer-registry-prometheus'
 }
 
 tasks.named('test') {

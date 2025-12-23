@@ -44,7 +44,7 @@ public class SecurityConfig {
                                 , "/member/reissue", "/member/callback/**"
                                 ,"/course/generate-ai", "/health"
                                 ,"/course/place/current", "/course/place/region"
-                                , "/member/mypage/nickname").permitAll()
+                                , "/member/mypage/nickname", "/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception
