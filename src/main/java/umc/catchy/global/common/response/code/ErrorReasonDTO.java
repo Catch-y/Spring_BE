@@ -11,4 +11,10 @@ public class ErrorReasonDTO {
     private final boolean isSuccess;
     private final String code;
     private final String message;
+
+    @Override
+    public String toString() {
+        return String.format("ErrorReason{code='%s', message='%s', status=%s}",
+                code, message, httpStatus);
+    }
 }

@@ -1,5 +1,6 @@
 package umc.catchy.global.error.exception;
 
+import io.sentry.Sentry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -28,14 +29,36 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
 
     private ResponseEntity<Object> createErrorResponse(
             Exception e, ErrorStatus errorStatus, String errorMessage, HttpHeaders headers, WebRequest request) {
-        log.error("Exception: {}, Status: {}, Message: {}", e.getClass().getSimpleName(), errorStatus, errorMessage);
+        log.error("Exception: {}, Code: {}, Message: {}",
+                e.getClass().getSimpleName(), errorStatus.getCode(), errorMessage);
         BaseResponse<Object> body = BaseResponse.onFailure(errorStatus, errorMessage);
         return super.handleExceptionInternal(e, body, headers, errorStatus.getHttpStatus(), request);
     }
 
     private ResponseEntity<Object> createErrorResponse(
             Exception e, ErrorReasonDTO reason, HttpHeaders headers, HttpServletRequest request) {
-        log.error("Exception: {}, Reason: {}", e.getClass().getSimpleName(), reason);
+
+        // 상세 로그 출력 (Sentry가 읽기 쉽게)
+        log.error("Exception: {}, Code: {}, Message: {}, Status: {}",
+                e.getClass().getSimpleName(),
+                reason.getCode(),
+                reason.getMessage(),
+                reason.getHttpStatus().value());
+
+        // Sentry에 상세 정보 추가
+        Sentry.configureScope(scope -> {
+            scope.setTag("error_code", reason.getCode());
+            scope.setTag("http_status", String.valueOf(reason.getHttpStatus().value()));
+            scope.setTag("endpoint", request.getRequestURI());
+            scope.setTag("method", request.getMethod());
+            scope.setExtra("error_message", reason.getMessage());
+        });
+
+        // 500 에러만 Sentry에 전송
+        if (reason.getHttpStatus().is5xxServerError()) {
+            Sentry.captureException(e);
+        }
+
         BaseResponse<Object> body = BaseResponse.onFailure(reason, null);
         WebRequest webRequest = new ServletWebRequest(request);
         return super.handleExceptionInternal(e, body, headers, reason.getHttpStatus(), webRequest);
@@ -43,6 +66,15 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler
     public ResponseEntity<Object> handleGlobalException(Exception e, WebRequest request) {
+        // 예상치 못한 에러는 무조건 Sentry에
+        log.error("Unexpected exception occurred", e);
+
+        Sentry.configureScope(scope -> {
+            scope.setTag("error_type", e.getClass().getSimpleName());
+            scope.setExtra("error_message", e.getMessage());
+        });
+        Sentry.captureException(e);
+
         return createErrorResponse(e, ErrorStatus._INTERNAL_SERVER_ERROR, e.getMessage(), HttpHeaders.EMPTY, request);
     }
 
@@ -52,6 +84,9 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
                 .map(ConstraintViolation::getMessage)
                 .reduce((first, second) -> first + ", " + second)
                 .orElse("Validation error occurred");
+
+        log.warn("Validation error: {}", errorMessage);
+
         return createErrorResponse(e, ErrorStatus.VALIDATION_ERROR, errorMessage, HttpHeaders.EMPTY, request);
     }
 
@@ -70,11 +105,16 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
         e.getBindingResult().getFieldErrors()
                 .forEach(fieldError -> errors.put(fieldError.getField(), fieldError.getDefaultMessage()));
         String errorMessage = String.join(", ", errors.values());
+
+        log.warn("Method argument validation failed: {}", errorMessage);
+
         return createErrorResponse(e, ErrorStatus._BAD_REQUEST, errorMessage, headers, request);
     }
 
     @ExceptionHandler(ResultEmptyListException.class)
     public ResponseEntity<Object> handleResultEmptyListException(ResultEmptyListException e, WebRequest request) {
+        log.info("Empty result list: {}", e.getErrorStatus().getCode());
+
         return ResponseEntity
                 .status(e.getErrorStatus().getHttpStatus())
                 .body(BaseResponse.onFailureWithEmptyList(e.getErrorStatus()));

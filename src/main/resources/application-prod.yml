@@ -88,5 +88,12 @@ cache:
 fcm:
   certification: ${FCM_CERTIFICATION:}
 
+sentry:
+  dsn: ${SENTRY_DSN}
+  environment: production
+  send-default-pii: true
+  attach-stacktrace: true
+  traces-sample-rate: 1.0
+
 server:
   port: 8081
