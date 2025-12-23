@@ -11,10 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import umc.catchy.domain.group.dto.request.CreateGroupRequest;
 import umc.catchy.domain.group.dto.request.InviteCodeRequest;
 import umc.catchy.domain.group.dto.response.*;
-import umc.catchy.domain.group.service.GroupService;
+import umc.catchy.domain.group.service.GroupFacade;
 import umc.catchy.global.common.response.BaseResponse;
 import umc.catchy.global.common.response.status.SuccessStatus;
-import umc.catchy.global.util.SecurityUtil;
 
 import java.util.List;
 
@@ -24,21 +23,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GroupController {
 
-    private final GroupService groupService;
+    private final GroupFacade groupFacade;
 
     @Operation(summary = "그룹 생성", description = "그룹을 생성합니다.")
     @PostMapping(consumes = "multipart/form-data")
     public ResponseEntity<BaseResponse<CreateGroupResponse>> createGroup(@Validated @ModelAttribute CreateGroupRequest request) {
-
-        Long memberId = SecurityUtil.getCurrentMemberId();
-        CreateGroupResponse response = groupService.createGroup(request, memberId);
+        CreateGroupResponse response = groupFacade.createGroup(request);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._CREATED, response));
     }
 
     @Operation(summary = "그룹 초대 코드로 가입", description = "초대 코드를 입력하여 사용자가 그룹에 가입합니다.")
     @PostMapping("/join")
     public ResponseEntity<BaseResponse<GroupJoinResponse>> joinGroupByInviteCode(@Valid @RequestBody InviteCodeRequest request) {
-        GroupJoinResponse response = groupService.joinGroupByInviteCode(request.inviteCode());
+        GroupJoinResponse response = groupFacade.joinGroupByInviteCode(request.inviteCode());
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
@@ -48,7 +45,7 @@ public class GroupController {
             @Parameter(description = "그룹 초대 코드", required = true)
             @PathVariable String inviteCode
     ) {
-        GroupInfoResponse response = groupService.getGroupInfoByInviteCode(inviteCode);
+        GroupInfoResponse response = groupFacade.getGroupInfoByInviteCode(inviteCode);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
@@ -58,7 +55,7 @@ public class GroupController {
             @Parameter(description = "그룹 ID", required = true)
             @PathVariable Long groupId
     ) {
-        groupService.leaveGroup(groupId);
+        groupFacade.leaveGroup(groupId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, null));
     }
 
@@ -67,7 +64,7 @@ public class GroupController {
     public ResponseEntity<BaseResponse<List<GroupCalendarResponse>>> getUserGroups(
             @RequestParam int year,
             @RequestParam int month) {
-        List<GroupCalendarResponse> response = groupService.getUserGroups(year, month);
+        List<GroupCalendarResponse> response = groupFacade.getUserGroups(year, month);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 
@@ -76,9 +73,7 @@ public class GroupController {
     public ResponseEntity<BaseResponse<List<GroupMemberResponse>>> getGroupMembers(
             @Parameter(description = "그룹 ID", required = true)
             @PathVariable Long groupId) {
-
-        List<GroupMemberResponse> response = groupService.getGroupMembers(groupId);
-
+        List<GroupMemberResponse> response = groupFacade.getGroupMembers(groupId);
         return ResponseEntity.ok(BaseResponse.onSuccess(SuccessStatus._OK, response));
     }
 }

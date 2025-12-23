@@ -17,7 +17,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "`groups`", indexes = {
-        @Index(name = "idx_groups_region", columnList = "sido, sigungu")
+        @Index(name = "idx_groups_region", columnList = "sido, sigungu"),
+        @Index(name = "idx_groups_promise_time", columnList = "promiseTime") // [추가] 성능 최적화를 위한 인덱스
 })
 public class Groups extends BaseTimeEntity {
 
