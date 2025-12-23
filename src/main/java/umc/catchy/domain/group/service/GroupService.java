@@ -105,15 +105,16 @@ public class GroupService {
     public List<GroupCalendarResponse> getUserGroups(int year, int month) {
         Long memberId = SecurityUtil.getCurrentMemberId();
 
-        Member member = memberRepository.findById(memberId)
+        memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        List<MemberGroup> memberGroups = memberGroupRepository.findAllByMemberId(memberId);
+        LocalDateTime start = LocalDateTime.of(year, month, 1, 0, 0);
+        LocalDateTime end = start.plusMonths(1);
 
-        // 해당 년도와 월에 맞는 그룹 필터링
+        List<MemberGroup> memberGroups = memberGroupRepository.findAllByMemberIdAndDateRange(memberId, start, end);
+
         return memberGroups.stream()
                 .map(MemberGroup::getGroup)
-                .filter(group -> group.getPromiseTime().getYear() == year && group.getPromiseTime().getMonthValue() == month)
                 .map(GroupCalendarResponse::from)
                 .toList();
     }
