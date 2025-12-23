@@ -3,6 +3,7 @@ package umc.catchy.domain.group.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
+import umc.catchy.domain.group.domain.Groups;
 import umc.catchy.domain.group.dto.request.CreateGroupRequest;
 import umc.catchy.domain.group.dto.response.CreateGroupResponse;
 import umc.catchy.domain.group.dto.response.GroupCalendarResponse;
@@ -19,6 +20,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GroupFacade {
 
+    private static final String GROUP_IMAGE_PREFIX = "group-images/";
+    private static final String JOIN_SUCCESS_MESSAGE = "Successfully joined the group.";
+    private static final int TIME_NORMALIZATION_VALUE = 0;
+
     private final GroupCommandService groupCommandService;
     private final GroupQueryService groupQueryService;
     private final AmazonS3Manager amazonS3Manager;
@@ -29,13 +34,13 @@ public class GroupFacade {
         MultipartFile groupImageFile = request.groupImage();
 
         if (groupImageFile != null && !groupImageFile.isEmpty()) {
-            String keyName = "group-images/" + groupImageFile.getOriginalFilename();
+            String keyName = GROUP_IMAGE_PREFIX + groupImageFile.getOriginalFilename();
             groupImageUrl = amazonS3Manager.uploadFile(keyName, groupImageFile);
         }
 
         LocalDateTime promiseTime = request.promiseTime()
-                .withSecond(0)
-                .withNano(0);
+                .withSecond(TIME_NORMALIZATION_VALUE)
+                .withNano(TIME_NORMALIZATION_VALUE);
 
         try {
             return groupCommandService.createGroupMetadata(request, memberId, groupImageUrl, promiseTime);
@@ -49,7 +54,7 @@ public class GroupFacade {
 
     public GroupJoinResponse joinGroupByInviteCode(String inviteCode) {
         groupCommandService.joinGroup(SecurityUtil.getCurrentMemberId(), inviteCode);
-        return GroupJoinResponse.of(true, "Successfully joined the group.");
+        return GroupJoinResponse.of(true, JOIN_SUCCESS_MESSAGE);
     }
 
     public void leaveGroup(Long groupId) {
