@@ -290,7 +290,6 @@ public class PlaceRepositoryImpl implements PlaceCustomRepository {
                 .selectFrom(place)
                 .join(place.category, category).fetchJoin()
                 .leftJoin(memberPlaceVote).on(memberPlaceVote.place.id.eq(place.id))
-                .join(place.category, category)
                 .where(
                         category.bigCategory.eq(bigCategory),
                         locationFilter(normGroup, normAlt)
