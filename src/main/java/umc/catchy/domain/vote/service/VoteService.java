@@ -227,49 +227,40 @@ public class VoteService {
     public PlaceVoteListResponse getPlacesByCategory(Long groupId, String category, int pageSize, Long lastPlaceId) {
         Groups group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
-        String groupLocation = group.getGroupLocation();
 
-        String normalizedGroupLocation = LocationUtils.normalizeLocation(groupLocation);
-        String normalizedAlternativeLocation = LocationUtils.normalizeLocation(normalizedGroupLocation);
-
+        // 1. 장소 목록 조회 (QueryDSL)
         Slice<Place> placesSlice = placeRepository.getPlacesByCategoryWithPaging(
-                BigCategory.valueOf(category),
-                normalizedGroupLocation,
-                normalizedAlternativeLocation,
-                pageSize,
-                lastPlaceId,
-                groupId
+                BigCategory.valueOf(category), group.getGroupLocation(),
+                LocationUtils.normalizeLocation(group.getGroupLocation()),
+                pageSize, lastPlaceId, groupId
         );
 
-        List<PlaceVoteListResponse.PlaceVoteInfo> placeInfos = placesSlice.getContent().stream()
-                .map(place -> {
-                    long reviewCount = placeReviewRepository.countByPlaceId(place.getId());
+        List<Place> places = placesSlice.getContent();
+        List<Long> placeIds = places.stream().map(Place::getId).toList();
 
-                    List<Member> votingMembers = memberPlaceVoteRepository.findMembersByPlaceIdAndGroupId(place.getId(), groupId);
+        Map<Long, Long> reviewCountMap = placeReviewRepository.countByPlaceIdsGroupByPlace(placeIds).stream()
+                .collect(Collectors.toMap(obj -> (Long) obj[0], obj -> (Long) obj[1]));
+
+        Map<Long, List<Member>> votingMembersMap = memberPlaceVoteRepository.findMembersByPlaceIdsAndGroupId(placeIds, groupId).stream()
+                .collect(Collectors.groupingBy(mpv -> mpv.getPlace().getId(),
+                        Collectors.mapping(MemberPlaceVote::getMember, Collectors.toList())));
+
+        List<PlaceVoteListResponse.PlaceVoteInfo> placeInfos = places.stream()
+                .map(place -> {
+                    Long reviewCount = reviewCountMap.getOrDefault(place.getId(), 0L);
+                    List<Member> votingMembers = votingMembersMap.getOrDefault(place.getId(), List.of());
 
                     List<CategoryVoteResultResponse.VotedMemberInfo> votedMembers = votingMembers.stream()
-                            .map(member -> CategoryVoteResultResponse.VotedMemberInfo.of(
-                                    member.getId(),
-                                    member.getNickname(),
-                                    member.getProfileImage()
-                            ))
+                            .map(m -> CategoryVoteResultResponse.VotedMemberInfo.of(m.getId(), m.getNickname(), m.getProfileImage()))
                             .toList();
 
                     return PlaceVoteListResponse.PlaceVoteInfo.of(
-                            place.getId(),
-                            place.getPlaceName(),
-                            place.getRoadAddress(),
-                            place.getRating(),
-                            reviewCount,
-                            place.getImageUrl(),
-                            votedMembers
+                            place.getId(), place.getPlaceName(), place.getRoadAddress(),
+                            place.getRating(), reviewCount, place.getImageUrl(), votedMembers
                     );
-                })
-                .toList();
+                }).toList();
 
-        boolean isLast = !placesSlice.hasNext();
-
-        return PlaceVoteListResponse.of(groupLocation, placeInfos, isLast);
+        return PlaceVoteListResponse.of(group.getGroupLocation(), placeInfos, !placesSlice.hasNext());
     }
 
     @Transactional
