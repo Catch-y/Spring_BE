@@ -172,13 +172,12 @@ public class VoteService {
                 .orElseThrow(() -> new GeneralException(ErrorStatus.VOTE_NOT_FOUND));
 
         Long groupId = vote.getGroup().getId();
-        int totalMembers = memberGroupRepository.countByGroupId(groupId);
 
+        int totalMembers = memberGroupRepository.countByGroupId(groupId);
         int membersWhoVoted = memberCategoryVoteRepository.countDistinctMembersByVoteId(voteId);
 
-        if (totalMembers == membersWhoVoted) {
-            vote.changeStatus(VoteStatus.COMPLETED);
-            voteRepository.save(vote);
+        if (vote.isAllMembersVoted(totalMembers, membersWhoVoted)) {
+            vote.complete();
         }
     }
 
@@ -201,7 +200,7 @@ public class VoteService {
         String alternativeLocation = LocationUtils.normalizeLocation(groupLocation);
 
         int totalMembers = memberGroupRepository.countByGroupId(groupId);
-        int majorityThreshold = (int) Math.ceil(totalMembers / 2.0);
+        int majorityThreshold = vote.calculateMajorityThreshold(totalMembers);
 
         List<GroupVoteResultResponse.CategoryResult> categories = categoryVoteRepository.findByVoteId(voteId).stream()
                 .map(categoryVote -> {
