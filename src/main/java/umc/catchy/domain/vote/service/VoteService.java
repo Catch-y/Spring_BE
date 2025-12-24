@@ -68,10 +68,10 @@ public class VoteService {
                 .toList();
 
         Vote vote = Vote.create(group);
-        voteRepository.save(vote);
+        Vote savedVote = voteRepository.save(vote);
 
         for (BigCategory bigCategory : BigCategory.values()) {
-            CategoryVote categoryVote = CategoryVote.create(vote, bigCategory);
+            CategoryVote categoryVote = CategoryVote.create(savedVote, bigCategory);
             categoryVoteRepository.save(categoryVote);
         }
         fcmService.sendGroupMessageAsync(deviceTokenList, COURSE_UPDATED_MESSAGE_TITLE, GROUP_VOTE_START_MESSAGE_CONTENT);
