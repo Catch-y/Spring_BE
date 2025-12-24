@@ -30,6 +30,9 @@ import java.util.List;
 @Transactional
 public class VoteCommandService {
 
+    private static final String VOTE_REMOVED = "Vote removed successfully.";
+    private static final String VOTE_ADDED = "Vote added successfully.";
+
     private final VoteRepository voteRepository;
     private final GroupRepository groupRepository;
     private final CategoryVoteRepository categoryVoteRepository;
@@ -94,10 +97,10 @@ public class VoteCommandService {
 
         if (existingVote != null) {
             memberPlaceVoteRepository.delete(existingVote);
-            return "Vote removed successfully.";
+            return VOTE_REMOVED;
         } else {
             memberPlaceVoteRepository.save(MemberPlaceVote.create(place, member, vote, group));
-            return "Vote added successfully.";
+            return VOTE_ADDED;
         }
     }
 }
