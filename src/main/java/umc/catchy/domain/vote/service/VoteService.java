@@ -23,19 +23,15 @@ import umc.catchy.domain.placeReview.dao.PlaceReviewRepository;
 import umc.catchy.domain.vote.dao.VoteRepository;
 import umc.catchy.domain.vote.domain.Vote;
 import umc.catchy.domain.vote.domain.VoteStatus;
-import umc.catchy.domain.vote.dto.request.VoteCreateRequest;
 import umc.catchy.domain.vote.dto.request.PlaceVoteRequest;
+import umc.catchy.domain.vote.dto.request.VoteCreateRequest;
 import umc.catchy.domain.vote.dto.response.*;
 import umc.catchy.global.common.response.status.ErrorStatus;
 import umc.catchy.global.error.exception.GeneralException;
 import umc.catchy.global.util.SecurityUtil;
 import umc.catchy.infra.config.fcm.FCMService;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static umc.catchy.global.common.constants.FcmConstants.*;
@@ -112,15 +108,24 @@ public class VoteService {
         int totalMembers = memberGroupRepository.countByGroupId(vote.getGroup().getId());
         List<CategoryVote> categoryVotes = categoryVoteRepository.findByVoteId(voteId);
 
+        Map<Long, Long> voteCountMap = memberCategoryVoteRepository.countVotesByVoteIdGroupByCategory(voteId).stream()
+                .collect(Collectors.toMap(obj -> (Long) obj[0], obj -> (Long) obj[1]));
+
+        Map<Long, List<Member>> membersByCategoryMap = memberCategoryVoteRepository.findAllByVoteIdWithMember(voteId).stream()
+                .collect(Collectors.groupingBy(mcv -> mcv.getCategoryVote().getId(),
+                        Collectors.mapping(MemberCategoryVote::getMember, Collectors.toList())));
+
         List<CategoryVoteResultResponse.VoteResultInfo> rawResults = categoryVotes.stream()
-                .map(cv -> CategoryVoteResultResponse.VoteResultInfo.of(
-                        cv.getBigCategory().toString(),
-                        memberCategoryVoteRepository.countByVoteIdAndCategoryVoteId(voteId, cv.getId()),
-                        memberCategoryVoteRepository.findMembersByCategoryVoteId(cv.getId()).stream()
-                                .map(m -> CategoryVoteResultResponse.VotedMemberInfo.of(m.getId(), m.getNickname(), m.getProfileImage()))
-                                .toList(),
-                        0
-                ))
+                .map(cv -> {
+                    Long count = voteCountMap.getOrDefault(cv.getId(), 0L);
+                    List<Member> members = membersByCategoryMap.getOrDefault(cv.getId(), List.of());
+
+                    List<CategoryVoteResultResponse.VotedMemberInfo> votedMemberInfos = members.stream()
+                            .map(m -> CategoryVoteResultResponse.VotedMemberInfo.of(m.getId(), m.getNickname(), m.getProfileImage()))
+                            .toList();
+
+                    return CategoryVoteResultResponse.VoteResultInfo.of(cv.getBigCategory().toString(), count.intValue(), votedMemberInfos, 0);
+                })
                 .sorted(Comparator.comparing(CategoryVoteResultResponse.VoteResultInfo::voteCount).reversed())
                 .toList();
 
@@ -194,7 +199,7 @@ public class VoteService {
                 .filter(member -> member.getFcmInfo().getAppAlarm())
                 .map(member -> member.getFcmInfo().getFcmToken())
                 .collect(Collectors.toList());
-        fcmService.sendGroupMessageAsync(deviceTokenList,COURSE_UPDATED_MESSAGE_TITLE,GROUP_VOTE_END_MESSAGE_CONTENT);
+        fcmService.sendGroupMessageAsync(deviceTokenList, COURSE_UPDATED_MESSAGE_TITLE, GROUP_VOTE_END_MESSAGE_CONTENT);
 
         String groupLocation = group.getGroupLocation();
         String alternativeLocation = LocationUtils.normalizeLocation(groupLocation);

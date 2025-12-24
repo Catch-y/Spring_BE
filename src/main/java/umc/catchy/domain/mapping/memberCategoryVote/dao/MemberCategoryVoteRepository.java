@@ -25,6 +25,12 @@ public interface MemberCategoryVoteRepository extends JpaRepository<MemberCatego
             "AND mcv.categoryVote.id = :categoryVoteId")
     int countByVoteIdAndCategoryVoteId(@Param("voteId") Long voteId, @Param("categoryVoteId") Long categoryVoteId);
 
+    @Query("SELECT mcv.categoryVote.id, COUNT(mcv) FROM MemberCategoryVote mcv WHERE mcv.voteId = :voteId GROUP BY mcv.categoryVote.id")
+    List<Object[]> countVotesByVoteIdGroupByCategory(@Param("voteId") Long voteId);
+
+    @Query("SELECT mcv FROM MemberCategoryVote mcv JOIN FETCH mcv.member m WHERE mcv.voteId = :voteId")
+    List<MemberCategoryVote> findAllByVoteIdWithMember(@Param("voteId") Long voteId);
+
     @Modifying
     @Query("DELETE FROM MemberCategoryVote m WHERE m.voteId = :voteId AND m.member.id = :memberId")
     void deleteByVoteIdAndMemberId(@Param("voteId") Long voteId, @Param("memberId") Long memberId);
