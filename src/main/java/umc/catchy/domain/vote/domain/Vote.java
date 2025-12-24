@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import umc.catchy.domain.common.BaseTimeEntity;
 import umc.catchy.domain.group.domain.Groups;
+import umc.catchy.global.common.response.status.ErrorStatus;
+import umc.catchy.global.error.exception.GeneralException;
 
 import java.time.LocalDateTime;
 
@@ -36,7 +38,18 @@ public class Vote extends BaseTimeEntity {
                 .build();
     }
 
-    public void changeStatus(VoteStatus status) {
-        this.status = status;
+    public int calculateMajorityThreshold(int totalMembers) {
+        return (int) Math.ceil(totalMembers / 2.0);
+    }
+
+    public boolean isAllMembersVoted(int totalMembers, int votedCount) {
+        return totalMembers == votedCount;
+    }
+
+    public void complete() {
+        if (this.status == VoteStatus.COMPLETED) {
+            throw new GeneralException(ErrorStatus.VOTE_ALREADY_COMPLETED);
+        }
+        this.status = VoteStatus.COMPLETED;
     }
 }
